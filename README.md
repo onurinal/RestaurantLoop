@@ -11,8 +11,8 @@ Portrait
 
 ## Team
 
-Onur - Developer
-Hazar - Developer
-Merve - Artist
-Bengisu - Artist
-Enes - Game Designer / Developer
+- **Onur** - Developer
+- **Hazar** - Developer
+- **Merve** - Artist
+- **Bengisu** - Artist
+- **Enes** - Game Designer / Developer
