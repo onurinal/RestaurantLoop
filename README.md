@@ -1,7 +1,7 @@
 # Restaurant Loop
 
 ## Unity Version
-Unity 6.3 LTS
+Unity 6.3 LTS (6000.3.22f1)
 
 ## Platform
 Android
