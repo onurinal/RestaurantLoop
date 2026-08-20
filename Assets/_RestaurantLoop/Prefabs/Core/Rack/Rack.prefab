@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 2931102983835105342}
   - component: {fileID: 7115178747288806495}
   - component: {fileID: 3716873231072192262}
-  - component: {fileID: 6201599858830878903}
+  - component: {fileID: 1244953484590377093}
   m_Layer: 0
   m_Name: Rack
   m_TagString: Untagged
@@ -113,7 +113,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &6201599858830878903
+--- !u!114 &1244953484590377093
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -122,6 +122,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 654363922013046188}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 82a6198cae214cb1a820bba868b2163a, type: 3}
+  m_Script: {fileID: 11500000, guid: c93e470b06534d299a564bf3b1465b16, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.RackSlot

@@ -4,7 +4,7 @@ using UnityEngine;
 namespace RestaurantLoop.Core
 {
     /// <summary>
-    /// Dynamic spawner for queue grid columns and slots with scene Gizmo preview.
+    /// Spawns queue layout columns and slots dynamically with scene Gizmo preview.
     /// </summary>
     public class QueueSpawner : MonoBehaviour
     {

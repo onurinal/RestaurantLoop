@@ -1,11 +1,10 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace RestaurantLoop.Core
 {
     /// <summary>
-    /// Controls conveyor simulation, capacity reservations, and entrance cooldowns.
+    /// Controls conveyor simulation, capacity reservations, and entrance/exit ratios.
     /// </summary>
     public class ConveyorController : MonoBehaviour
     {
@@ -22,12 +21,11 @@ namespace RestaurantLoop.Core
 
         private readonly List<StackItem> activeStacks = new List<StackItem>();
         private int occupiedCapacity = 0;
-        private bool isCooldownActive = false;
 
-        // Conveyor refuses new items if full OR during exit cooldown
-        public bool CanAcceptStack => occupiedCapacity < maxCapacity && !isCooldownActive;
+        public bool CanAcceptStack => occupiedCapacity < maxCapacity;
         public bool IsClockwise => isClockwise;
         public float MoveSpeed => moveSpeed;
+        public SplineConveyorPath Path => path;
         public float EntranceDistance => entranceRatio * (path != null ? path.GetOrCalculateLength() : 0f);
         public float ExitDistance => exitRatio * (path != null ? path.GetOrCalculateLength() : 0f);
 
@@ -96,22 +94,10 @@ namespace RestaurantLoop.Core
 
             if (isClockwise)
             {
-                if (exit > entry)
-                {
-                    return exit - entry;
-                }
-
-                return (totalLength - entry) + exit;
+                return exit > entry ? exit - entry : (totalLength - entry) + exit;
             }
-            else
-            {
-                if (entry > exit)
-                {
-                    return entry - exit;
-                }
 
-                return entry + (totalLength - exit);
-            }
+            return entry > exit ? entry - exit : entry + (totalLength - exit);
         }
 
         private void OnDrawGizmosSelected()

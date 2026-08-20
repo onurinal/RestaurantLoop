@@ -5,7 +5,7 @@ using DG.Tweening;
 namespace RestaurantLoop.Core
 {
     /// <summary>
-    /// Manages an individual queue column and shifts items upward safely in local space.
+    /// Manages an individual vertical queue column and shifts items upward safely.
     /// </summary>
     public class QueueColumn : MonoBehaviour
     {
@@ -29,7 +29,7 @@ namespace RestaurantLoop.Core
             }
         }
 
-        public void TrySendFrontStackToBelt(SplineConveyorPath path)
+        public void TrySendFrontStackToBelt()
         {
             QueueSlot front = FrontSlot;
 
@@ -47,6 +47,7 @@ namespace RestaurantLoop.Core
             StackItem stackToSend = front.CurrentStack;
             front.ClearSlot();
 
+            SplineConveyorPath path = ConveyorController.Instance.Path;
             Vector3 entrancePosition = path.GetPosition(ConveyorController.Instance.EntranceDistance);
 
             stackToSend.JumpToConveyor(entrancePosition, () => { ConveyorController.Instance.TryAddStack(stackToSend); });

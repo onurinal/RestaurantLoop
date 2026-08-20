@@ -5,7 +5,7 @@ using DG.Tweening;
 namespace RestaurantLoop.Core
 {
     /// <summary>
-    /// Manages rack slots below the belt and coordinates rack reuse item dispatch.
+    /// Manages dynamic rack slot spawning, item placement, and rack reuse dispatching.
     /// </summary>
     public class RackManager : MonoBehaviour
     {
@@ -96,7 +96,7 @@ namespace RestaurantLoop.Core
             return true;
         }
 
-        public bool TrySendRackStackToBelt(StackItem stack, SplineConveyorPath path)
+        public bool TrySendRackStackToBelt(StackItem stack)
         {
             if (stack == null || stack.IsJumping)
             {
@@ -122,6 +122,7 @@ namespace RestaurantLoop.Core
             targetSlot.ClearSlot();
             stack.transform.SetParent(null);
 
+            SplineConveyorPath path = ConveyorController.Instance.Path;
             Vector3 entrancePosition = path.GetPosition(ConveyorController.Instance.EntranceDistance);
 
             stack.JumpToConveyor(entrancePosition, () => { ConveyorController.Instance.TryAddStack(stack); });

@@ -1,30 +1,7 @@
-﻿using UnityEngine;
-
-namespace RestaurantLoop.Core
+﻿namespace RestaurantLoop.Core
 {
     /// <summary>
-    /// Holds the state and item hierarchy for an individual rack slot.
+    /// Slot implementation for the Rack system.
     /// </summary>
-    public class RackSlot : MonoBehaviour
-    {
-        public bool IsOccupied { get; private set; }
-        public StackItem CurrentStack { get; private set; }
-
-        public void PlaceStack(StackItem stack)
-        {
-            CurrentStack = stack;
-            IsOccupied = stack != null;
-
-            if (stack != null)
-            {
-                stack.transform.SetParent(transform);
-            }
-        }
-
-        public void ClearSlot()
-        {
-            CurrentStack = null;
-            IsOccupied = false;
-        }
-    }
+    public class RackSlot : BaseSlot { }
 }

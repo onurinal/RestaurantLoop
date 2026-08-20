@@ -4,9 +4,9 @@ using DG.Tweening;
 namespace RestaurantLoop.Core
 {
     /// <summary>
-    /// Controls item movement on the conveyor belt, jump animations, and safe click feedback.
+    /// Handles stack movement along the spline, jump tweens, and input interaction.
     /// </summary>
-    public class StackItem : MonoBehaviour
+    public class StackItem : MonoBehaviour, IInteractable
     {
         [SerializeField] private int remainingCount = 10;
         [SerializeField] private float jumpPower = 1.5f;
@@ -18,6 +18,33 @@ namespace RestaurantLoop.Core
 
         public int RemainingItemCount => remainingCount;
         public bool IsJumping { get; private set; }
+
+        public void OnTap()
+        {
+            if (IsJumping)
+            {
+                return;
+            }
+
+            // Check if the stack belongs to a Queue Slot
+            QueueSlot queueSlot = GetComponentInParent<QueueSlot>();
+            if (queueSlot != null)
+            {
+                QueueColumn column = queueSlot.GetComponentInParent<QueueColumn>();
+                if (column != null && column.FrontSlot == queueSlot)
+                {
+                    column.TrySendFrontStackToBelt();
+                    return;
+                }
+            }
+
+            // Check if the stack belongs to a Rack Slot (Rack Reuse)
+            RackSlot rackSlot = GetComponentInParent<RackSlot>();
+            if (rackSlot != null && RackManager.Instance != null)
+            {
+                RackManager.Instance.TrySendRackStackToBelt(this);
+            }
+        }
 
         public void InitializeOnBelt(SplineConveyorPath path, float startDistance, float totalDistanceToExit)
         {

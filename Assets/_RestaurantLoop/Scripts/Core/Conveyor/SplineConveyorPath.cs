@@ -18,9 +18,6 @@ namespace RestaurantLoop.Core
             GetOrCalculateLength();
         }
 
-        /// <summary>
-        /// Calculates spline length dynamically if not calculated yet (e.g. in Edit Mode).
-        /// </summary>
         public float GetOrCalculateLength()
         {
             if (splineContainer == null)
@@ -71,13 +68,7 @@ namespace RestaurantLoop.Core
             }
 
             Vector3 tangent = Vector3.Normalize(splineContainer.EvaluateTangent(t));
-
-            if (!isClockwise)
-            {
-                return -tangent;
-            }
-
-            return tangent;
+            return isClockwise ? tangent : -tangent;
         }
     }
 }
