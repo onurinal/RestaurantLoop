@@ -4,7 +4,7 @@ using UnityEngine.Splines;
 namespace RestaurantLoop.Core
 {
     /// <summary>
-    /// Calculates positions and directions along the spline.
+    /// Pure geometry handler that calculates positions and directions along the spline.
     /// </summary>
     [RequireComponent(typeof(SplineContainer))]
     public class SplineConveyorPath : MonoBehaviour
@@ -15,20 +15,38 @@ namespace RestaurantLoop.Core
 
         private void Awake()
         {
+            GetOrCalculateLength();
+        }
+
+        /// <summary>
+        /// Calculates spline length dynamically if not calculated yet (e.g. in Edit Mode).
+        /// </summary>
+        public float GetOrCalculateLength()
+        {
             if (splineContainer == null)
             {
                 splineContainer = GetComponent<SplineContainer>();
             }
 
-            Length = splineContainer.CalculateLength();
+            if (splineContainer != null)
+            {
+                Length = splineContainer.CalculateLength();
+                return Length;
+            }
+
+            return 0f;
         }
 
-        /// <summary>
-        /// Calculates world position along the spline based on distance.
-        /// </summary>
         public Vector3 GetPosition(float distance)
         {
-            float t = (distance % Length) / Length;
+            float currentLength = Length > 0f ? Length : GetOrCalculateLength();
+
+            if (currentLength <= 0f)
+            {
+                return transform.position;
+            }
+
+            float t = (distance % currentLength) / currentLength;
             if (t < 0f)
             {
                 t += 1f;
@@ -37,12 +55,16 @@ namespace RestaurantLoop.Core
             return splineContainer.EvaluatePosition(t);
         }
 
-        /// <summary>
-        /// Calculates movement direction vector along the spline.
-        /// </summary>
         public Vector3 GetDirection(float distance, bool isClockwise)
         {
-            float t = (distance % Length) / Length;
+            float currentLength = Length > 0f ? Length : GetOrCalculateLength();
+
+            if (currentLength <= 0f)
+            {
+                return transform.forward;
+            }
+
+            float t = (distance % currentLength) / currentLength;
             if (t < 0f)
             {
                 t += 1f;

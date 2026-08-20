@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace RestaurantLoop.Core
 {
     /// <summary>
-    /// Controls conveyor simulation settings including capacity, speed, direction, and spawn entrance.
+    /// Controls conveyor simulation, capacity reservations, and entrance cooldowns.
     /// </summary>
     public class ConveyorController : MonoBehaviour
     {
@@ -14,13 +15,21 @@ namespace RestaurantLoop.Core
         [SerializeField] private float moveSpeed = 5f;
         [SerializeField] private int maxCapacity = 5;
         [SerializeField] private bool isClockwise = true;
+
+        [Header("Spline Points")]
         [Range(0f, 1f)] [SerializeField] private float entranceRatio = 0f;
+        [Range(0f, 1f)] [SerializeField] private float exitRatio = 0.8f;
 
         private readonly List<StackItem> activeStacks = new List<StackItem>();
+        private int occupiedCapacity = 0;
+        private bool isCooldownActive = false;
 
-        public bool CanAcceptStack => activeStacks.Count < maxCapacity;
+        // Conveyor refuses new items if full OR during exit cooldown
+        public bool CanAcceptStack => occupiedCapacity < maxCapacity && !isCooldownActive;
         public bool IsClockwise => isClockwise;
-        public float EntranceDistance => entranceRatio * path.Length;
+        public float MoveSpeed => moveSpeed;
+        public float EntranceDistance => entranceRatio * (path != null ? path.GetOrCalculateLength() : 0f);
+        public float ExitDistance => exitRatio * (path != null ? path.GetOrCalculateLength() : 0f);
 
         private void Awake()
         {
@@ -42,36 +51,86 @@ namespace RestaurantLoop.Core
             }
         }
 
-        /// <summary>
-        /// Attempts to add a stack to the conveyor and initializes its position at the configured entrance point.
-        /// </summary>
-        public bool TryAddStack(StackItem stack)
+        public bool TryReserveSlot()
         {
             if (!CanAcceptStack)
             {
                 return false;
             }
 
-            activeStacks.Add(stack);
-            stack.InitializeOnBelt(path, EntranceDistance);
+            occupiedCapacity++;
             return true;
         }
 
-        public void RemoveStack(StackItem stack)
+        public bool TryAddStack(StackItem stack)
+        {
+            activeStacks.Add(stack);
+            stack.InitializeOnBelt(path, EntranceDistance, GetRequiredTravelDistance());
+            return true;
+        }
+
+        public void RemoveStackFromBelt(StackItem stack)
         {
             activeStacks.Remove(stack);
+        }
+
+        public void ReleaseCapacity()
+        {
+            if (occupiedCapacity > 0)
+            {
+                occupiedCapacity--;
+            }
+        }
+
+        public float GetRequiredTravelDistance()
+        {
+            float totalLength = path != null ? path.GetOrCalculateLength() : 0f;
+
+            if (totalLength <= 0f)
+            {
+                return 0f;
+            }
+
+            float entry = EntranceDistance;
+            float exit = ExitDistance;
+
+            if (isClockwise)
+            {
+                if (exit > entry)
+                {
+                    return exit - entry;
+                }
+
+                return (totalLength - entry) + exit;
+            }
+            else
+            {
+                if (entry > exit)
+                {
+                    return entry - exit;
+                }
+
+                return entry + (totalLength - exit);
+            }
         }
 
         private void OnDrawGizmosSelected()
         {
             if (path == null)
             {
+                path = GetComponent<SplineConveyorPath>();
+            }
+
+            if (path == null)
+            {
                 return;
             }
 
-            // Visualizes the entrance point in the scene view
             Gizmos.color = Color.green;
-            Gizmos.DrawSphere(path.GetPosition(EntranceDistance), 0.3f);
+            Gizmos.DrawSphere(path.GetPosition(EntranceDistance), 0.35f);
+
+            Gizmos.color = Color.red;
+            Gizmos.DrawSphere(path.GetPosition(ExitDistance), 0.35f);
         }
     }
 }
