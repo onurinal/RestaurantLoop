@@ -1,74 +1,65 @@
 ﻿using UnityEngine;
-using UnityEngine.Splines;
+using Dreamteck.Splines;
 
 namespace RestaurantLoop.Core
 {
-    /// <summary>
-    /// Pure geometry handler that calculates positions and directions along the spline.
-    /// </summary>
-    [RequireComponent(typeof(SplineContainer))]
+    [RequireComponent(typeof(SplineComputer))]
     public class SplineConveyorPath : MonoBehaviour
     {
-        [SerializeField] private SplineContainer splineContainer;
+        [SerializeField] private SplineComputer splineComputer;
 
         public float Length { get; private set; }
 
         private void Awake()
         {
-            GetOrCalculateLength();
+            Initialize();
         }
 
-        public float GetOrCalculateLength()
+        public void Initialize()
         {
-            if (splineContainer == null)
+            if (splineComputer == null)
             {
-                splineContainer = GetComponent<SplineContainer>();
+                splineComputer = GetComponent<SplineComputer>();
             }
 
-            if (splineContainer != null)
+            if (splineComputer != null)
             {
-                Length = splineContainer.CalculateLength();
-                return Length;
+                Length = splineComputer.CalculateLength();
             }
-
-            return 0f;
         }
 
         public Vector3 GetPosition(float distance)
         {
-            float currentLength = Length > 0f ? Length : GetOrCalculateLength();
+            if (Length <= 0f)
+            {
+                Initialize();
+            }
 
-            if (currentLength <= 0f)
+            if (Length <= 0f)
             {
                 return transform.position;
             }
 
-            float t = (distance % currentLength) / currentLength;
-            if (t < 0f)
-            {
-                t += 1f;
-            }
-
-            return splineContainer.EvaluatePosition(t);
+            float t = Mathf.Repeat(distance, Length) / Length;
+            return splineComputer.EvaluatePosition(t);
         }
 
         public Vector3 GetDirection(float distance, bool isClockwise)
         {
-            float currentLength = Length > 0f ? Length : GetOrCalculateLength();
+            if (Length <= 0f)
+            {
+                Initialize();
+            }
 
-            if (currentLength <= 0f)
+            if (Length <= 0f)
             {
                 return transform.forward;
             }
 
-            float t = (distance % currentLength) / currentLength;
-            if (t < 0f)
-            {
-                t += 1f;
-            }
+            float t = Mathf.Repeat(distance, Length) / Length;
+            Vector3 forward = splineComputer.Evaluate(t).forward;
 
-            Vector3 tangent = Vector3.Normalize(splineContainer.EvaluateTangent(t));
-            return isClockwise ? tangent : -tangent;
+            return isClockwise ? forward : -forward;
         }
     }
 }

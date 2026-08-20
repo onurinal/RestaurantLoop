@@ -6,6 +6,7 @@ namespace RestaurantLoop.Core
 {
     /// <summary>
     /// Manages dynamic rack slot spawning, item placement, and rack reuse dispatching.
+    /// Safely aligns relative to ConveyorController bounds.
     /// </summary>
     public class RackManager : MonoBehaviour
     {
@@ -14,7 +15,7 @@ namespace RestaurantLoop.Core
         [Header("Prefabs & Anchors")]
         [SerializeField] private RackSlot slotPrefab;
         [SerializeField] private Transform beltAnchor;
-        [SerializeField] private Vector3 offsetFromBelt = new Vector3(0f, 0f, -7f);
+        [SerializeField] private Vector3 offsetFromBelt = new Vector3(0f, 0f, -8f);
         [SerializeField] private bool lockToWorldCenterX = true;
 
         [Header("Layout Settings")]
@@ -44,6 +45,12 @@ namespace RestaurantLoop.Core
 
         public Vector3 GetCalculatedCenterPosition()
         {
+            // Fallback to ConveyorController if beltAnchor is not manually assigned
+            if (beltAnchor == null && ConveyorController.Instance != null)
+            {
+                beltAnchor = ConveyorController.Instance.transform;
+            }
+
             Vector3 origin = beltAnchor != null ? beltAnchor.position + offsetFromBelt : transform.position;
 
             if (lockToWorldCenterX)

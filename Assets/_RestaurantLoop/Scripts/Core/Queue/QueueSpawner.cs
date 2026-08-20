@@ -5,6 +5,7 @@ namespace RestaurantLoop.Core
 {
     /// <summary>
     /// Spawns queue layout columns and slots dynamically with scene Gizmo preview.
+    /// Aligns relative to RackManager center position.
     /// </summary>
     public class QueueSpawner : MonoBehaviour
     {
@@ -14,7 +15,7 @@ namespace RestaurantLoop.Core
 
         [Header("Positioning & Offset")]
         [SerializeField] private RackManager rackManager;
-        [SerializeField] private Vector3 offsetFromRack = new Vector3(0f, 0f, -1.8f);
+        [SerializeField] private Vector3 offsetFromRack = new Vector3(0f, 0f, -2.2f);
 
         [Header("Layout Settings")]
         [SerializeField] private float columnSpacing = 1.1f;
@@ -56,7 +57,7 @@ namespace RestaurantLoop.Core
         {
             if (rackManager == null)
             {
-                rackManager = FindFirstObjectByType<RackManager>();
+                rackManager = RackManager.Instance != null ? RackManager.Instance : FindFirstObjectByType<RackManager>();
             }
 
             if (rackManager != null)

@@ -3,9 +3,6 @@ using DG.Tweening;
 
 namespace RestaurantLoop.Core
 {
-    /// <summary>
-    /// Handles stack movement along the spline, jump tweens, and input interaction.
-    /// </summary>
     public class StackItem : MonoBehaviour, IInteractable
     {
         [SerializeField] private int remainingCount = 10;
@@ -21,12 +18,8 @@ namespace RestaurantLoop.Core
 
         public void OnTap()
         {
-            if (IsJumping)
-            {
-                return;
-            }
+            if (IsJumping) return;
 
-            // Check if the stack belongs to a Queue Slot
             QueueSlot queueSlot = GetComponentInParent<QueueSlot>();
             if (queueSlot != null)
             {
@@ -38,7 +31,6 @@ namespace RestaurantLoop.Core
                 }
             }
 
-            // Check if the stack belongs to a Rack Slot (Rack Reuse)
             RackSlot rackSlot = GetComponentInParent<RackSlot>();
             if (rackSlot != null && RackManager.Instance != null)
             {
@@ -57,18 +49,12 @@ namespace RestaurantLoop.Core
 
         public void MoveAlongBelt(SplineConveyorPath path, float speed, bool isClockwise, float deltaTime)
         {
-            if (IsJumping)
-            {
-                return;
-            }
+            if (IsJumping) return;
 
             float moveDelta = (isClockwise ? speed : -speed) * deltaTime;
 
             currentDistance = (currentDistance + moveDelta) % path.Length;
-            if (currentDistance < 0f)
-            {
-                currentDistance += path.Length;
-            }
+            if (currentDistance < 0f) currentDistance += path.Length;
 
             traveledDistance += Mathf.Abs(moveDelta);
             UpdateTransform(path, isClockwise);
@@ -107,10 +93,7 @@ namespace RestaurantLoop.Core
 
         public void Shake()
         {
-            if (IsJumping || DOTween.IsTweening(transform))
-            {
-                return;
-            }
+            if (IsJumping || DOTween.IsTweening(transform)) return;
 
             transform.DOKill();
             transform.localPosition = Vector3.zero;

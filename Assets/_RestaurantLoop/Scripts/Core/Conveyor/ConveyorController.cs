@@ -1,11 +1,9 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using TMPro; // TextMeshPro namespace'i eklendi
 
 namespace RestaurantLoop.Core
 {
-    /// <summary>
-    /// Controls conveyor simulation, capacity reservations, and entrance/exit ratios.
-    /// </summary>
     public class ConveyorController : MonoBehaviour
     {
         public static ConveyorController Instance { get; private set; }
@@ -14,6 +12,9 @@ namespace RestaurantLoop.Core
         [SerializeField] private float moveSpeed = 5f;
         [SerializeField] private int maxCapacity = 5;
         [SerializeField] private bool isClockwise = true;
+
+        [Header("UI References")]
+        [SerializeField] private TMP_Text countText; // Indicator UI Text referansı
 
         [Header("Spline Points")]
         [Range(0f, 1f)] [SerializeField] private float entranceRatio = 0f;
@@ -26,19 +27,21 @@ namespace RestaurantLoop.Core
         public bool IsClockwise => isClockwise;
         public float MoveSpeed => moveSpeed;
         public SplineConveyorPath Path => path;
-        public float EntranceDistance => entranceRatio * (path != null ? path.GetOrCalculateLength() : 0f);
-        public float ExitDistance => exitRatio * (path != null ? path.GetOrCalculateLength() : 0f);
+
+        public float EntranceDistance => entranceRatio * (path != null ? path.Length : 0f);
+        public float ExitDistance => exitRatio * (path != null ? path.Length : 0f);
 
         private void Awake()
         {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Destroy(gameObject);
-            }
+            if (Instance == null) Instance = this;
+            else Destroy(gameObject);
+
+            if (path != null) path.Initialize();
+        }
+
+        private void Start()
+        {
+            UpdateUI();
         }
 
         private void Update()
@@ -51,12 +54,10 @@ namespace RestaurantLoop.Core
 
         public bool TryReserveSlot()
         {
-            if (!CanAcceptStack)
-            {
-                return false;
-            }
+            if (!CanAcceptStack) return false;
 
             occupiedCapacity++;
+            UpdateUI();
             return true;
         }
 
@@ -77,40 +78,37 @@ namespace RestaurantLoop.Core
             if (occupiedCapacity > 0)
             {
                 occupiedCapacity--;
+                UpdateUI();
             }
         }
 
         public float GetRequiredTravelDistance()
         {
-            float totalLength = path != null ? path.GetOrCalculateLength() : 0f;
-
-            if (totalLength <= 0f)
-            {
-                return 0f;
-            }
+            float totalLength = path != null ? path.Length : 0f;
+            if (totalLength <= 0f) return 0f;
 
             float entry = EntranceDistance;
             float exit = ExitDistance;
 
             if (isClockwise)
-            {
                 return exit > entry ? exit - entry : (totalLength - entry) + exit;
-            }
 
             return entry > exit ? entry - exit : entry + (totalLength - exit);
         }
 
+        // Updates conveyor capacity text
+        private void UpdateUI()
+        {
+            if (countText != null)
+            {
+                countText.text = $"{occupiedCapacity} / {maxCapacity}";
+            }
+        }
+
         private void OnDrawGizmosSelected()
         {
-            if (path == null)
-            {
-                path = GetComponent<SplineConveyorPath>();
-            }
-
-            if (path == null)
-            {
-                return;
-            }
+            if (path == null) path = GetComponent<SplineConveyorPath>();
+            if (path == null) return;
 
             Gizmos.color = Color.green;
             Gizmos.DrawSphere(path.GetPosition(EntranceDistance), 0.35f);
