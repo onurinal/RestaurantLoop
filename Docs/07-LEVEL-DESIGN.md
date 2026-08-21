@@ -3,7 +3,7 @@
 - Owner: Enes
 - Technical reviewer: Onur
 - Status: Production specification
-- Last reviewed: 2026-08-19
+- Last reviewed: 2026-08-21
 - Related GDD sections: 3, 5, 6
 - Approval: Core grammar approved; cadence partly blocked
 
@@ -12,6 +12,17 @@
 Each `LevelDefinition` contains stable ID/version, ordered queue stacks, customer
 nodes and food orders, layers, table groups, allowed power-ups, rule profile,
 feel profile, and tuning history. Runtime state never lives in the asset.
+
+## Current Implementation Boundary
+
+The active `Onur-Gameplay` scene is a test sandbox, not a level. Its queue and
+customer spawners independently randomize food assignments, so it can produce
+unwinnable setups. It may be used to inspect interaction and presentation only;
+it must not be used for level difficulty, solvability, or progression evidence.
+
+No production level is authored until `LevelDefinition`/`LevelData` represents
+both queue supply and customer demand deterministically, and the conveyor/rack
+deadlock in `PROBLEMS.md` is resolved.
 
 ## Mandatory Invariants
 
@@ -55,4 +66,3 @@ onboarding evidence is approved.
 - Device readability checked.
 - First-attempt human evidence recorded when available.
 - Tuning changes and reasons retained.
-

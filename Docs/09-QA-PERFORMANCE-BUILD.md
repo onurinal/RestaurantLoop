@@ -3,11 +3,16 @@
 - Owner: Hazar
 - Reviewer: Onur
 - Status: Working checklist
-- Last reviewed: 2026-08-19
+- Last reviewed: 2026-08-21
 - Related GDD sections: 3, 5, 7, 8
 - Approval: Core targets approved
 
 ## Automated Tests
+
+**Current status:** no automated gameplay-test suite exists yet. The following
+are required acceptance tests, not completed evidence. A clean Editor smoke
+test on 2026-08-21 launched the current scene with no Console errors; that does
+not validate the cases below.
 
 - Conservation, IDs, references, table membership, and topology.
 - Queue-front and rack-only input.
@@ -54,4 +59,3 @@
 Clean install, menu, level selection, tutorial, fail/retry, win/next, progression,
 background restart, L1/L10/L20/L30 smoke tests, no missing assets, no unresolved
 core blockers, and final known-issues report.
-

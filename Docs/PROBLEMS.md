@@ -3,7 +3,7 @@
 - Owner: Enes
 - Contributors: everyone
 - Status: Active
-- Last reviewed: 2026-08-19
+- Last reviewed: 2026-08-21
 - Approval: Living log
 
 ## P-001 - Initial PDF visual inspection unavailable
@@ -54,4 +54,62 @@
 - Affects: 30 FPS and memory acceptance on Android 10 / 3 GB RAM.
 - Safe work: editor profiling and APK generation.
 - Required action: assign a physical target device and record model/OS/RAM.
+
+## P-006 - Full rack can deadlock the conveyor
+
+- Status: Open core blocker.
+- Intended operation: a stack reaching its exit should enter an available rack
+  slot, or trigger the approved fail/blocked behavior.
+- Affected system: `StackItem.OnExitReached`, `RackManager.TryAddStackToRack`,
+  `ConveyorManager` capacity.
+- Observed failure: `StackItem` sets `IsJumping` before attempting rack entry.
+  If the rack is full, the rack returns false; the stack remains active on the
+  belt but no longer moves, and its reserved capacity is never released.
+- Missing information: the GDD/reference-confirmed full-rack fail behavior.
+- Blocked work: reliable gameplay loop acceptance and production-level content.
+- Safe workaround: do not treat rack-full behavior as complete; implement an
+  explicit reversible state or approved fail outcome before level authoring.
+- Required action: Onur resolves the state transition; Enes records the
+  approved fail behavior if the GDD is ambiguous.
+
+## P-007 - Current scene creates non-deterministic, potentially unwinnable runs
+
+- Status: Open prototype limitation.
+- Intended operation: every production level has conserved food supply/demand
+  and a reproducible solution.
+- Affected system: `QueueManager` and `CrowdTestSpawner` random item selection.
+- Observed failure: queue stacks and customer orders are assigned independently
+  with `Random.Range`; no conservation or solvability check exists.
+- Safe workaround: use the scene only as a graybox interaction sandbox.
+- Required action: replace random production spawning with deterministic level
+  data before level, difficulty, or progression work.
+
+## P-008 - Component prototype cannot yet support solver, bots, or validator
+
+- Status: Open architecture gap.
+- Intended operation: runtime, tests, solver, and policy bots share one
+  deterministic rules implementation.
+- Affected system: current `QueueManager`, `ConveyorManager`, `RackManager`,
+  `CrowdManager`, and `StackItem` MonoBehaviours.
+- Observed limitation: gameplay state, Unity transforms, singleton lookups, and
+  DOTween presentation are coupled; no pure-C# state/reducer or automated
+  gameplay test suite exists.
+- Safe workaround: continue the component loop only for immediate graybox
+  iteration under D-013.
+- Required action: extract the authoritative domain transition before production
+  validation work.
+
+## P-009 - Trello Code status lacks acceptance evidence
+
+- Status: Open production-process issue.
+- Intended operation: Done-Code means implemented, verified, documented, and
+  GDD-ready.
+- Affected source: Ekip 3, `Done - Code` and `TODO - Code` lists.
+- Observed failure: cards have no owner, due date, acceptance checklist, or
+  test evidence. Several Done cards represent valid graybox work but still have
+  known defects or incomplete production behavior.
+- Safe workaround: treat Done-Code as “first implementation exists” until the
+  board is reconciled; move partial cards to In Progress.
+- Required action: add acceptance criteria and update the affected card status
+  before relying on the board for production reporting.
 

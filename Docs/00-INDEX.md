@@ -2,7 +2,7 @@
 
 - Owner: Enes
 - Status: Active
-- Last reviewed: 2026-08-19
+- Last reviewed: 2026-08-21
 - Approval: Working baseline
 
 The source PDF at `../restaurant-loop-one-pager.pdf` is authoritative. Start
@@ -22,6 +22,7 @@ the documents below in order.
 11. `REFERENCE-OBSERVATIONS.md` - evidence that may resolve GDD gaps.
 12. `DECISIONS.md` - owner-approved interpretations.
 13. `PROBLEMS.md` - blockers, limitations, attempted workarounds.
+14. `11-IMPLEMENTATION-STATUS.md` - verified current implementation, architecture stage, and Trello reconciliation.
 
 ## Status Vocabulary
 
@@ -33,7 +34,11 @@ the documents below in order.
 
 ## Current Milestone
 
-Foundation implementation. The GDD text and all nine embedded figures have been
-extracted and inspected. Reference-game behavior, artist-authored final assets,
-human playtest data, and minimum-spec device measurements remain unavailable.
+Component-loop stabilization. The active gameplay scene is a MonoBehaviour-based
+graybox prototype using ScriptableObject food assets, singleton managers, and
+Dreamteck spline presentation. It is not yet the deterministic, solver-ready
+production architecture described as the target in `03-ARCHITECTURE.md`.
 
+The GDD text and all nine embedded figures have been extracted and inspected.
+Reference-game behavior, artist-authored final assets, human playtest data, and
+minimum-spec device measurements remain unavailable.

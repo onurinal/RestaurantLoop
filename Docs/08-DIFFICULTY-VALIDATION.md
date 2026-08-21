@@ -2,12 +2,16 @@
 
 - Owner: Enes
 - Technical owner: Onur
-- Status: Implementation specification
-- Last reviewed: 2026-08-19
+- Status: Planned; blocked on deterministic gameplay state
+- Last reviewed: 2026-08-21
 - Related GDD section: 5
 - Approval: Approved method
 
 ## Exact Solver
+
+**Current status:** not implemented. The active component prototype contains
+random test spawning and no reusable pure-C# state transition. It cannot be
+used for solver, bot, replay, or Monte Carlo claims.
 
 Searches legal commands using the production state transition code. It reports
 one solution, explored states, peak rack occupancy, forced decisions, alternate
@@ -54,4 +58,3 @@ recalibrate policies before trusting model-driven tuning.
 Reports always distinguish exact solvability, modeled policy difficulty, and
 measured human results. Missing human data is a blocker, not a zero-percent fail
 rate.
-
