@@ -23,5 +23,7 @@ namespace RestaurantLoop.Core
             CurrentStack = null;
             IsOccupied = false;
         }
+
+        public abstract void OnStackTapped(StackItem stack);
     }
 }

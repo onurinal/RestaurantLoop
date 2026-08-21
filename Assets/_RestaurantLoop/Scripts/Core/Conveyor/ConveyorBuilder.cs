@@ -30,6 +30,13 @@ namespace RestaurantLoop.Core
         [SerializeField] private float lineStep = 1f;
 
         public SplineComputer Spline => splineComputer;
+        public float Width => width;
+        public float Height => height;
+
+        public float YOffset => yOffset;
+        public float ZOffset => zOffset;
+
+        public Vector3 CenterPosition => transform.position + new Vector3(0f, yOffset, zOffset);
 
         private void OnValidate()
         {

@@ -3,11 +3,17 @@ using DG.Tweening;
 
 namespace RestaurantLoop.Core
 {
+    /// <summary>
+    /// Controls stack movement along the spline, jump tweens, and O(1) grid service detection.
+    /// </summary>
     public class StackItem : MonoBehaviour, IInteractable
     {
         [SerializeField] private int remainingCount = 10;
         [SerializeField] private float jumpPower = 1.5f;
         [SerializeField] private float jumpDuration = 0.5f;
+
+        [Header("Data")]
+        [SerializeField] private ItemDataSO itemData;
 
         private float currentDistance;
         private float traveledDistance;
@@ -15,27 +21,25 @@ namespace RestaurantLoop.Core
 
         public int RemainingItemCount => remainingCount;
         public bool IsJumping { get; private set; }
+        public ItemDataSO Data => itemData;
+
+        public void InitializeData(ItemDataSO data)
+        {
+            if (data != null)
+            {
+                itemData = data;
+            }
+        }
 
         public void OnTap()
         {
-            if (IsJumping) return;
-
-            QueueSlot queueSlot = GetComponentInParent<QueueSlot>();
-            if (queueSlot != null)
+            if (IsJumping)
             {
-                QueueColumn column = queueSlot.GetComponentInParent<QueueColumn>();
-                if (column != null && column.FrontSlot == queueSlot)
-                {
-                    column.TrySendFrontStackToBelt();
-                    return;
-                }
+                return;
             }
 
-            RackSlot rackSlot = GetComponentInParent<RackSlot>();
-            if (rackSlot != null && RackManager.Instance != null)
-            {
-                RackManager.Instance.TrySendRackStackToBelt(this);
-            }
+            // The owning slot (Queue or Rack) decides what a tap means in its context.
+            GetComponentInParent<BaseSlot>()?.OnStackTapped(this);
         }
 
         public void InitializeOnBelt(SplineConveyorPath path, float startDistance, float totalDistanceToExit)
@@ -49,15 +53,23 @@ namespace RestaurantLoop.Core
 
         public void MoveAlongBelt(SplineConveyorPath path, float speed, bool isClockwise, float deltaTime)
         {
-            if (IsJumping) return;
+            if (IsJumping)
+            {
+                return;
+            }
 
             float moveDelta = (isClockwise ? speed : -speed) * deltaTime;
 
             currentDistance = (currentDistance + moveDelta) % path.Length;
-            if (currentDistance < 0f) currentDistance += path.Length;
+            if (currentDistance < 0f)
+            {
+                currentDistance += path.Length;
+            }
 
             traveledDistance += Mathf.Abs(moveDelta);
             UpdateTransform(path, isClockwise);
+
+            CheckForNearbyCustomer();
 
             if (traveledDistance >= targetTravelDistance)
             {
@@ -93,13 +105,35 @@ namespace RestaurantLoop.Core
 
         public void Shake()
         {
-            if (IsJumping || DOTween.IsTweening(transform)) return;
+            if (IsJumping || DOTween.IsTweening(transform))
+            {
+                return;
+            }
 
             transform.DOKill();
             transform.localPosition = Vector3.zero;
 
             transform.DOShakePosition(0.2f, 0.12f, 10, 90f)
                 .OnComplete(() => { transform.localPosition = Vector3.zero; });
+        }
+
+        private void CheckForNearbyCustomer()
+        {
+            if (IsJumping || itemData == null || CrowdManager.Instance == null)
+            {
+                return;
+            }
+
+            Customer targetCustomer = CrowdManager.Instance.CheckServiceForBeltItem(currentDistance, itemData);
+
+            if (targetCustomer != null)
+            {
+                IsJumping = true;
+                ConveyorManager.Instance.RemoveStackFromBelt(this);
+                ConveyorManager.Instance.ReleaseCapacity();
+
+                targetCustomer.ReceiveItem(this, () => { CrowdManager.Instance.OnCustomerServed(targetCustomer); });
+            }
         }
 
         private void UpdateTransform(SplineConveyorPath path, bool isClockwise)

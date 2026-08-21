@@ -46,9 +46,9 @@ namespace RestaurantLoop.Core
         public Vector3 GetCalculatedCenterPosition()
         {
             // Fallback to ConveyorController if beltAnchor is not manually assigned
-            if (beltAnchor == null && ConveyorController.Instance != null)
+            if (beltAnchor == null && ConveyorManager.Instance != null)
             {
-                beltAnchor = ConveyorController.Instance.transform;
+                beltAnchor = ConveyorManager.Instance.transform;
             }
 
             Vector3 origin = beltAnchor != null ? beltAnchor.position + offsetFromBelt : transform.position;
@@ -95,10 +95,10 @@ namespace RestaurantLoop.Core
                 return false;
             }
 
-            ConveyorController.Instance.RemoveStackFromBelt(stack);
+            ConveyorManager.Instance.RemoveStackFromBelt(stack);
             emptySlot.PlaceStack(stack);
 
-            stack.JumpToSlot(emptySlot.transform, () => { ConveyorController.Instance.ReleaseCapacity(); });
+            stack.JumpToSlot(emptySlot.transform, () => { ConveyorManager.Instance.ReleaseCapacity(); });
 
             return true;
         }
@@ -117,7 +117,7 @@ namespace RestaurantLoop.Core
                 return false;
             }
 
-            if (!ConveyorController.Instance.TryReserveSlot())
+            if (!ConveyorManager.Instance.CanAcceptStack)
             {
                 stack.Shake();
                 return false;
@@ -129,11 +129,7 @@ namespace RestaurantLoop.Core
             targetSlot.ClearSlot();
             stack.transform.SetParent(null);
 
-            SplineConveyorPath path = ConveyorController.Instance.Path;
-            Vector3 entrancePosition = path.GetPosition(ConveyorController.Instance.EntranceDistance);
-
-            stack.JumpToConveyor(entrancePosition, () => { ConveyorController.Instance.TryAddStack(stack); });
-
+            ConveyorManager.Instance.TrySendStackToBelt(stack);
             return true;
         }
 

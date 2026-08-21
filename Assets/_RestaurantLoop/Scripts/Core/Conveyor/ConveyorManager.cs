@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
-using TMPro; // TextMeshPro namespace'i eklendi
+using TMPro;
 
 namespace RestaurantLoop.Core
 {
-    public class ConveyorController : MonoBehaviour
+    public class ConveyorManager : MonoBehaviour
     {
-        public static ConveyorController Instance { get; private set; }
+        public static ConveyorManager Instance { get; private set; }
 
         [SerializeField] private SplineConveyorPath path;
         [SerializeField] private float moveSpeed = 5f;
@@ -14,7 +14,7 @@ namespace RestaurantLoop.Core
         [SerializeField] private bool isClockwise = true;
 
         [Header("UI References")]
-        [SerializeField] private TMP_Text countText; // Indicator UI Text referansı
+        [SerializeField] private TMP_Text countText;
 
         [Header("Spline Points")]
         [Range(0f, 1f)] [SerializeField] private float entranceRatio = 0f;
@@ -82,6 +82,19 @@ namespace RestaurantLoop.Core
             }
         }
 
+        public bool TrySendStackToBelt(StackItem stack)
+        {
+            if (!TryReserveSlot())
+            {
+                stack.Shake();
+                return false;
+            }
+
+            Vector3 entrancePosition = path.GetPosition(EntranceDistance);
+            stack.JumpToConveyor(entrancePosition, () => TryAddStack(stack));
+            return true;
+        }
+
         public float GetRequiredTravelDistance()
         {
             float totalLength = path != null ? path.Length : 0f;
@@ -96,7 +109,7 @@ namespace RestaurantLoop.Core
             return entry > exit ? entry - exit : entry + (totalLength - exit);
         }
 
-        // Updates conveyor capacity text
+        // Updates the belt capacity indicator text.
         private void UpdateUI()
         {
             if (countText != null)

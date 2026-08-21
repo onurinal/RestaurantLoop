@@ -38,7 +38,7 @@ namespace RestaurantLoop.Core
                 return;
             }
 
-            if (!ConveyorController.Instance.TryReserveSlot())
+            if (!ConveyorManager.Instance.CanAcceptStack)
             {
                 front.CurrentStack.Shake();
                 return;
@@ -47,11 +47,7 @@ namespace RestaurantLoop.Core
             StackItem stackToSend = front.CurrentStack;
             front.ClearSlot();
 
-            SplineConveyorPath path = ConveyorController.Instance.Path;
-            Vector3 entrancePosition = path.GetPosition(ConveyorController.Instance.EntranceDistance);
-
-            stackToSend.JumpToConveyor(entrancePosition, () => { ConveyorController.Instance.TryAddStack(stackToSend); });
-
+            ConveyorManager.Instance.TrySendStackToBelt(stackToSend);
             ShiftColumnItemsUp();
         }
 

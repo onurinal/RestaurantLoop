@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6188d261b4bb40bba52a9ed5fdd04069, type: 3}
+  m_Name: SO_Purple
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.ItemDataSO
+  itemName: Purple Item
+  uiColor: {r: 0.5506661, g: 0, b: 0.69803923, a: 1}
+  balloonIcon: {fileID: 0}
+  stackPrefab: {fileID: 8317400590032934289, guid: 19ea9d86b6f92da4da6f02f9fb7b50b2, type: 3}
