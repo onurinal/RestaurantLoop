@@ -7,7 +7,12 @@
     {
         public override void OnStackTapped(StackItem stack)
         {
-            GetComponentInParent<QueueColumn>()?.TrySendFrontStackToBelt();
+            QueueColumn column = GetComponentInParent<QueueColumn>();
+
+            if (column != null && column.FrontSlot == this)
+            {
+                column.TrySendFrontStackToBelt();
+            }
         }
     }
 }

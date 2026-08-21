@@ -5,7 +5,7 @@ using DG.Tweening;
 namespace RestaurantLoop.Core
 {
     /// <summary>
-    /// Manages inner crowd matrix grid and shifts EXACTLY ONE inner customer outward toward cleared edge slots.
+    /// Manages inner crowd matrix grid and pulls the closest available inner customer to fill cleared edge slots.
     /// </summary>
     public class CrowdManager : MonoBehaviour
     {
@@ -55,10 +55,6 @@ namespace RestaurantLoop.Core
             InitializeGridSplineMapping();
         }
 
-        /// <summary>
-        /// True if the given grid coordinate sits on the outer ring of the crowd grid.
-        /// Only edge slots are servable, so this is the single source of truth for that check.
-        /// </summary>
         private bool IsEdgeSlot(int row, int col)
         {
             return row == 0 || row == rows - 1 || col == 0 || col == columns - 1;
@@ -109,6 +105,8 @@ namespace RestaurantLoop.Core
             }
 
             float pathLength = conveyorPath.Length;
+            Customer bestCandidate = null;
+            float minDelta = float.MaxValue;
 
             foreach (Vector2Int coord in edgeCoordinates)
             {
@@ -134,13 +132,14 @@ namespace RestaurantLoop.Core
                     delta = pathLength - delta;
                 }
 
-                if (delta <= alignmentTolerance)
+                if (delta <= alignmentTolerance && delta < minDelta)
                 {
-                    return candidate;
+                    minDelta = delta;
+                    bestCandidate = candidate;
                 }
             }
 
-            return null;
+            return bestCandidate;
         }
 
         public void RegisterCustomer(Customer customer, int row, int col)
@@ -188,33 +187,44 @@ namespace RestaurantLoop.Core
             }
         }
 
+        /// <summary>
+        /// Scans all inner non-edge slots to find the mathematically closest available inner customer and shifts them to the cleared edge slot.
+        /// </summary>
         private void ShiftInnerCustomers(int servedRow, int servedCol)
         {
-            int innerR = servedRow;
-            int innerC = servedCol;
+            int bestR = -1;
+            int bestC = -1;
+            float minSqrDist = float.MaxValue;
 
-            // Target the adjacent inner slot opposite to the cleared edge
-            if (servedRow == 0) innerR = 1;
-            else if (servedRow == rows - 1) innerR = rows - 2;
-
-            if (servedCol == 0) innerC = 1;
-            else if (servedCol == columns - 1) innerC = columns - 2;
-
-            // Strictly verify that the source position is an inner slot (NOT an edge slot)
-            bool isTargetInner = (innerR > 0 && innerR < rows - 1 && innerC > 0 && innerC < columns - 1);
-
-            if (!isTargetInner)
+            // Search the entire inner core for the nearest unserved inner customer
+            for (int r = 0; r < rows; r++)
             {
-                return; // Grid has no inner layers or target is an edge slot
+                for (int c = 0; c < columns; c++)
+                {
+                    if (!IsEdgeSlot(r, c))
+                    {
+                        Customer innerCustomer = grid[r, c];
+                        if (innerCustomer != null && !innerCustomer.IsServed)
+                        {
+                            float sqrDist = (r - servedRow) * (r - servedRow) + (c - servedCol) * (c - servedCol);
+                            if (sqrDist < minSqrDist)
+                            {
+                                minSqrDist = sqrDist;
+                                bestR = r;
+                                bestC = c;
+                            }
+                        }
+                    }
+                }
             }
 
-            Customer innerCustomer = grid[innerR, innerC];
-
-            // Shift ONLY the single inner customer to the edge slot
-            if (innerCustomer != null && !innerCustomer.IsServed)
+            // Move the best candidate into the vacant edge slot
+            if (bestR != -1 && bestC != -1)
             {
+                Customer innerCustomer = grid[bestR, bestC];
+
                 grid[servedRow, servedCol] = innerCustomer;
-                grid[innerR, innerC] = null;
+                grid[bestR, bestC] = null;
 
                 innerCustomer.SetEdgeStatus(true);
 
