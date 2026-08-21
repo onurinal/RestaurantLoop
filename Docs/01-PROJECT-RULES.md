@@ -3,7 +3,7 @@
 - Owner: Onur
 - Reviewer: Hazar
 - Status: Active
-- Last reviewed: 2026-08-19
+- Last reviewed: 2026-08-21
 - Related GDD sections: all
 - Approval: Owner-mandated rules
 
@@ -55,14 +55,30 @@ Every report contains:
 
 ## Engineering Rules
 
-- Gameplay decisions belong to the Unity-independent domain layer.
-- Presentation forwards input and renders domain events; it does not duplicate
-  rules.
-- The game, solver, bots, and tests use the same state transition code.
+### Architecture Stages
+
+- The current graybox gameplay loop is allowed to remain component-based:
+  MonoBehaviours, explicit Inspector references, ScriptableObject authoring data,
+  and tightly scoped manager components may implement the immediate playable
+  loop. This is a temporary, documented prototype stage—not evidence that the
+  domain/solver architecture exists.
+- The production target remains a Unity-independent domain layer. Before
+  production level authoring, exact validation, solver, bots, or difficulty
+  claims begin, rule ownership moves to the domain layer and presentation only
+  forwards commands/renders results.
+- The game, solver, bots, and tests must use the same state transition code once
+  those systems are introduced. Bot or solver output must never be claimed from
+  the current component prototype.
+- Do not introduce a new catch-all `GameManager`, a global string-event bus, or
+  new hidden singleton dependencies. New component dependencies should be
+  serialized explicitly where practical.
+
+### Data and Determinism
+
 - Randomized tests and simulations record seeds.
 - ScriptableObjects are authoring data and are converted to immutable runtime
-  definitions before play.
-- No global string event bus or catch-all `GameManager`.
+  definitions before production play. Random queue/customer spawning is allowed
+  only in clearly named test tooling; it is forbidden in authored levels.
 - No SDK, analytics, ads, IAP, network dependency, or remote configuration.
 - Preserve unrelated user changes. Use Git LFS for large artist sources.
 
@@ -72,4 +88,3 @@ A task is done only when implementation, automated checks, documentation,
 visible error handling, and the relevant acceptance evidence are complete.
 Deadline pressure never converts a blocked or unverified item into a completed
 one.
-

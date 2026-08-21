@@ -2,7 +2,7 @@
 
 - Owner: Enes
 - Status: Active baseline
-- Last reviewed: 2026-08-19
+- Last reviewed: 2026-08-21
 - Approval: Project owner
 
 ## Named Ownership
@@ -12,6 +12,16 @@
 - Enes: GDD/docs, reference synthesis, 30 levels, tutorial, tuning, acceptance.
 - Merve: environment, conveyor/rack/queue, foods, UI art, lighting/readability.
 - Bengisu: characters, rig/animation, balloons, VFX, SFX, ambience/music assets.
+
+## Architecture Stage Gate
+
+The current implementation is permitted to continue as a component-based
+graybox loop for immediate gameplay iteration. It must first resolve the
+recorded conveyor/rack deadlock and deterministic-content gaps. Before the team
+claims a production level, runs validation, or starts solver/bot work, Onur
+extracts the authoritative rules into the domain state transition described in
+`03-ARCHITECTURE.md`. Hazar retains the existing Unity components as the
+presentation bridge; Dreamteck remains presentation-only.
 
 ## Daily Deliverables
 
