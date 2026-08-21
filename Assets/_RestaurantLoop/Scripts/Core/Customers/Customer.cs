@@ -52,18 +52,22 @@ namespace RestaurantLoop.Core
         {
             IsServed = true;
 
-            stack.transform.DOKill();
-            stack.transform.DOJump(transform.position, 1.2f, 1, 0.35f).OnComplete(() =>
-            {
-                Destroy(stack.gameObject);
-                StartCoroutine(EatAndLeaveRoutine(onComplete));
-            });
+            // DİKKAT: Ana kuleyi (stack) zıplatıp silme kodlarını kaldırdık!
+            // Uçma işlemini artık StackItem.cs kendi içindeki kopan 'thrownItem' ile yapıyor.
+            
+            // Sadece bekleme ve yeme animasyonunu başlat
+            StartCoroutine(EatAndLeaveRoutine(onComplete));
         }
 
         private IEnumerator EatAndLeaveRoutine(Action onComplete)
         {
+            // 1. Tabağın havada kavis çizip gelme süresini (0.35 saniye) bekle
+            yield return new WaitForSeconds(0.35f);
+
+            // 2. Müşterinin tabağı yeme (nom-nom) süresi (0.4 saniye)
             yield return new WaitForSeconds(0.4f);
 
+            // 3. Yeme işi bitti, zıplayarak masadan ayrıl
             transform.DOJump(transform.position, 0.6f, 1, 0.3f).OnComplete(() =>
             {
                 onComplete?.Invoke();

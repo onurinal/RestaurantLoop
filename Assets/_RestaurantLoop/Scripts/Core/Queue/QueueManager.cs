@@ -3,8 +3,15 @@ using UnityEngine;
 
 namespace RestaurantLoop.Core
 {
+    [System.Serializable]
+    public struct QueueItemSetup
+    {
+        public ItemDataSO itemData; 
+        public int itemCount;       
+    }
+
     /// <summary>
-    /// Manages queue grid initialization and populates unique item stack prefabs assigned to ItemDataSO assets.
+    /// Manages queue grid initialization and populates unique item stack prefabs manually configured per level.
     /// </summary>
     public class QueueManager : MonoBehaviour
     {
@@ -14,10 +21,13 @@ namespace RestaurantLoop.Core
         [SerializeField] private QueueSpawner queueSpawner;
         [SerializeField] private StackItem fallbackStackPrefab;
 
-        [Header("Test Configuration")]
+        [Header("Grid Configuration")]
         [SerializeField] private int initialColumnCount = 3;
-        [SerializeField] private int initialRowCount = 3;
-        [SerializeField] private ItemDataSO[] availableItems;
+        [SerializeField] private int initialRowCount = 8;
+
+        [Header("Level Design: Manual Sequence")]
+        [Tooltip("Queue içindeki elemanları sırayla buradan ayarlayın (Sol üstten başlayarak dizer)")]
+        [SerializeField] private List<QueueItemSetup> manualQueueSequence;
 
         private List<QueueColumn> columns = new List<QueueColumn>();
 
@@ -43,12 +53,11 @@ namespace RestaurantLoop.Core
 
         private void BuildAndPopulateQueue()
         {
-            if (queueSpawner == null)
-            {
-                return;
-            }
+            if (queueSpawner == null) return;
 
             columns = queueSpawner.SpawnQueueLayout(initialColumnCount, initialRowCount);
+            
+            int sequenceIndex = 0; 
 
             for (int i = 0; i < columns.Count; i++)
             {
@@ -57,24 +66,26 @@ namespace RestaurantLoop.Core
                 for (int j = 0; j < col.transform.childCount; j++)
                 {
                     QueueSlot slot = col.transform.GetChild(j).GetComponent<QueueSlot>();
-                    if (slot == null)
-                    {
-                        continue;
-                    }
+                    if (slot == null) continue;
 
-                    if (availableItems != null && availableItems.Length > 0)
+                    if (manualQueueSequence != null && sequenceIndex < manualQueueSequence.Count)
                     {
-                        ItemDataSO selectedData = availableItems[Random.Range(0, availableItems.Length)];
+                        QueueItemSetup setup = manualQueueSequence[sequenceIndex];
 
-                        if (selectedData != null && selectedData.StackPrefab != null)
+                        if (setup.itemData != null && setup.itemData.StackPrefab != null)
                         {
-                            GameObject spawnedObj = Instantiate(selectedData.StackPrefab, slot.transform.position, Quaternion.identity);
+                            GameObject spawnedObj = Instantiate(setup.itemData.StackPrefab, slot.transform.position, Quaternion.identity);
                             StackItem stackItem = spawnedObj.GetComponent<StackItem>();
 
                             if (stackItem != null)
                             {
-                                stackItem.InitializeData(selectedData);
+                                stackItem.InitializeData(setup.itemData);
+                                
+                                // ARTIK AKTİF VE ÇALIŞIYOR!
+                                stackItem.SetItemCount(setup.itemCount); 
+                                
                                 slot.PlaceStack(stackItem);
+                                sequenceIndex++; 
                                 continue;
                             }
                         }
