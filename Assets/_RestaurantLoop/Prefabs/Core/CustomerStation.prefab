@@ -319,4 +319,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.CustomerStationView
   counterText: {fileID: 4426018816961596026}
   tableRenderer: {fileID: 5849264142638683581}
-  textHeightOffset: 4
+  textHeightOffset: 1.5

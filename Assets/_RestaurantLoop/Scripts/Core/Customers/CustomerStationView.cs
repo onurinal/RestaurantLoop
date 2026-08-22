@@ -13,7 +13,7 @@ namespace RestaurantLoop.Core
         [SerializeField] private MeshRenderer tableRenderer;
 
         [Header("UI Offset Settings")]
-        [SerializeField] private float textHeightOffset = 1.2f;
+        [SerializeField] private float textOffset = 1.5f;
 
         private Camera mainCamera;
 
@@ -58,7 +58,7 @@ namespace RestaurantLoop.Core
         {
             if (counterText != null)
             {
-                counterText.transform.localPosition = new Vector3(0f, textHeightOffset, 0f);
+                counterText.transform.localPosition = new Vector3(0f,0f, textOffset);
             }
         }
     }

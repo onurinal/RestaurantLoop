@@ -84,14 +84,15 @@ namespace RestaurantLoop.Core
         {
             ClearStackedVisuals();
 
+            float modelBaseOffsetY = singleMeshModel != null ? singleMeshModel.transform.localPosition.y : 0f;
+
             if (currentMode == StackVisualMode.SingleWithUI)
             {
                 if (singleMeshModel != null) singleMeshModel.SetActive(true);
 
-                // Position text directly above single item
-                UpdateCountText(true, textHeightOffset);
+                UpdateCountText(true, yOffset + textHeightOffset);
             }
-            else // Stacked mode for Conveyor
+            else 
             {
                 if (singleMeshModel != null) singleMeshModel.SetActive(false);
 
@@ -101,14 +102,14 @@ namespace RestaurantLoop.Core
                     {
                         GameObject item = Instantiate(singleMeshModel, visualContainer);
                         item.SetActive(true);
-                        item.transform.localPosition = new Vector3(0f, i * yOffset, 0f);
+
+                        item.transform.localPosition = new Vector3(0f, (i * yOffset) + modelBaseOffsetY, 0f);
                         item.transform.localRotation = singleMeshModel.transform.localRotation;
                         item.transform.localScale = singleMeshModel.transform.localScale;
                         spawnedStackedItems.Add(item);
                     }
                 }
 
-                // Position text dynamically above the top of the stack on the belt
                 float totalStackHeight = remainingCount * yOffset;
                 UpdateCountText(true, totalStackHeight + textHeightOffset);
             }
