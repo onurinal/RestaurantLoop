@@ -15,4 +15,4 @@ MonoBehaviour:
   itemName: Yellow Item
   uiColor: {r: 1, g: 0.86514914, b: 0, a: 1}
   balloonIcon: {fileID: 0}
-  stackPrefab: {fileID: 6333100141765626957, guid: b48027f09618f54448d5ca10531a6e49, type: 3}
+  stackPrefab: {fileID: 3873658242560358701, guid: 94cbe1c01aad43649a60828499f9a9bc, type: 3}

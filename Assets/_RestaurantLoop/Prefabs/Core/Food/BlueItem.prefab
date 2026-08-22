@@ -267,8 +267,8 @@ MonoBehaviour:
   jumpPower: 1.5
   jumpDuration: 0.5
   itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
-  visualPrefab: {fileID: 6693750446294857269, guid: 092220a5ab20dfe44ab17ca94b0c000b, type: 3}
   visualContainer: {fileID: 7985034420036287933}
+  singleMeshModel: {fileID: 6693750446294857269}
   yOffset: 0.3
   countText: {fileID: 4438036940827548038}
   textHeightOffset: 0.5

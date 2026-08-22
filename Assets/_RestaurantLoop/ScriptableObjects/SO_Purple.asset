@@ -15,4 +15,4 @@ MonoBehaviour:
   itemName: Purple Item
   uiColor: {r: 0.5506661, g: 0, b: 0.69803923, a: 1}
   balloonIcon: {fileID: 0}
-  stackPrefab: {fileID: 8317400590032934289, guid: 19ea9d86b6f92da4da6f02f9fb7b50b2, type: 3}
+  stackPrefab: {fileID: 3873658242560358701, guid: fadf56bfb28792e4e8b7e35551c97470, type: 3}

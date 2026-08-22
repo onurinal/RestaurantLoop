@@ -6,12 +6,12 @@ namespace RestaurantLoop.Core
     [System.Serializable]
     public struct QueueItemSetup
     {
-        public ItemDataSO itemData; 
-        public int itemCount;       
+        public ItemDataSO itemData;
+        public int itemCount;
     }
 
     /// <summary>
-    /// Manages queue grid initialization and populates unique item stack prefabs manually configured per level.
+    /// Manages queue grid initialization and populates item stack prefabs based on manual sequence configuration.
     /// </summary>
     public class QueueManager : MonoBehaviour
     {
@@ -25,8 +25,7 @@ namespace RestaurantLoop.Core
         [SerializeField] private int initialColumnCount = 3;
         [SerializeField] private int initialRowCount = 8;
 
-        [Header("Level Design: Manual Sequence")]
-        [Tooltip("Queue içindeki elemanları sırayla buradan ayarlayın (Sol üstten başlayarak dizer)")]
+        [Header("Level Design Sequence")]
         [SerializeField] private List<QueueItemSetup> manualQueueSequence;
 
         private List<QueueColumn> columns = new List<QueueColumn>();
@@ -56,8 +55,7 @@ namespace RestaurantLoop.Core
             if (queueSpawner == null) return;
 
             columns = queueSpawner.SpawnQueueLayout(initialColumnCount, initialRowCount);
-            
-            int sequenceIndex = 0; 
+            int sequenceIndex = 0;
 
             for (int i = 0; i < columns.Count; i++)
             {
@@ -80,12 +78,10 @@ namespace RestaurantLoop.Core
                             if (stackItem != null)
                             {
                                 stackItem.InitializeData(setup.itemData);
-                                
-                                // ARTIK AKTİF VE ÇALIŞIYOR!
-                                stackItem.SetItemCount(setup.itemCount); 
-                                
+                                stackItem.SetItemCount(setup.itemCount);
                                 slot.PlaceStack(stackItem);
-                                sequenceIndex++; 
+
+                                sequenceIndex++;
                                 continue;
                             }
                         }

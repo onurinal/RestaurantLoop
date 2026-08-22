@@ -1,13 +1,18 @@
-﻿using UnityEngine;
-using TMPro; 
+﻿using System.Collections.Generic;
+using UnityEngine;
+using TMPro;
 using DG.Tweening;
-using System.Collections.Generic;
 
 namespace RestaurantLoop.Core
 {
+    public enum StackVisualMode
+    {
+        SingleWithUI, // Queue & Rack: 1 Mesh + Text Counter
+        Stacked       // Conveyor: Vertical Stack + Top Text Counter
+    }
+
     /// <summary>
-    /// Controls stack movement along the spline, jump tweens, O(1) grid service detection,
-    /// visual stacking of items, dynamic UI counting (Billboard) and service cooldowns.
+    /// Manages item stack movement, visual mode states (Queue/Belt/Rack), item throwing, and dynamic text positioning.
     /// </summary>
     [RequireComponent(typeof(BoxCollider))]
     public class StackItem : MonoBehaviour, IInteractable
@@ -19,23 +24,22 @@ namespace RestaurantLoop.Core
         [Header("Data")]
         [SerializeField] private ItemDataSO itemData;
 
-        [Header("Visual Stack Settings")]
-        [SerializeField] private GameObject visualPrefab;
+        [Header("Visual Settings")]
         [SerializeField] private Transform visualContainer;
-        [SerializeField] private float yOffset = 0.3f;
+        [SerializeField] private GameObject singleMeshModel;
+        [SerializeField] private float yOffset = 1.0f; 
 
         [Header("UI Settings")]
-        [SerializeField] private TMP_Text countText; 
-        [SerializeField] private float textHeightOffset = 3.5f; 
+        [SerializeField] private TMP_Text countText;
+        [SerializeField] private float textHeightOffset = 0.8f;
 
         private float currentDistance;
         private float traveledDistance;
         private float targetTravelDistance;
-        
-        // Makinalı tüfek (peş peşe fırlatma) hatasını önleyecek bekleme süresi
-        private float serviceCooldown = 0f; 
-        
-        private Stack<GameObject> visualItems = new Stack<GameObject>();
+        private float serviceCooldown = 0f;
+
+        private StackVisualMode currentMode = StackVisualMode.SingleWithUI;
+        private readonly List<GameObject> spawnedStackedItems = new List<GameObject>();
         private Camera mainCamera;
 
         public int RemainingItemCount => remainingCount;
@@ -49,7 +53,7 @@ namespace RestaurantLoop.Core
 
         private void LateUpdate()
         {
-            if (countText != null && mainCamera != null)
+            if (countText != null && countText.gameObject.activeSelf && mainCamera != null)
             {
                 countText.transform.rotation = mainCamera.transform.rotation;
             }
@@ -60,73 +64,90 @@ namespace RestaurantLoop.Core
             if (data != null)
             {
                 itemData = data;
-                GenerateVisualStack();
+                RefreshVisuals();
             }
         }
 
         public void SetItemCount(int newCount)
         {
             remainingCount = newCount;
-            GenerateVisualStack();
+            RefreshVisuals();
         }
 
-        private void GenerateVisualStack()
+        public void SetVisualMode(StackVisualMode mode)
         {
-            foreach (var item in visualItems)
-            {
-                Destroy(item);
-            }
-            visualItems.Clear();
-
-            for (int i = 0; i < remainingCount; i++)
-            {
-                GameObject newItem = Instantiate(visualPrefab, visualContainer);
-                newItem.transform.localPosition = new Vector3(0, i * yOffset, 0);
-                visualItems.Push(newItem);
-            }
-
-            BoxCollider boxCol = GetComponent<BoxCollider>();
-            if (boxCol == null)
-            {
-                boxCol = gameObject.AddComponent<BoxCollider>();
-            }
-
-            float totalHeight = remainingCount > 0 ? (remainingCount * yOffset) : 0.5f;
-            boxCol.size = new Vector3(1f, totalHeight, 1f); 
-            boxCol.center = new Vector3(0f, (totalHeight / 2f) - (yOffset / 2f), 0f);
-
-            UpdateCountText();
+            currentMode = mode;
+            RefreshVisuals();
         }
 
-        private void UpdateCountText()
+        private void RefreshVisuals()
         {
-            if (countText != null)
+            ClearStackedVisuals();
+
+            if (currentMode == StackVisualMode.SingleWithUI)
             {
-                if (remainingCount > 0)
+                if (singleMeshModel != null) singleMeshModel.SetActive(true);
+
+                // Position text directly above single item
+                UpdateCountText(true, textHeightOffset);
+            }
+            else // Stacked mode for Conveyor
+            {
+                if (singleMeshModel != null) singleMeshModel.SetActive(false);
+
+                for (int i = 0; i < remainingCount; i++)
                 {
-                    countText.text = remainingCount.ToString();
-                    float currentStackHeight = remainingCount * yOffset;
-                    countText.transform.position = transform.position + new Vector3(0, currentStackHeight + textHeightOffset, 0);
+                    if (singleMeshModel != null)
+                    {
+                        GameObject item = Instantiate(singleMeshModel, visualContainer);
+                        item.SetActive(true);
+                        item.transform.localPosition = new Vector3(0f, i * yOffset, 0f);
+                        item.transform.localRotation = singleMeshModel.transform.localRotation;
+                        item.transform.localScale = singleMeshModel.transform.localScale;
+                        spawnedStackedItems.Add(item);
+                    }
                 }
-                else
-                {
-                    countText.text = "";
-                }
+
+                // Position text dynamically above the top of the stack on the belt
+                float totalStackHeight = remainingCount * yOffset;
+                UpdateCountText(true, totalStackHeight + textHeightOffset);
             }
         }
 
-        public GameObject PopTopVisualItem()
+        private void ClearStackedVisuals()
         {
-            if (visualItems.Count > 0)
+            foreach (var item in spawnedStackedItems)
             {
-                remainingCount--;
-                GameObject topItem = visualItems.Pop();
-                topItem.transform.SetParent(null); 
-                
-                GenerateVisualStack(); 
-                return topItem;
+                if (item != null) Destroy(item);
             }
-            return null;
+            spawnedStackedItems.Clear();
+        }
+
+        private void UpdateCountText(bool show, float targetYOffset)
+        {
+            if (countText == null) return;
+
+            if (show && remainingCount > 0)
+            {
+                countText.gameObject.SetActive(true);
+                countText.text = remainingCount.ToString();
+                countText.transform.localPosition = new Vector3(0f, targetYOffset, 0f);
+            }
+            else
+            {
+                countText.gameObject.SetActive(false);
+            }
+        }
+
+        public void Shake()
+        {
+            if (IsJumping || DOTween.IsTweening(transform)) return;
+
+            transform.DOKill();
+            transform.localPosition = Vector3.zero;
+
+            transform.DOShakePosition(0.2f, 0.12f, 10, 90f)
+                .OnComplete(() => { transform.localPosition = Vector3.zero; });
         }
 
         public void OnTap()
@@ -141,16 +162,16 @@ namespace RestaurantLoop.Core
             traveledDistance = 0f;
             targetTravelDistance = totalDistanceToExit;
             IsJumping = false;
-            serviceCooldown = 0f; // Bantta ilk başladığında süre sıfırlansın
+            serviceCooldown = 0f;
+
+            SetVisualMode(StackVisualMode.Stacked);
             UpdateTransform(path, true);
         }
 
         public void MoveAlongBelt(SplineConveyorPath path, float speed, bool isClockwise, float deltaTime)
         {
-            if (this == null) return;
-            if (IsJumping) return;
+            if (this == null || IsJumping) return;
 
-            // Bekleme süresi varsa süreyi azalt
             if (serviceCooldown > 0f)
             {
                 serviceCooldown -= deltaTime;
@@ -162,16 +183,13 @@ namespace RestaurantLoop.Core
 
             traveledDistance += Mathf.Abs(moveDelta);
             UpdateTransform(path, isClockwise);
-            
-            // Eğer bekleme süresi bittiyse yeni müşteri ara
+
             if (serviceCooldown <= 0f)
             {
                 CheckForNearbyCustomer();
             }
 
-            if (this == null) return;
-
-            if (traveledDistance >= targetTravelDistance)
+            if (this != null && traveledDistance >= targetTravelDistance)
             {
                 OnExitReached();
             }
@@ -185,6 +203,7 @@ namespace RestaurantLoop.Core
                 .OnComplete(() =>
                 {
                     IsJumping = false;
+                    SetVisualMode(StackVisualMode.Stacked);
                     onComplete?.Invoke();
                 });
         }
@@ -199,19 +218,10 @@ namespace RestaurantLoop.Core
                     IsJumping = false;
                     transform.SetParent(slotTransform);
                     transform.localPosition = Vector3.zero;
+
+                    SetVisualMode(StackVisualMode.SingleWithUI);
                     onComplete?.Invoke();
                 });
-        }
-
-        public void Shake()
-        {
-            if (IsJumping || DOTween.IsTweening(visualContainer)) return;
-
-            visualContainer.DOKill();
-            visualContainer.localPosition = Vector3.zero;
-
-            visualContainer.DOShakePosition(0.2f, 0.12f, 10, 90f)
-                .OnComplete(() => { visualContainer.localPosition = Vector3.zero; });
         }
 
         private void CheckForNearbyCustomer()
@@ -222,30 +232,28 @@ namespace RestaurantLoop.Core
 
             if (targetCustomer != null)
             {
-                // YENİ: Başka bir tabak fırlatmadan önce 0.5 saniye bekle
-                serviceCooldown = 0.5f; 
+                serviceCooldown = 0.5f;
+                remainingCount--;
 
-                GameObject thrownItem = PopTopVisualItem();
-
-                if (thrownItem != null)
+                if (singleMeshModel != null)
                 {
-                    Vector3 targetPos = targetCustomer.transform.position;
-                    
-                    thrownItem.transform.DOJump(targetPos, 2f, 1, 0.35f)
-                        .OnComplete(() => 
-                        {
-                            if (thrownItem != null) Destroy(thrownItem);
-                        });
+                    GameObject flyingItem = Instantiate(singleMeshModel, transform.position, Quaternion.identity);
+                    flyingItem.SetActive(true);
+
+                    flyingItem.transform.DOJump(targetCustomer.transform.position, 2f, 1, 0.35f)
+                        .OnComplete(() => { Destroy(flyingItem); });
                 }
 
+                // Rebuilds stacked visual and dynamically lowers top text height
+                RefreshVisuals();
                 targetCustomer.ReceiveItem(this, () => { CrowdManager.Instance.OnCustomerServed(targetCustomer); });
 
                 if (remainingCount <= 0)
                 {
-                    IsJumping = true; 
+                    IsJumping = true;
                     ConveyorManager.Instance.RemoveStackFromBelt(this);
                     ConveyorManager.Instance.ReleaseCapacity();
-                    Destroy(gameObject); 
+                    Destroy(gameObject);
                 }
             }
         }
