@@ -1,38 +1,57 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
-using DG.Tweening;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace RestaurantLoop.Core
 {
+    public class CustomerStation
+    {
+        public ItemDataSO itemData;
+        public int remainingCount;
+        public Vector3 position;
+        public CustomerStationView view;
+
+        public void UpdateUI()
+        {
+            if (view != null)
+            {
+                view.UpdateCount(remainingCount);
+            }
+        }
+    }
+
     /// <summary>
-    /// Manages inner crowd matrix grid and pulls the closest available inner customer to fill cleared edge slots.
+    /// Manages active edge slots and automatically arranges station prefabs dynamically centered inside the conveyor bounds.
     /// </summary>
     public class CrowdManager : MonoBehaviour
     {
         public static CrowdManager Instance { get; private set; }
 
-        [Header("Grid Setup")]
-        [SerializeField] private int columns = 5;
-        [SerializeField] private int rows = 5;
-
-        [Header("Mechanics")]
-        [SerializeField] private bool enableRowShift = true;
+        [Header("Active Edge Setup")]
+        [SerializeField] private int activeEdgeSlotCount = 6;
         [SerializeField] private float alignmentTolerance = 1.2f;
-
-        [Header("Margins")]
         [SerializeField] private float marginX = 3.5f;
         [SerializeField] private float marginZ = 4.0f;
 
-        [Header("References")]
+        [Header("Central Station Layout Setup")]
+        [SerializeField] private CustomerStationView stationPrefab;
+        [Range(1, 5)] [SerializeField] private int maxStationsPerRow = 2;
+        [SerializeField] private float stationSpacingX = 2.5f;
+        [SerializeField] private float stationSpacingZ = 2.5f;
+
+        [Header("Prefabs & References")]
+        [SerializeField] private Customer customerPrefab;
         [SerializeField] private ConveyorBuilder conveyorBuilder;
         [SerializeField] private SplineConveyorPath conveyorPath;
 
-        private Customer[,] grid;
-        private float[,] slotSplineDistances;
-        private readonly List<Vector2Int> edgeCoordinates = new List<Vector2Int>();
+        private Customer[] activeEdgeSlots;
+        private float[] slotSplineDistances;
+        private List<CustomerStation> stations = new List<CustomerStation>();
 
-        public int Columns => columns;
-        public int Rows => rows;
+        public int ActiveEdgeSlotCount => activeEdgeSlotCount;
 
         private void Awake()
         {
@@ -45,9 +64,8 @@ namespace RestaurantLoop.Core
                 Destroy(gameObject);
             }
 
-            grid = new Customer[rows, columns];
-            slotSplineDistances = new float[rows, columns];
-            CacheEdgeCoordinates();
+            activeEdgeSlots = new Customer[activeEdgeSlotCount];
+            slotSplineDistances = new float[activeEdgeSlotCount];
         }
 
         private void Start()
@@ -55,25 +73,11 @@ namespace RestaurantLoop.Core
             InitializeGridSplineMapping();
         }
 
-        private bool IsEdgeSlot(int row, int col)
+        private void OnValidate()
         {
-            return row == 0 || row == rows - 1 || col == 0 || col == columns - 1;
-        }
-
-        private void CacheEdgeCoordinates()
-        {
-            edgeCoordinates.Clear();
-
-            for (int r = 0; r < rows; r++)
-            {
-                for (int c = 0; c < columns; c++)
-                {
-                    if (IsEdgeSlot(r, c))
-                    {
-                        edgeCoordinates.Add(new Vector2Int(r, c));
-                    }
-                }
-            }
+#if UNITY_EDITOR
+            SceneView.RepaintAll();
+#endif
         }
 
         public void InitializeGridSplineMapping()
@@ -83,54 +87,133 @@ namespace RestaurantLoop.Core
                 conveyorPath = FindFirstObjectByType<SplineConveyorPath>();
             }
 
-            if (conveyorPath == null || conveyorPath.Length <= 0f)
-            {
-                return;
-            }
+            if (conveyorPath == null || conveyorPath.Length <= 0f) return;
 
             float pathLength = conveyorPath.Length;
 
-            foreach (Vector2Int coord in edgeCoordinates)
+            for (int i = 0; i < activeEdgeSlotCount; i++)
             {
-                Vector3 slotWorldPos = GetSlotWorldPosition(coord.x, coord.y);
-                slotSplineDistances[coord.x, coord.y] = FindClosestDistanceOnSpline(slotWorldPos, pathLength);
+                Vector3 slotPos = GetEdgeSlotWorldPosition(i);
+                slotSplineDistances[i] = FindClosestDistanceOnSpline(slotPos, pathLength);
             }
+        }
+
+        public void SetupStations(List<StationConfig> configs)
+        {
+            ClearExistingStations();
+
+            if (configs == null || configs.Count == 0 || stationPrefab == null) return;
+
+            List<Vector3> layoutPositions = CalculateStationPositions(configs.Count);
+
+            for (int i = 0; i < configs.Count; i++)
+            {
+                StationConfig cfg = configs[i];
+                Vector3 spawnPos = layoutPositions[i];
+
+                CustomerStationView viewInstance = Instantiate(stationPrefab, spawnPos, Quaternion.identity, transform);
+                viewInstance.Initialize(cfg.itemData, cfg.remainingCount);
+
+                CustomerStation station = new CustomerStation
+                {
+                    itemData = cfg.itemData,
+                    remainingCount = cfg.remainingCount,
+                    position = spawnPos,
+                    view = viewInstance
+                };
+
+                stations.Add(station);
+            }
+
+            PopulateInitialEdgeSlots();
+        }
+
+        private void ClearExistingStations()
+        {
+            foreach (var st in stations)
+            {
+                if (st.view != null) Destroy(st.view.gameObject);
+            }
+            stations.Clear();
+        }
+
+        public List<Vector3> CalculateStationPositions(int count)
+        {
+            List<Vector3> positions = new List<Vector3>();
+            if (count <= 0) return positions;
+
+            Vector3 center = conveyorBuilder != null ? conveyorBuilder.CenterPosition : transform.position;
+            int cols = Mathf.Min(count, maxStationsPerRow);
+            int rows = Mathf.CeilToInt((float)count / cols);
+
+            for (int i = 0; i < count; i++)
+            {
+                int r = i / cols;
+                int c = i % cols;
+
+                int colsInCurrentRow = (r == rows - 1 && count % cols != 0) ? (count % cols) : cols;
+
+                float x = (c - (colsInCurrentRow - 1) * 0.5f) * stationSpacingX;
+                float z = ((rows - 1) * 0.5f - r) * stationSpacingZ;
+
+                positions.Add(center + new Vector3(x, 0f, z));
+            }
+
+            return positions;
+        }
+
+        private void PopulateInitialEdgeSlots()
+        {
+            for (int i = 0; i < activeEdgeSlotCount; i++)
+            {
+                TryFillEdgeSlot(i);
+            }
+        }
+
+        private void TryFillEdgeSlot(int slotIndex)
+        {
+            CustomerStation availableStation = GetNextAvailableStation();
+            if (availableStation == null) return;
+
+            availableStation.remainingCount--;
+            availableStation.UpdateUI();
+
+            Vector3 spawnPos = availableStation.position;
+            Vector3 targetPos = GetEdgeSlotWorldPosition(slotIndex);
+
+            Customer newCustomer = Instantiate(customerPrefab, spawnPos, customerPrefab.transform.rotation, transform);
+            newCustomer.Initialize(availableStation.itemData);
+
+            activeEdgeSlots[slotIndex] = newCustomer;
+            newCustomer.MoveToEdgeSlot(targetPos, null);
+        }
+
+        private CustomerStation GetNextAvailableStation()
+        {
+            List<CustomerStation> validStations = stations.FindAll(s => s.remainingCount > 0);
+            if (validStations.Count == 0) return null;
+
+            return validStations[Random.Range(0, validStations.Count)];
         }
 
         public Customer CheckServiceForBeltItem(float itemSplineDistance, ItemDataSO itemData)
         {
-            if (conveyorPath == null)
-            {
-                return null;
-            }
+            if (conveyorPath == null) return null;
 
             float pathLength = conveyorPath.Length;
             Customer bestCandidate = null;
             float minDelta = float.MaxValue;
 
-            foreach (Vector2Int coord in edgeCoordinates)
+            for (int i = 0; i < activeEdgeSlotCount; i++)
             {
-                int r = coord.x;
-                int c = coord.y;
+                Customer candidate = activeEdgeSlots[i];
+                if (candidate == null || candidate.IsServed || !candidate.IsEdgeCustomer) continue;
+                if (candidate.RequiredData != itemData) continue;
 
-                Customer candidate = grid[r, c];
-                if (candidate == null || candidate.IsServed || !candidate.IsEdgeCustomer)
-                {
-                    continue;
-                }
-
-                if (candidate.RequiredData != itemData)
-                {
-                    continue;
-                }
-
-                float targetSplineDistance = slotSplineDistances[r, c];
+                float targetSplineDistance = slotSplineDistances[i];
                 float delta = Mathf.Abs(itemSplineDistance - targetSplineDistance);
 
-                if (delta > pathLength * 0.5f)
-                {
-                    delta = pathLength - delta;
-                }
+                if (delta > pathLength * 0.5f) delta = pathLength - delta;
 
                 if (delta <= alignmentTolerance && delta < minDelta)
                 {
@@ -142,108 +225,45 @@ namespace RestaurantLoop.Core
             return bestCandidate;
         }
 
-        public void RegisterCustomer(Customer customer, int row, int col)
-        {
-            if (row < 0 || row >= rows || col < 0 || col >= columns)
-            {
-                return;
-            }
-
-            grid[row, col] = customer;
-            customer.SetEdgeStatus(IsEdgeSlot(row, col));
-        }
-
         public void OnCustomerServed(Customer customer)
         {
-            if (customer == null)
-            {
-                return;
-            }
+            if (customer == null) return;
 
-            int targetRow = -1;
-            int targetCol = -1;
-
-            for (int r = 0; r < rows; r++)
+            for (int i = 0; i < activeEdgeSlotCount; i++)
             {
-                for (int c = 0; c < columns; c++)
+                if (activeEdgeSlots[i] == customer)
                 {
-                    if (grid[r, c] == customer)
-                    {
-                        targetRow = r;
-                        targetCol = c;
-                        break;
-                    }
-                }
-            }
-
-            if (targetRow != -1 && targetCol != -1)
-            {
-                grid[targetRow, targetCol] = null;
-
-                if (enableRowShift)
-                {
-                    ShiftInnerCustomers(targetRow, targetCol);
+                    activeEdgeSlots[i] = null;
+                    TryFillEdgeSlot(i);
+                    break;
                 }
             }
         }
 
-        /// <summary>
-        /// Scans all inner non-edge slots to find the mathematically closest available inner customer and shifts them to the cleared edge slot.
-        /// </summary>
-        private void ShiftInnerCustomers(int servedRow, int servedCol)
-        {
-            int bestR = -1;
-            int bestC = -1;
-            float minSqrDist = float.MaxValue;
-
-            // Search the entire inner core for the nearest unserved inner customer
-            for (int r = 0; r < rows; r++)
-            {
-                for (int c = 0; c < columns; c++)
-                {
-                    if (!IsEdgeSlot(r, c))
-                    {
-                        Customer innerCustomer = grid[r, c];
-                        if (innerCustomer != null && !innerCustomer.IsServed)
-                        {
-                            float sqrDist = (r - servedRow) * (r - servedRow) + (c - servedCol) * (c - servedCol);
-                            if (sqrDist < minSqrDist)
-                            {
-                                minSqrDist = sqrDist;
-                                bestR = r;
-                                bestC = c;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Move the best candidate into the vacant edge slot
-            if (bestR != -1 && bestC != -1)
-            {
-                Customer innerCustomer = grid[bestR, bestC];
-
-                grid[servedRow, servedCol] = innerCustomer;
-                grid[bestR, bestC] = null;
-
-                innerCustomer.SetEdgeStatus(true);
-
-                Vector3 targetWorldPos = GetSlotWorldPosition(servedRow, servedCol);
-                innerCustomer.transform.DOMove(targetWorldPos, 0.3f);
-            }
-        }
-
-        public Vector3 GetSlotWorldPosition(int row, int col)
+        public Vector3 GetEdgeSlotWorldPosition(int index)
         {
             GetInnerBounds(out float minX, out float maxX, out float minZ, out float maxZ);
 
-            float tx = columns > 1 ? (float)col / (columns - 1) : 0.5f;
-            float tz = rows > 1 ? (float)row / (rows - 1) : 0.5f;
+            float perimeter = 2 * ((maxX - minX) + (maxZ - minZ));
+            float step = perimeter / activeEdgeSlotCount;
+            float currentDist = index * step;
 
-            float xPos = Mathf.Lerp(minX, maxX, tx);
-            float zPos = Mathf.Lerp(minZ, maxZ, tz);
+            float width = maxX - minX;
+            float height = maxZ - minZ;
 
-            return new Vector3(xPos, transform.position.y, zPos);
+            if (currentDist <= width)
+                return new Vector3(minX + currentDist, transform.position.y, minZ);
+            currentDist -= width;
+
+            if (currentDist <= height)
+                return new Vector3(maxX, transform.position.y, minZ + currentDist);
+            currentDist -= height;
+
+            if (currentDist <= width)
+                return new Vector3(maxX - currentDist, transform.position.y, maxZ);
+            currentDist -= width;
+
+            return new Vector3(minX, transform.position.y, maxZ - currentDist);
         }
 
         private float FindClosestDistanceOnSpline(Vector3 worldPos, float pathLength)
@@ -270,12 +290,7 @@ namespace RestaurantLoop.Core
 
         private void GetInnerBounds(out float minX, out float maxX, out float minZ, out float maxZ)
         {
-            Vector3 center = transform.position;
-
-            if (conveyorBuilder != null)
-            {
-                center = conveyorBuilder.CenterPosition;
-            }
+            Vector3 center = conveyorBuilder != null ? conveyorBuilder.CenterPosition : transform.position;
 
             float halfW = (conveyorBuilder != null ? conveyorBuilder.Width * 0.5f : 7.5f) - marginX;
             float halfH = (conveyorBuilder != null ? conveyorBuilder.Height * 0.5f : 10f) - marginZ;
@@ -286,24 +301,26 @@ namespace RestaurantLoop.Core
             maxZ = center.z + halfH;
         }
 
-        private void OnDrawGizmosSelected()
+        private void OnDrawGizmos()
         {
-            GetInnerBounds(out float minX, out float maxX, out float minZ, out float maxZ);
-
-            Vector3 center = new Vector3((minX + maxX) * 0.5f, transform.position.y, (minZ + maxZ) * 0.5f);
-            Vector3 size = new Vector3(maxX - minX, 0.1f, maxZ - minZ);
-
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawWireCube(center, size);
-
-            Gizmos.color = Color.cyan;
-            for (int r = 0; r < rows; r++)
+            Gizmos.color = Color.green;
+            for (int i = 0; i < activeEdgeSlotCount; i++)
             {
-                for (int c = 0; c < columns; c++)
-                {
-                    Vector3 slotPos = GetSlotWorldPosition(r, c);
-                    Gizmos.DrawWireSphere(slotPos, 0.35f);
-                }
+                Gizmos.DrawWireSphere(GetEdgeSlotWorldPosition(i), 0.4f);
+            }
+
+            CrowdTestSpawner spawner = FindFirstObjectByType<CrowdTestSpawner>();
+            if (spawner == null || spawner.StationConfigs == null || spawner.StationConfigs.Count == 0)
+            {
+                return;
+            }
+
+            List<Vector3> previewPositions = CalculateStationPositions(spawner.StationConfigs.Count);
+            Gizmos.color = Color.magenta;
+
+            foreach (var pos in previewPositions)
+            {
+                Gizmos.DrawWireCube(pos + Vector3.up * 0.5f, new Vector3(1.2f, 1f, 1.2f));
             }
         }
     }

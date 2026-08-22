@@ -6,7 +6,7 @@ using DG.Tweening;
 namespace RestaurantLoop.Core
 {
     /// <summary>
-    /// Controls customer order visualization, edge states, and service animations.
+    /// Controls customer order visualization, movement from central stations to edge slots, and service animations.
     /// </summary>
     public class Customer : MonoBehaviour
     {
@@ -27,6 +27,16 @@ namespace RestaurantLoop.Core
         {
             requiredData = data;
             UpdateBalloonVisual();
+        }
+
+        public void MoveToEdgeSlot(Vector3 targetPosition, Action onArrived)
+        {
+            SetEdgeStatus(false);
+            transform.DOMove(targetPosition, 0.5f).SetEase(Ease.OutQuad).OnComplete(() =>
+            {
+                SetEdgeStatus(true);
+                onArrived?.Invoke();
+            });
         }
 
         public void SetEdgeStatus(bool onEdge)
