@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using DG.Tweening;
@@ -45,6 +46,12 @@ namespace RestaurantLoop.Core
         public int RemainingItemCount => remainingCount;
         public bool IsJumping { get; private set; }
         public ItemDataSO Data => itemData;
+
+        /// <summary>Raised after this prototype commits one food item to an eligible customer.</summary>
+        public event Action<StackItem, Customer, ItemDataSO> FoodCommittedToCustomer;
+
+        /// <summary>Raised after the final committed food item removes this stack from the conveyor.</summary>
+        public event Action<StackItem> StackDepleted;
 
         private void Awake()
         {
@@ -247,6 +254,7 @@ namespace RestaurantLoop.Core
 
                 // Rebuilds stacked visual and dynamically lowers top text height
                 RefreshVisuals();
+                FoodCommittedToCustomer?.Invoke(this, targetCustomer, itemData);
                 targetCustomer.ReceiveItem(this, () => { CrowdManager.Instance.OnCustomerServed(targetCustomer); });
 
                 if (remainingCount <= 0)
@@ -254,6 +262,7 @@ namespace RestaurantLoop.Core
                     IsJumping = true;
                     ConveyorManager.Instance.RemoveStackFromBelt(this);
                     ConveyorManager.Instance.ReleaseCapacity();
+                    StackDepleted?.Invoke(this);
                     Destroy(gameObject);
                 }
             }

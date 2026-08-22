@@ -23,6 +23,7 @@ the documents below in order.
 12. `DECISIONS.md` - owner-approved interpretations.
 13. `PROBLEMS.md` - blockers, limitations, attempted workarounds.
 14. `11-IMPLEMENTATION-STATUS.md` - verified current implementation, architecture stage, and Trello reconciliation.
+15. `12-LOCAL-EVENT-MIGRATION.md` - local C# event contracts and the prototype-to-domain migration guide.
 
 ## Status Vocabulary
 

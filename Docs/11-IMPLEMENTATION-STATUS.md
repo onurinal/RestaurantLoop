@@ -3,7 +3,7 @@
 - Owner: Onur
 - Reviewer: Enes, Hazar
 - Status: Active prototype baseline
-- Last reviewed: 2026-08-21
+- Last reviewed: 2026-08-22
 - Related GDD sections: 3, 5, 6, 8
 - Approval: D-013 and D-014
 
@@ -20,6 +20,8 @@
 - `RackManager` receives a stack that completes its lap and permits redeploy.
 - `ItemDataSO` identifies food and provides its prefab, balloon icon, and UI
   colour.
+- Local typed C# events on conveyor, stack, crowd, and rack ownership points;
+  `ConveyorCapacityView` is the first presentation-only subscriber.
 
 The scene was smoke-tested in Play Mode on 2026-08-21: it launched, displayed
 the queue/crowd/conveyor/rack, and had no Unity Console errors. This is not a
@@ -53,6 +55,18 @@ Migration is manageable before production levels exist. It becomes expensive if
 the team adds level-specific behavior, random production spawning, or new
 cross-manager singleton calls first.
 
+## Local Event Migration Status
+
+The approved local C# event seam is implemented without changing gameplay
+rules. `ConveyorManager` no longer owns the capacity TMP update;
+`ConveyorCapacityView` subscribes to its capacity event and renders the
+initial state on enable. See `12-LOCAL-EVENT-MIGRATION.md` for the public
+contracts, subscription rules, and domain migration mapping.
+
+This does not resolve the current prototype's rack, queue-parent, lap/service,
+zero-count, random station, or conservation issues. Those require separate
+rule changes and acceptance tests.
+
 ## Trello Code Reconciliation
 
 `Done - Code` means a first graybox implementation exists unless a card has
@@ -80,7 +94,8 @@ conveyor UV scrolling remain TODO.
 1. Resolve P-006: full-rack behavior must move, reject, or fail explicitly;
    it must never freeze a capacity slot.
 2. Detach a queue stack from its slot before its conveyor jump.
-3. Clarify and implement the GDD's stack-consumption semantics; `remainingCount`
-   is currently never decremented.
+3. Clarify and implement the GDD's stack-consumption semantics. The current
+   prototype decrements `remainingCount` when it commits service before the
+   customer exit/confirmation flow, which may not match the GDD.
 4. Replace random queue/customer data with deterministic level data before
    authoring a production level.

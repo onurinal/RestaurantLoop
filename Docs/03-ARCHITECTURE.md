@@ -3,7 +3,7 @@
 - Owner: Onur
 - Reviewer: Hazar
 - Status: Transitional baseline
-- Last reviewed: 2026-08-21
+- Last reviewed: 2026-08-22
 - Related GDD sections: 3, 5, 6, 8
 - Approval: D-013 and D-014
 
@@ -30,6 +30,9 @@ The active `Onur-Gameplay` scene currently uses:
   and orientation.
 - DOTween inside `StackItem` and `Customer` for movement and service feedback.
 - Explicit Inspector references plus existing manager singletons.
+- Local typed C# events on their owning managers. They publish completed
+  prototype transitions for presentation; they are not a global event bus and
+  do not decide gameplay rules.
 
 This is authorized only for graybox/core-loop work. `CrowdTestSpawner` and the
 queue's random item selection are test utilities, not production content.
@@ -131,3 +134,14 @@ Migration is manageable while the game has a single graybox loop. It becomes
 expensive once many levels or feature-specific component-to-singleton calls
 exist, because the two implementations can diverge.
 
+## Local Event Prototype Seam
+
+The first migration seam is implemented in `12-LOCAL-EVENT-MIGRATION.md`.
+`ConveyorManager`, `StackItem`, `CrowdManager`, and `RackManager` publish
+typed C# events only after their existing component state changes. The first
+subscriber is `ConveyorCapacityView`, which renders capacity without making
+the conveyor own a TMP label.
+
+This is not a second rules implementation. Existing direct calls remain the
+prototype authority; later the pure-C# domain replaces their rule decisions
+and returns ordered ID-based events for those same presentation consumers.

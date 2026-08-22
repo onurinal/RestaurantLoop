@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 
@@ -25,6 +26,12 @@ namespace RestaurantLoop.Core
         private readonly List<RackSlot> rackSlots = new List<RackSlot>();
 
         public Vector3 CenterPosition => GetCalculatedCenterPosition();
+
+        /// <summary>Raised after a stack is accepted into a rack slot and its return animation starts.</summary>
+        public event Action<StackItem, RackSlot> StackAssignedToRack;
+
+        /// <summary>Raised after a rack stack is accepted for conveyor redeployment and its slot is cleared.</summary>
+        public event Action<StackItem, RackSlot> RackStackRedeploymentStarted;
 
         private void Awake()
         {
@@ -99,6 +106,7 @@ namespace RestaurantLoop.Core
             emptySlot.PlaceStack(stack);
 
             stack.JumpToSlot(emptySlot.transform, () => { ConveyorManager.Instance.ReleaseCapacity(); });
+            StackAssignedToRack?.Invoke(stack, emptySlot);
 
             return true;
         }
@@ -129,7 +137,14 @@ namespace RestaurantLoop.Core
             targetSlot.ClearSlot();
             stack.transform.SetParent(null);
 
-            ConveyorManager.Instance.TrySendStackToBelt(stack);
+            bool accepted = ConveyorManager.Instance.TrySendStackToBelt(stack);
+            if (accepted)
+            {
+                RackStackRedeploymentStarted?.Invoke(stack, targetSlot);
+            }
+
+            // Preserve the prototype method's existing return contract. The event,
+            // unlike the method result, is emitted only when conveyor acceptance succeeds.
             return true;
         }
 

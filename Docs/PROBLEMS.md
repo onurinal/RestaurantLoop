@@ -3,7 +3,7 @@
 - Owner: Enes
 - Contributors: everyone
 - Status: Active
-- Last reviewed: 2026-08-21
+- Last reviewed: 2026-08-22
 - Approval: Living log
 
 ## P-001 - Initial PDF visual inspection unavailable
@@ -113,3 +113,18 @@
 - Required action: add acceptance criteria and update the affected card status
   before relying on the board for production reporting.
 
+## P-010 - Unity editor pipeline did not complete the final prefab reload smoke test
+
+- Status: Open tooling-verification limitation.
+- Affected work: `ConveyorCapacityView` prefab attachment and final Play Mode
+  verification of the local C# event migration.
+- Evidence: the event code compiled successfully, and the scene-level capacity
+  view previously rendered `0 / 5` in Play Mode. After moving that attachment
+  to the reusable conveyor prefab to avoid unrelated scene YAML churn, Unity
+  pipeline `open_scene` and `editor_status` calls each timed out after 60
+  seconds.
+- Safe conclusion: the C# implementation and prefab references have static
+  validation, but the final reload from the prefab asset is not verified.
+- Required action: once the Unity editor is responsive, reopen
+  `Onur-Gameplay`, confirm the conveyor prefab has `ConveyorCapacityView`, run
+  a queue deploy/release cycle, and confirm the label changes from `0 / 5`.
