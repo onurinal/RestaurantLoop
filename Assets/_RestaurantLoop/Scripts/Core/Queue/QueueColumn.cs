@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 
@@ -45,9 +45,25 @@ namespace RestaurantLoop.Core
             }
 
             StackItem stackToSend = front.CurrentStack;
+
+            if (stackToSend.RemainingItemCount <= 0)
+            {
+                front.ClearSlot();
+                stackToSend.transform.SetParent(null, true);
+                Destroy(stackToSend.gameObject);
+                ShiftColumnItemsUp();
+                return;
+            }
+
             front.ClearSlot();
 
-            ConveyorManager.Instance.TrySendStackToBelt(stackToSend);
+            if (!ConveyorManager.Instance.TrySendStackToBelt(stackToSend))
+            {
+                front.PlaceStack(stackToSend);
+                stackToSend.transform.localPosition = Vector3.zero;
+                return;
+            }
+
             ShiftColumnItemsUp();
         }
 

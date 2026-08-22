@@ -63,9 +63,10 @@ rules. `ConveyorManager` no longer owns the capacity TMP update;
 initial state on enable. See `12-LOCAL-EVENT-MIGRATION.md` for the public
 contracts, subscription rules, and domain migration mapping.
 
-This does not resolve the current prototype's rack, queue-parent, lap/service,
-zero-count, random station, or conservation issues. Those require separate
-rule changes and acceptance tests.
+The 2026-08-22 gameplay stabilization pass then resolved the known full-rack
+freeze, queue-parent retention, zero-count runtime loop, and service-after-lap
+boundary defects. This event seam remains observability-only; those fixes stay
+in their owning gameplay components.
 
 ## Trello Code Reconciliation
 
@@ -75,10 +76,10 @@ explicit acceptance evidence. The following need attention:
 | Card | Accurate status |
 |---|---|
 | SplineConveyorPath for Conveyor | Implemented, but update its description from Unity Splines to Dreamteck Splines. |
-| Conveyor Simulation & Flow Control | In Progress: P-006 full-rack deadlock prevents acceptance. |
+| Conveyor Simulation & Flow Control | Graybox behavior verified for full-rack wait/recovery and lap-boundary ordering; terminal fail detection remains TODO. |
 | Conveyor dynamic Entrance & Exit Points | Graybox Done. |
 | Dynamic Rack Slot Spawning | Graybox Done. |
-| Conveyor to Rack Jump / Rack Slot Reuse / Slot Occupancy | In Progress: rack-full state and queue-parent cleanup are unresolved. |
+| Conveyor to Rack Jump / Rack Slot Reuse / Slot Occupancy | Graybox Done for rack wait/recovery, rack reuse, and queue-parent cleanup; terminal fail behavior remains TODO. |
 | Dynamic Queue Grid Spawner | Graybox Done. |
 | 3D Raycast Tap Detection | Implemented; needs Android-touch acceptance. |
 | Dreamteck Spline Integration & Capacity Indicator | Graybox Done; not final conveyor art integration. |
@@ -91,11 +92,12 @@ conveyor UV scrolling remain TODO.
 
 ## Required Next Fixes
 
-1. Resolve P-006: full-rack behavior must move, reject, or fail explicitly;
-   it must never freeze a capacity slot.
-2. Detach a queue stack from its slot before its conveyor jump.
-3. Clarify and implement the GDD's stack-consumption semantics. The current
+1. Implement authoritative win/fail outcomes, including the rack-full and
+   no-valid-serve predicate plus the user-approved fail grace/feedback.
+2. Clarify and implement the GDD's stack-consumption semantics. The current
    prototype decrements `remainingCount` when it commits service before the
    customer exit/confirmation flow, which may not match the GDD.
-4. Replace random queue/customer data with deterministic level data before
-   authoring a production level.
+3. Replace random queue/customer data with deterministic, conserved level data
+   before authoring a production level.
+4. Replace proximity/cooldown service sampling with deterministic service-zone
+   crossing and explicit reservation/completion state.

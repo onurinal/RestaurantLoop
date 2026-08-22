@@ -42,10 +42,13 @@ queue's random item selection are test utilities, not production content.
 Do not begin production level authoring, exact solver work, bots, Monte Carlo,
 or difficulty reporting until all of the following are true:
 
-1. Full-rack behavior is explicit and cannot freeze capacity (P-006).
-2. Queue/customer supply and demand come from deterministic level data (P-007).
-3. The authoritative state transition is Unity-independent (P-008).
-4. The current component scripts render/forward that result rather than owning
+1. [x] Full-rack behavior is explicit at prototype level and cannot freeze a
+   capacity slot: the stack waits at the legal exit and retries when a rack slot
+   becomes available (P-006). Terminal fail detection is still run-state work.
+2. [ ] Queue/customer supply and demand come from deterministic level data
+   (P-007).
+3. [ ] The authoritative state transition is Unity-independent (P-008).
+4. [ ] The current component scripts render/forward that result rather than owning
    a separate interpretation of the rules.
 
 ## Target Production Architecture

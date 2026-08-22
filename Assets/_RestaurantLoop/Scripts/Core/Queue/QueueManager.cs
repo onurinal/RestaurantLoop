@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace RestaurantLoop.Core
@@ -56,6 +56,7 @@ namespace RestaurantLoop.Core
 
             columns = queueSpawner.SpawnQueueLayout(initialColumnCount, initialRowCount);
             int sequenceIndex = 0;
+            bool hasManualSequence = manualQueueSequence != null && manualQueueSequence.Count > 0;
 
             for (int i = 0; i < columns.Count; i++)
             {
@@ -66,9 +67,17 @@ namespace RestaurantLoop.Core
                     QueueSlot slot = col.transform.GetChild(j).GetComponent<QueueSlot>();
                     if (slot == null) continue;
 
-                    if (manualQueueSequence != null && sequenceIndex < manualQueueSequence.Count)
+                    bool populated = false;
+
+                    while (hasManualSequence && sequenceIndex < manualQueueSequence.Count && !populated)
                     {
-                        QueueItemSetup setup = manualQueueSequence[sequenceIndex];
+                        QueueItemSetup setup = manualQueueSequence[sequenceIndex++];
+
+                        if (setup.itemCount <= 0)
+                        {
+                            Debug.LogWarning($"Skipping queue entry {sequenceIndex - 1}: itemCount must be greater than zero.", this);
+                            continue;
+                        }
 
                         if (setup.itemData != null && setup.itemData.StackPrefab != null)
                         {
@@ -81,13 +90,17 @@ namespace RestaurantLoop.Core
                                 stackItem.SetItemCount(setup.itemCount);
                                 slot.PlaceStack(stackItem);
 
-                                sequenceIndex++;
-                                continue;
+                                populated = true;
                             }
+                        }
+
+                        if (!populated)
+                        {
+                            Debug.LogWarning($"Skipping queue entry {sequenceIndex - 1}: food data or stack prefab is missing.", this);
                         }
                     }
 
-                    if (fallbackStackPrefab != null)
+                    if (!populated && !hasManualSequence && fallbackStackPrefab != null)
                     {
                         StackItem fallbackStack = Instantiate(fallbackStackPrefab, slot.transform.position, Quaternion.identity);
                         slot.PlaceStack(fallbackStack);

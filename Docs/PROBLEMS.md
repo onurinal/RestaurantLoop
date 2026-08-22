@@ -57,20 +57,25 @@
 
 ## P-006 - Full rack can deadlock the conveyor
 
-- Status: Open core blocker.
+- Status: Technical freeze resolved on 2026-08-22; terminal fail outcome remains
+  open.
 - Intended operation: a stack reaching its exit should enter an available rack
   slot, or trigger the approved fail/blocked behavior.
 - Affected system: `StackItem.OnExitReached`, `RackManager.TryAddStackToRack`,
   `ConveyorManager` capacity.
-- Observed failure: `StackItem` sets `IsJumping` before attempting rack entry.
-  If the rack is full, the rack returns false; the stack remains active on the
-  belt but no longer moves, and its reserved capacity is never released.
+- Resolution: a stack that reaches a full rack now enters an explicit
+  `IsWaitingForRack` state at the legal exit. It does not serve beyond that
+  boundary and retries rack assignment when a slot becomes available.
+- Verification: a Play Mode stress check filled all rack slots, confirmed the
+  exiting stack remained reversible and retained its capacity reservation, then
+  freed one slot and confirmed the stack began its rack transition.
 - Missing information: the GDD/reference-confirmed full-rack fail behavior.
-- Blocked work: reliable gameplay loop acceptance and production-level content.
-- Safe workaround: do not treat rack-full behavior as complete; implement an
-  explicit reversible state or approved fail outcome before level authoring.
-- Required action: Onur resolves the state transition; Enes records the
-  approved fail behavior if the GDD is ambiguous.
+- Remaining work: implement the authoritative no-valid-move fail predicate,
+  approved grace/feedback, and run outcome. A true deadlock can therefore wait
+  indefinitely instead of ending the level, but it no longer corrupts/freezes
+  conveyor state.
+- Required action: Enes records the approved fail behavior if the GDD is
+  ambiguous; Onur implements it with the later authoritative run-state system.
 
 ## P-007 - Current scene creates non-deterministic, potentially unwinnable runs
 

@@ -38,6 +38,7 @@ namespace RestaurantLoop.Core
         private float traveledDistance;
         private float targetTravelDistance;
         private float serviceCooldown = 0f;
+        private bool isWaitingForRack;
 
         private StackVisualMode currentMode = StackVisualMode.SingleWithUI;
         private readonly List<GameObject> spawnedStackedItems = new List<GameObject>();
@@ -45,6 +46,7 @@ namespace RestaurantLoop.Core
 
         public int RemainingItemCount => remainingCount;
         public bool IsJumping { get; private set; }
+        public bool IsWaitingForRack => isWaitingForRack;
         public ItemDataSO Data => itemData;
 
         /// <summary>Raised after this prototype commits one food item to an eligible customer.</summary>
@@ -77,7 +79,7 @@ namespace RestaurantLoop.Core
 
         public void SetItemCount(int newCount)
         {
-            remainingCount = newCount;
+            remainingCount = Mathf.Max(0, newCount);
             RefreshVisuals();
         }
 
@@ -170,6 +172,7 @@ namespace RestaurantLoop.Core
             traveledDistance = 0f;
             targetTravelDistance = totalDistanceToExit;
             IsJumping = false;
+            isWaitingForRack = false;
             serviceCooldown = 0f;
 
             SetVisualMode(StackVisualMode.Stacked);
@@ -180,26 +183,37 @@ namespace RestaurantLoop.Core
         {
             if (this == null || IsJumping) return;
 
+            if (isWaitingForRack)
+            {
+                OnExitReached();
+                return;
+            }
+
             if (serviceCooldown > 0f)
             {
                 serviceCooldown -= deltaTime;
             }
 
-            float moveDelta = (isClockwise ? speed : -speed) * deltaTime;
+            float remainingTravelDistance = Mathf.Max(0f, targetTravelDistance - traveledDistance);
+            float stepDistance = Mathf.Min(Mathf.Abs(speed * deltaTime), remainingTravelDistance);
+            float moveDelta = isClockwise ? stepDistance : -stepDistance;
             currentDistance = (currentDistance + moveDelta) % path.Length;
             if (currentDistance < 0f) currentDistance += path.Length;
 
-            traveledDistance += Mathf.Abs(moveDelta);
+            traveledDistance += stepDistance;
             UpdateTransform(path, isClockwise);
+
+            // Lap completion owns the boundary. Never serve from a position at
+            // or beyond the authored exit point.
+            if (traveledDistance >= targetTravelDistance)
+            {
+                OnExitReached();
+                return;
+            }
 
             if (serviceCooldown <= 0f)
             {
                 CheckForNearbyCustomer();
-            }
-
-            if (this != null && traveledDistance >= targetTravelDistance)
-            {
-                OnExitReached();
             }
         }
 
@@ -259,13 +273,19 @@ namespace RestaurantLoop.Core
 
                 if (remainingCount <= 0)
                 {
-                    IsJumping = true;
-                    ConveyorManager.Instance.RemoveStackFromBelt(this);
-                    ConveyorManager.Instance.ReleaseCapacity();
-                    StackDepleted?.Invoke(this);
-                    Destroy(gameObject);
+                    DepleteAndDestroy();
                 }
             }
+        }
+
+        private void DepleteAndDestroy()
+        {
+            IsJumping = true;
+            isWaitingForRack = false;
+            ConveyorManager.Instance.RemoveStackFromBelt(this);
+            ConveyorManager.Instance.ReleaseCapacity();
+            StackDepleted?.Invoke(this);
+            Destroy(gameObject);
         }
 
         private void UpdateTransform(SplineConveyorPath path, bool isClockwise)
@@ -280,10 +300,29 @@ namespace RestaurantLoop.Core
 
         private void OnExitReached()
         {
-            if (remainingCount > 0)
+            if (remainingCount <= 0)
             {
-                IsJumping = true;
-                RackManager.Instance.TryAddStackToRack(this);
+                DepleteAndDestroy();
+                return;
+            }
+
+            RackManager rack = RackManager.Instance;
+            if (rack == null || !rack.HasAvailableSlot)
+            {
+                // The fail/grace rule is still unresolved. Keep this reversible:
+                // hold at the legal exit until gameplay frees a rack slot.
+                IsJumping = false;
+                isWaitingForRack = true;
+                return;
+            }
+
+            isWaitingForRack = false;
+            IsJumping = true;
+
+            if (!rack.TryAddStackToRack(this))
+            {
+                IsJumping = false;
+                isWaitingForRack = true;
             }
         }
     }

@@ -85,11 +85,20 @@ namespace RestaurantLoop.Core
 
         public bool TrySendStackToBelt(StackItem stack)
         {
+            if (stack == null || stack.RemainingItemCount <= 0)
+            {
+                return false;
+            }
+
             if (!TryReserveSlot())
             {
                 stack.Shake();
                 return false;
             }
+
+            // A stack on the belt must no longer belong to its queue/rack slot.
+            // Keep its world pose while the entry jump begins.
+            stack.transform.SetParent(null, true);
 
             Vector3 entrancePosition = path.GetPosition(EntranceDistance);
             stack.JumpToConveyor(entrancePosition, () => TryAddStack(stack));

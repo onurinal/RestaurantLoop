@@ -26,6 +26,7 @@ namespace RestaurantLoop.Core
         private readonly List<RackSlot> rackSlots = new List<RackSlot>();
 
         public Vector3 CenterPosition => GetCalculatedCenterPosition();
+        public bool HasAvailableSlot => GetFirstEmptySlot() != null;
 
         /// <summary>Raised after a stack is accepted into a rack slot and its return animation starts.</summary>
         public event Action<StackItem, RackSlot> StackAssignedToRack;
