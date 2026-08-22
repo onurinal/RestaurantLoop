@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using UnityEngine;
-using TMPro;
 
 namespace RestaurantLoop.Core
 {
@@ -13,9 +13,6 @@ namespace RestaurantLoop.Core
         [SerializeField] private int maxCapacity = 5;
         [SerializeField] private bool isClockwise = true;
 
-        [Header("UI References")]
-        [SerializeField] private TMP_Text countText;
-
         [Header("Spline Points")]
         [Range(0f, 1f)] [SerializeField] private float entranceRatio = 0f;
         [Range(0f, 1f)] [SerializeField] private float exitRatio = 0.8f;
@@ -27,6 +24,14 @@ namespace RestaurantLoop.Core
         public bool IsClockwise => isClockwise;
         public float MoveSpeed => moveSpeed;
         public SplineConveyorPath Path => path;
+        public int OccupiedCapacity => occupiedCapacity;
+        public int MaxCapacity => maxCapacity;
+
+        /// <summary>Raised after conveyor capacity changes through a successful reservation or release.</summary>
+        public event Action<int, int> CapacityChanged;
+
+        /// <summary>Raised after a stack has completed its entry jump and is part of the conveyor state.</summary>
+        public event Action<StackItem> StackEnteredBelt;
 
         public float EntranceDistance => entranceRatio * (path != null ? path.Length : 0f);
         public float ExitDistance => exitRatio * (path != null ? path.Length : 0f);
@@ -37,11 +42,6 @@ namespace RestaurantLoop.Core
             else Destroy(gameObject);
 
             if (path != null) path.Initialize();
-        }
-
-        private void Start()
-        {
-            UpdateUI();
         }
 
         private void Update()
@@ -57,7 +57,7 @@ namespace RestaurantLoop.Core
             if (!CanAcceptStack) return false;
 
             occupiedCapacity++;
-            UpdateUI();
+            CapacityChanged?.Invoke(occupiedCapacity, maxCapacity);
             return true;
         }
 
@@ -65,6 +65,7 @@ namespace RestaurantLoop.Core
         {
             activeStacks.Add(stack);
             stack.InitializeOnBelt(path, EntranceDistance, GetRequiredTravelDistance());
+            StackEnteredBelt?.Invoke(stack);
             return true;
         }
 
@@ -78,7 +79,7 @@ namespace RestaurantLoop.Core
             if (occupiedCapacity > 0)
             {
                 occupiedCapacity--;
-                UpdateUI();
+                CapacityChanged?.Invoke(occupiedCapacity, maxCapacity);
             }
         }
 
@@ -107,15 +108,6 @@ namespace RestaurantLoop.Core
                 return exit > entry ? exit - entry : (totalLength - entry) + exit;
 
             return entry > exit ? entry - exit : entry + (totalLength - exit);
-        }
-
-        // Updates the belt capacity indicator text.
-        private void UpdateUI()
-        {
-            if (countText != null)
-            {
-                countText.text = $"{occupiedCapacity} / {maxCapacity}";
-            }
         }
 
         private void OnDrawGizmosSelected()

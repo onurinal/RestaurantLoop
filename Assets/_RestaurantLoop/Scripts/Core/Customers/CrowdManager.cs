@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -52,6 +53,12 @@ namespace RestaurantLoop.Core
         private List<CustomerStation> stations = new List<CustomerStation>();
 
         public int ActiveEdgeSlotCount => activeEdgeSlotCount;
+
+        /// <summary>Raised after a replacement customer is assigned to an edge slot and starts moving toward it.</summary>
+        public event Action<Customer, int> EdgeCustomerReplacementStarted;
+
+        /// <summary>Raised after an exiting customer releases its edge slot.</summary>
+        public event Action<Customer, int> CustomerExitCompleted;
 
         private void Awake()
         {
@@ -186,6 +193,7 @@ namespace RestaurantLoop.Core
 
             activeEdgeSlots[slotIndex] = newCustomer;
             newCustomer.MoveToEdgeSlot(targetPos, null);
+            EdgeCustomerReplacementStarted?.Invoke(newCustomer, slotIndex);
         }
 
         private CustomerStation GetNextAvailableStation()
@@ -193,7 +201,7 @@ namespace RestaurantLoop.Core
             List<CustomerStation> validStations = stations.FindAll(s => s.remainingCount > 0);
             if (validStations.Count == 0) return null;
 
-            return validStations[Random.Range(0, validStations.Count)];
+            return validStations[UnityEngine.Random.Range(0, validStations.Count)];
         }
 
         public Customer CheckServiceForBeltItem(float itemSplineDistance, ItemDataSO itemData)
@@ -234,6 +242,7 @@ namespace RestaurantLoop.Core
                 if (activeEdgeSlots[i] == customer)
                 {
                     activeEdgeSlots[i] = null;
+                    CustomerExitCompleted?.Invoke(customer, i);
                     TryFillEdgeSlot(i);
                     break;
                 }

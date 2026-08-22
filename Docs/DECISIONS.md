@@ -2,7 +2,7 @@
 
 - Owner: Enes
 - Status: Active
-- Last reviewed: 2026-08-21
+- Last reviewed: 2026-08-22
 
 | ID | Decision | Status | Source/approver |
 |---|---|---|---|
@@ -20,6 +20,7 @@
 | D-012 | Android package ID is `com.udogames.restaurantloop`; internal debug signing is sufficient. | Approved | Project owner |
 | D-013 | Use the current component-based MonoBehaviour gameplay loop for the immediate graybox/core-loop stage. Keep it explicitly provisional; extract authoritative deterministic rules before production-level validation, solver, bot, or Monte Carlo work. | Approved | Project owner, 2026-08-21 |
 | D-014 | Dreamteck Splines is the current conveyor presentation package. It does not own gameplay rules or replace the future deterministic path/state model. | Approved | Project owner, 2026-08-21 |
+| D-015 | Use local typed C# events on the component that owns a completed prototype transition. Keep direct calls for gameplay decisions; prohibit a global event manager or generic event bus. | Approved | Project owner, 2026-08-22 |
 
 ## D-013 Decision Detail
 
@@ -40,6 +41,17 @@
 - Decision: retain the already integrated Dreamteck spline only as conveyor
   presentation while gameplay remains independent of its API at the production
   architecture stage.
+- Approver: Project owner.
+
+## D-015 Decision Detail
+
+- Date: 2026-08-22
+- Affected GDD sections: 3, 5, 6, 8.
+- Alternatives considered: retain direct presentation updates in each gameplay
+  component; introduce a global event manager or generic observer base class;
+  use local typed C# events while keeping component-owned prototype state.
+- Decision: use the local typed-event option. Events are factual notifications
+  after state changes; direct calls retain gameplay-rule authority.
 - Approver: Project owner.
 
 New decisions require a date, affected GDD sections, alternatives considered,

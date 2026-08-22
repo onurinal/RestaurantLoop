@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 124697660262780726}
   - component: {fileID: 258054232526709144}
+  - component: {fileID: 945388239391009912}
   - component: {fileID: 1840659288766098658}
   m_Layer: 0
   m_Name: ConveyorManager
@@ -52,9 +53,22 @@ MonoBehaviour:
   moveSpeed: 15
   maxCapacity: 5
   isClockwise: 0
-  countText: {fileID: 2924618816482141986}
   entranceRatio: 0.893
   exitRatio: 0.045
+--- !u!114 &945388239391009912
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1210838341176990646}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b35654bcd7508ed4ca8e90a3932083b0, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.UI.ConveyorCapacityView
+  conveyor: {fileID: 258054232526709144}
+  countText: {fileID: 2924618816482141986}
 --- !u!114 &1840659288766098658
 MonoBehaviour:
   m_ObjectHideFlags: 0
