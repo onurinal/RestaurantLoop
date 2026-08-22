@@ -198,10 +198,27 @@ namespace RestaurantLoop.Core
 
         private CustomerStation GetNextAvailableStation()
         {
-            List<CustomerStation> validStations = stations.FindAll(s => s.remainingCount > 0);
-            if (validStations.Count == 0) return null;
+            int validCount = 0;
+            for (int i = 0; i < stations.Count; i++)
+            {
+                if (stations[i].remainingCount > 0) validCount++;
+            }
 
-            return validStations[UnityEngine.Random.Range(0, validStations.Count)];
+            if (validCount == 0) return null;
+
+            int randomIndex = UnityEngine.Random.Range(0, validCount);
+            int current = 0;
+
+            for (int i = 0; i < stations.Count; i++)
+            {
+                if (stations[i].remainingCount > 0)
+                {
+                    if (current == randomIndex) return stations[i];
+                    current++;
+                }
+            }
+
+            return null;
         }
 
         public Customer CheckServiceForBeltItem(float itemSplineDistance, ItemDataSO itemData)

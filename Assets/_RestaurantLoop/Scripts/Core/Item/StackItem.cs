@@ -28,7 +28,7 @@ namespace RestaurantLoop.Core
         [Header("Visual Settings")]
         [SerializeField] private Transform visualContainer;
         [SerializeField] private GameObject singleMeshModel;
-        [SerializeField] private float yOffset = 1.0f; 
+        [SerializeField] private float yOffset = 1.0f;
 
         [Header("UI Settings")]
         [SerializeField] private TMP_Text countText;
@@ -80,7 +80,27 @@ namespace RestaurantLoop.Core
         public void SetItemCount(int newCount)
         {
             remainingCount = Mathf.Max(0, newCount);
-            RefreshVisuals();
+
+            // Optimization: Remove top item directly instead of rebuilding entire stack
+            if (currentMode == StackVisualMode.Stacked && spawnedStackedItems.Count > remainingCount)
+            {
+                int itemsToRemove = spawnedStackedItems.Count - remainingCount;
+                for (int i = 0; i < itemsToRemove; i++)
+                {
+                    int lastIndex = spawnedStackedItems.Count - 1;
+                    if (lastIndex >= 0)
+                    {
+                        if (spawnedStackedItems[lastIndex] != null) Destroy(spawnedStackedItems[lastIndex]);
+                        spawnedStackedItems.RemoveAt(lastIndex);
+                    }
+                }
+                float totalStackHeight = remainingCount * yOffset;
+                UpdateCountText(true, totalStackHeight + textHeightOffset);
+            }
+            else
+            {
+                RefreshVisuals();
+            }
         }
 
         public void SetVisualMode(StackVisualMode mode)
@@ -101,7 +121,7 @@ namespace RestaurantLoop.Core
 
                 UpdateCountText(true, yOffset + textHeightOffset);
             }
-            else 
+            else
             {
                 if (singleMeshModel != null) singleMeshModel.SetActive(false);
 
@@ -203,8 +223,6 @@ namespace RestaurantLoop.Core
             traveledDistance += stepDistance;
             UpdateTransform(path, isClockwise);
 
-            // Lap completion owns the boundary. Never serve from a position at
-            // or beyond the authored exit point.
             if (traveledDistance >= targetTravelDistance)
             {
                 OnExitReached();
@@ -217,7 +235,7 @@ namespace RestaurantLoop.Core
             }
         }
 
-        public void JumpToConveyor(Vector3 targetPosition, System.Action onComplete)
+        public void JumpToConveyor(Vector3 targetPosition, Action onComplete)
         {
             IsJumping = true;
             transform.DOKill();
@@ -230,7 +248,7 @@ namespace RestaurantLoop.Core
                 });
         }
 
-        public void JumpToSlot(Transform slotTransform, System.Action onComplete = null)
+        public void JumpToSlot(Transform slotTransform, Action onComplete = null)
         {
             IsJumping = true;
             transform.DOKill();
@@ -266,8 +284,7 @@ namespace RestaurantLoop.Core
                         .OnComplete(() => { Destroy(flyingItem); });
                 }
 
-                // Rebuilds stacked visual and dynamically lowers top text height
-                RefreshVisuals();
+                SetItemCount(remainingCount);
                 FoodCommittedToCustomer?.Invoke(this, targetCustomer, itemData);
                 targetCustomer.ReceiveItem(this, () => { CrowdManager.Instance.OnCustomerServed(targetCustomer); });
 
@@ -309,8 +326,6 @@ namespace RestaurantLoop.Core
             RackManager rack = RackManager.Instance;
             if (rack == null || !rack.HasAvailableSlot)
             {
-                // The fail/grace rule is still unresolved. Keep this reversible:
-                // hold at the legal exit until gameplay frees a rack slot.
                 IsJumping = false;
                 isWaitingForRack = true;
                 return;

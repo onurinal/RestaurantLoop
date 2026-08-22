@@ -20,6 +20,11 @@ namespace RestaurantLoop.Core
         [SerializeField] private float height = 12f;
         [SerializeField] private float cornerRadius = 2f;
 
+        [Header("Gap & Closed Loop Settings")]
+        [SerializeField] private bool isClosedLoop = false; // False to keep corner open
+        [SerializeField] private float bottomEdgeGap = 1.5f; // Trimming offset along the bottom edge (X)
+        [SerializeField] private float leftEdgeGap = 1.5f;   // Trimming offset along the left edge (Z)
+
         [Header("Spline Point Visuals & Offsets")]
         [SerializeField] private float pointSize = 1.5f;
         [SerializeField] private float yOffset = 0f;
@@ -32,7 +37,6 @@ namespace RestaurantLoop.Core
         public SplineComputer Spline => splineComputer;
         public float Width => width;
         public float Height => height;
-
         public float YOffset => yOffset;
         public float ZOffset => zOffset;
 
@@ -57,7 +61,6 @@ namespace RestaurantLoop.Core
             float halfH = height * 0.5f;
             float r = Mathf.Clamp(cornerRadius, 0f, Mathf.Min(halfW, halfH));
 
-            // Apply Z and Y position offsets
             Vector3 center = new Vector3(0f, yOffset, zOffset);
 
             Vector3 brCenter = new Vector3(center.x + halfW - r, center.y, center.z - halfH + r);
@@ -67,7 +70,9 @@ namespace RestaurantLoop.Core
 
             List<Vector3> points = new List<Vector3>();
 
-            Vector3 start = new Vector3(center.x - halfW + r, center.y, center.z - halfH);
+            // Calculate bottom start offset independently using bottomEdgeGap
+            float startOffsetX = isClosedLoop ? 0f : Mathf.Min(bottomEdgeGap, halfW - r);
+            Vector3 start = new Vector3(center.x - halfW + r + startOffsetX, center.y, center.z - halfH);
             points.Add(start);
 
             // 1) Bottom edge & bottom-right arc
@@ -75,21 +80,24 @@ namespace RestaurantLoop.Core
             AddArc(points, brCenter, r, -90f, 0f, arcSegments);
 
             // 2) Right edge & top-right arc
-            AddLineSampled(points, new Vector3(center.x + halfW, center.y, center.z - halfH + r), new Vector3(center.x + halfW, center.y, center.z + halfH - r),
-                lineStep);
+            AddLineSampled(points, new Vector3(center.x + halfW, center.y, center.z - halfH + r), new Vector3(center.x + halfW, center.y, center.z + halfH - r), lineStep);
             AddArc(points, trCenter, r, 0f, 90f, arcSegments);
 
             // 3) Top edge & top-left arc
-            AddLineSampled(points, new Vector3(center.x + halfW - r, center.y, center.z + halfH), new Vector3(center.x - halfW + r, center.y, center.z + halfH),
-                lineStep);
+            AddLineSampled(points, new Vector3(center.x + halfW - r, center.y, center.z + halfH), new Vector3(center.x - halfW + r, center.y, center.z + halfH), lineStep);
             AddArc(points, tlCenter, r, 90f, 180f, arcSegments);
 
-            // 4) Left edge & bottom-left arc
-            AddLineSampled(points, new Vector3(center.x - halfW, center.y, center.z + halfH - r), new Vector3(center.x - halfW, center.y, center.z - halfH + r),
-                lineStep);
-            AddArc(points, blCenter, r, 180f, 270f, arcSegments);
+            // 4) Left edge (stopping short independently using leftEdgeGap)
+            float endOffsetY = isClosedLoop ? 0f : Mathf.Min(leftEdgeGap, halfH - r);
+            Vector3 leftEdgeEnd = new Vector3(center.x - halfW, center.y, center.z - halfH + r + endOffsetY);
+            AddLineSampled(points, new Vector3(center.x - halfW, center.y, center.z + halfH - r), leftEdgeEnd, lineStep);
 
-            // Convert calculated points to Dreamteck SplinePoint array
+            // Include bottom-left arc only if closed loop
+            if (isClosedLoop)
+            {
+                AddArc(points, blCenter, r, 180f, 270f, arcSegments);
+            }
+
             SplinePoint[] splinePoints = new SplinePoint[points.Count];
             for (int i = 0; i < points.Count; i++)
             {
@@ -97,14 +105,23 @@ namespace RestaurantLoop.Core
                 {
                     position = points[i],
                     normal = Vector3.up,
-                    size = pointSize, // Applies point thickness multiplier
+                    size = pointSize,
                     color = Color.white
                 };
             }
 
             splineComputer.SetPoints(splinePoints);
             splineComputer.type = Dreamteck.Splines.Spline.Type.Linear;
-            splineComputer.Close();
+
+            if (isClosedLoop)
+            {
+                splineComputer.Close();
+            }
+            else
+            {
+                splineComputer.Break();
+            }
+
             splineComputer.RebuildImmediate();
 
             if (splineMesh != null)
