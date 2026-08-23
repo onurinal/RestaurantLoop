@@ -1,7 +1,8 @@
-﻿using UnityEditor;
+﻿using RestaurantLoop.Core;
+using UnityEditor;
 using UnityEngine;
 
-namespace RestaurantLoop.Core
+namespace RestaurantLoop.Edit
 {
     [CustomEditor(typeof(CrowdTestSpawner))]
     public class CrowdTestSpawnerEditor : Editor

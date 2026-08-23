@@ -8,13 +8,10 @@ namespace RestaurantLoop.Core
 {
     public enum StackVisualMode
     {
-        SingleWithUI, // Queue & Rack: 1 Mesh + Text Counter
-        Stacked       // Conveyor: Vertical Stack + Top Text Counter
+        SingleWithUI,
+        Stacked
     }
 
-    /// <summary>
-    /// Manages item stack movement, visual mode states (Queue/Belt/Rack), item throwing, and dynamic text positioning.
-    /// </summary>
     [RequireComponent(typeof(BoxCollider))]
     public class StackItem : MonoBehaviour, IInteractable
     {
@@ -49,15 +46,18 @@ namespace RestaurantLoop.Core
         public bool IsWaitingForRack => isWaitingForRack;
         public ItemDataSO Data => itemData;
 
-        /// <summary>Raised after this prototype commits one food item to an eligible customer.</summary>
         public event Action<StackItem, Customer, ItemDataSO> FoodCommittedToCustomer;
-
-        /// <summary>Raised after the final committed food item removes this stack from the conveyor.</summary>
         public event Action<StackItem> StackDepleted;
 
         private void Awake()
         {
             mainCamera = Camera.main;
+
+            // Auto-bind countText if reference was missed in Inspector
+            if (countText == null)
+            {
+                countText = GetComponentInChildren<TMP_Text>(true);
+            }
         }
 
         private void LateUpdate()
@@ -66,6 +66,14 @@ namespace RestaurantLoop.Core
             {
                 countText.transform.rotation = mainCamera.transform.rotation;
             }
+        }
+
+        public void Initialize(ItemDataSO data, int count)
+        {
+            itemData = data;
+            remainingCount = Mathf.Max(0, count);
+            currentMode = StackVisualMode.SingleWithUI;
+            RefreshVisuals();
         }
 
         public void InitializeData(ItemDataSO data)
@@ -81,7 +89,6 @@ namespace RestaurantLoop.Core
         {
             remainingCount = Mathf.Max(0, newCount);
 
-            // Optimization: Remove top item directly instead of rebuilding entire stack
             if (currentMode == StackVisualMode.Stacked && spawnedStackedItems.Count > remainingCount)
             {
                 int itemsToRemove = spawnedStackedItems.Count - remainingCount;
@@ -94,6 +101,7 @@ namespace RestaurantLoop.Core
                         spawnedStackedItems.RemoveAt(lastIndex);
                     }
                 }
+
                 float totalStackHeight = remainingCount * yOffset;
                 UpdateCountText(true, totalStackHeight + textHeightOffset);
             }
@@ -113,17 +121,16 @@ namespace RestaurantLoop.Core
         {
             ClearStackedVisuals();
 
-            float modelBaseOffsetY = singleMeshModel != null ? singleMeshModel.transform.localPosition.y : 0f;
-
             if (currentMode == StackVisualMode.SingleWithUI)
             {
                 if (singleMeshModel != null) singleMeshModel.SetActive(true);
-
                 UpdateCountText(true, yOffset + textHeightOffset);
             }
             else
             {
                 if (singleMeshModel != null) singleMeshModel.SetActive(false);
+
+                float modelBaseOffsetY = singleMeshModel != null ? singleMeshModel.transform.localPosition.y : 0f;
 
                 for (int i = 0; i < remainingCount; i++)
                 {
@@ -131,7 +138,6 @@ namespace RestaurantLoop.Core
                     {
                         GameObject item = Instantiate(singleMeshModel, visualContainer);
                         item.SetActive(true);
-
                         item.transform.localPosition = new Vector3(0f, (i * yOffset) + modelBaseOffsetY, 0f);
                         item.transform.localRotation = singleMeshModel.transform.localRotation;
                         item.transform.localScale = singleMeshModel.transform.localScale;
@@ -150,6 +156,7 @@ namespace RestaurantLoop.Core
             {
                 if (item != null) Destroy(item);
             }
+
             spawnedStackedItems.Clear();
         }
 
@@ -175,7 +182,6 @@ namespace RestaurantLoop.Core
 
             transform.DOKill();
             transform.localPosition = Vector3.zero;
-
             transform.DOShakePosition(0.2f, 0.12f, 10, 90f)
                 .OnComplete(() => { transform.localPosition = Vector3.zero; });
         }
@@ -183,9 +189,6 @@ namespace RestaurantLoop.Core
         public void OnTap()
         {
             if (IsJumping) return;
-
-            // Ignore taps while the entrance sequence is still walking customers to their slots/stations,
-            // so items can't be sent to the belt before there's anyone there to serve.
             if (CrowdManager.Instance != null && CrowdManager.Instance.IsSpawningCustomers) return;
 
             GetComponentInParent<BaseSlot>()?.OnStackTapped(this);
@@ -214,10 +217,7 @@ namespace RestaurantLoop.Core
                 return;
             }
 
-            if (serviceCooldown > 0f)
-            {
-                serviceCooldown -= deltaTime;
-            }
+            if (serviceCooldown > 0f) serviceCooldown -= deltaTime;
 
             float remainingTravelDistance = Mathf.Max(0f, targetTravelDistance - traveledDistance);
             float stepDistance = Mathf.Min(Mathf.Abs(speed * deltaTime), remainingTravelDistance);
@@ -234,10 +234,7 @@ namespace RestaurantLoop.Core
                 return;
             }
 
-            if (serviceCooldown <= 0f)
-            {
-                CheckForNearbyCustomer();
-            }
+            if (serviceCooldown <= 0f) CheckForNearbyCustomer();
         }
 
         public void JumpToConveyor(Vector3 targetPosition, Action onComplete)
@@ -293,10 +290,7 @@ namespace RestaurantLoop.Core
                 FoodCommittedToCustomer?.Invoke(this, targetCustomer, itemData);
                 targetCustomer.ReceiveItem(this, () => { CrowdManager.Instance.OnCustomerServed(targetCustomer); });
 
-                if (remainingCount <= 0)
-                {
-                    DepleteAndDestroy();
-                }
+                if (remainingCount <= 0) DepleteAndDestroy();
             }
         }
 

@@ -71,10 +71,17 @@ namespace RestaurantLoop.Core
         private void OnDrawGizmosSelected()
         {
             Vector3 origin = GetCalculatedCenterPosition();
-            QueueManager queueManager = FindFirstObjectByType<QueueManager>();
 
-            int cols = queueManager != null ? queueManager.InitialColumnCount : 3;
-            int rows = queueManager != null ? queueManager.InitialRowCount : 3;
+            // Default fallback gizmo preview dimensions
+            int cols = 3;
+            int rows = 3;
+
+            LevelManager levelManager = LevelManager.Instance != null ? LevelManager.Instance : FindFirstObjectByType<LevelManager>();
+            if (levelManager != null && levelManager.CurrentLevel != null)
+            {
+                cols = levelManager.CurrentLevel.columnCount;
+                rows = levelManager.CurrentLevel.calculatedRowCount;
+            }
 
             Gizmos.color = Color.cyan;
             float startX = origin.x - (((cols - 1) * columnSpacing) / 2f);

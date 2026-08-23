@@ -3,15 +3,8 @@ using UnityEngine;
 
 namespace RestaurantLoop.Core
 {
-    [System.Serializable]
-    public struct QueueItemSetup
-    {
-        public ItemDataSO itemData;
-        public int itemCount;
-    }
-
     /// <summary>
-    /// Manages queue grid initialization and populates item stack prefabs based on manual sequence configuration.
+    /// Orchestrates queue columns and instantiates specific item prefabs directly from LevelDataSO item definitions.
     /// </summary>
     public class QueueManager : MonoBehaviour
     {
@@ -19,94 +12,74 @@ namespace RestaurantLoop.Core
 
         [Header("References")]
         [SerializeField] private QueueSpawner queueSpawner;
-        [SerializeField] private StackItem fallbackStackPrefab;
-
-        [Header("Grid Configuration")]
-        [SerializeField] private int initialColumnCount = 3;
-        [SerializeField] private int initialRowCount = 8;
-
-        [Header("Level Design Sequence")]
-        [SerializeField] private List<QueueItemSetup> manualQueueSequence;
 
         private List<QueueColumn> columns = new List<QueueColumn>();
 
-        public int InitialColumnCount => initialColumnCount;
-        public int InitialRowCount => initialRowCount;
-
         private void Awake()
         {
-            if (Instance == null)
+            if (Instance == null) Instance = this;
+            else Destroy(gameObject);
+
+            if (queueSpawner == null)
             {
-                Instance = this;
-            }
-            else
-            {
-                Destroy(gameObject);
+                queueSpawner = GetComponent<QueueSpawner>();
             }
         }
 
-        private void Start()
+        /// <summary>
+        /// Sets up queue layout dynamically based on LevelDataSO column count and auto-calculated row count.
+        /// </summary>
+        public void SetupQueue(LevelDataSO levelData)
         {
-            BuildAndPopulateQueue();
-        }
+            ClearQueue();
 
-        private void BuildAndPopulateQueue()
-        {
-            if (queueSpawner == null) return;
+            if (queueSpawner == null || levelData == null || levelData.queueStackConfigs == null) return;
 
-            columns = queueSpawner.SpawnQueueLayout(initialColumnCount, initialRowCount);
-            int sequenceIndex = 0;
-            bool hasManualSequence = manualQueueSequence != null && manualQueueSequence.Count > 0;
+            int cols = levelData.columnCount;
+            int rows = levelData.calculatedRowCount;
+            var stackConfigs = levelData.queueStackConfigs;
 
-            for (int i = 0; i < columns.Count; i++)
+            columns = queueSpawner.SpawnQueueLayout(cols, rows);
+
+            int currentStackIndex = 0;
+
+            foreach (var col in columns)
             {
-                QueueColumn col = columns[i];
-
-                for (int j = 0; j < col.transform.childCount; j++)
+                for (int r = 0; r < rows; r++)
                 {
-                    QueueSlot slot = col.transform.GetChild(j).GetComponent<QueueSlot>();
-                    if (slot == null) continue;
+                    if (currentStackIndex >= stackConfigs.Count) break;
 
-                    bool populated = false;
-
-                    while (hasManualSequence && sequenceIndex < manualQueueSequence.Count && !populated)
+                    QueueSlot slot = col.transform.GetChild(r).GetComponent<QueueSlot>();
+                    if (slot != null)
                     {
-                        QueueItemSetup setup = manualQueueSequence[sequenceIndex++];
+                        QueueStackConfig config = stackConfigs[currentStackIndex];
 
-                        if (setup.itemCount <= 0)
+                        if (config.itemData != null && config.itemData.StackPrefab != null)
                         {
-                            Debug.LogWarning($"Skipping queue entry {sequenceIndex - 1}: itemCount must be greater than zero.", this);
-                            continue;
-                        }
+                            GameObject stackObj = Instantiate(config.itemData.StackPrefab, slot.transform);
+                            StackItem newStack = stackObj.GetComponent<StackItem>();
 
-                        if (setup.itemData != null && setup.itemData.StackPrefab != null)
-                        {
-                            GameObject spawnedObj = Instantiate(setup.itemData.StackPrefab, slot.transform.position, Quaternion.identity);
-                            StackItem stackItem = spawnedObj.GetComponent<StackItem>();
-
-                            if (stackItem != null)
+                            if (newStack != null)
                             {
-                                stackItem.InitializeData(setup.itemData);
-                                stackItem.SetItemCount(setup.itemCount);
-                                slot.PlaceStack(stackItem);
-
-                                populated = true;
+                                newStack.Initialize(config.itemData, config.itemCount);
+                                slot.PlaceStack(newStack);
                             }
                         }
 
-                        if (!populated)
-                        {
-                            Debug.LogWarning($"Skipping queue entry {sequenceIndex - 1}: food data or stack prefab is missing.", this);
-                        }
-                    }
-
-                    if (!populated && !hasManualSequence && fallbackStackPrefab != null)
-                    {
-                        StackItem fallbackStack = Instantiate(fallbackStackPrefab, slot.transform.position, Quaternion.identity);
-                        slot.PlaceStack(fallbackStack);
+                        currentStackIndex++;
                     }
                 }
             }
+        }
+
+        public void ClearQueue()
+        {
+            foreach (var col in columns)
+            {
+                if (col != null) Destroy(col.gameObject);
+            }
+
+            columns.Clear();
         }
     }
 }
