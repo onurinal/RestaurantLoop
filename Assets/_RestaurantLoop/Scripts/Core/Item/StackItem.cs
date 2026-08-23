@@ -183,6 +183,11 @@ namespace RestaurantLoop.Core
         public void OnTap()
         {
             if (IsJumping) return;
+
+            // Ignore taps while the entrance sequence is still walking customers to their slots/stations,
+            // so items can't be sent to the belt before there's anyone there to serve.
+            if (CrowdManager.Instance != null && CrowdManager.Instance.IsSpawningCustomers) return;
+
             GetComponentInParent<BaseSlot>()?.OnStackTapped(this);
         }
 
