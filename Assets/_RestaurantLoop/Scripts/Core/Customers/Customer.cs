@@ -1,79 +1,106 @@
 ﻿using System;
-using System.Collections;
 using UnityEngine;
 using DG.Tweening;
 
 namespace RestaurantLoop.Core
 {
     /// <summary>
-    /// Controls customer order visualization, movement from central stations to edge slots, and service animations.
+    /// Manages customer state, visual data binding via OrderBalloon, clean position movement, and safe exit callbacks.
     /// </summary>
     public class Customer : MonoBehaviour
     {
-        [Header("Data & References")]
-        [SerializeField] private ItemDataSO requiredData;
-        [SerializeField] private OrderBalloon balloon;
+        [Header("References")]
+        [SerializeField] private OrderBalloon orderBalloon;
 
-        public ItemDataSO RequiredData => requiredData;
+        [Header("Data")]
+        [SerializeField] private ItemDataSO requiredData;
+
         public bool IsServed { get; private set; }
         public bool IsEdgeCustomer { get; private set; }
+        public ItemDataSO RequiredData => requiredData;
 
         private void Awake()
         {
-            balloon = GetComponentInChildren<OrderBalloon>(true);
+            if (orderBalloon == null)
+            {
+                orderBalloon = GetComponentInChildren<OrderBalloon>();
+            }
+        }
+
+        private void OnDestroy()
+        {
+            transform.DOKill();
         }
 
         public void Initialize(ItemDataSO data)
         {
             requiredData = data;
-            UpdateBalloonVisual();
-        }
+            IsServed = false;
+            IsEdgeCustomer = false;
 
-        public void MoveToEdgeSlot(Vector3 targetPosition, Action onArrived)
-        {
-            SetEdgeStatus(false);
-            transform.DOMove(targetPosition, 0.5f).SetEase(Ease.OutQuad).OnComplete(() =>
+            if (orderBalloon != null && data != null)
             {
-                SetEdgeStatus(true);
-                onArrived?.Invoke();
-            });
-        }
-
-        public void SetEdgeStatus(bool onEdge)
-        {
-            IsEdgeCustomer = onEdge;
-            UpdateBalloonVisual();
-        }
-
-        private void UpdateBalloonVisual()
-        {
-            if (balloon == null)
-            {
-                balloon = GetComponentInChildren<OrderBalloon>();
-            }
-
-            if (balloon != null && requiredData != null)
-            {
-                balloon.SetColorAndState(requiredData.UIColor, IsEdgeCustomer);
+                orderBalloon.SetColorAndState(data.UIColor, false);
             }
         }
 
+        public void SetEdgeStatus(bool isEdge)
+        {
+            IsEdgeCustomer = isEdge;
+            if (orderBalloon != null && requiredData != null)
+            {
+                orderBalloon.SetColorAndState(requiredData.UIColor, isEdge);
+            }
+        }
+
+        /// <summary>
+        /// Moves customer along entrance waypoints via CatmullRom spline position tweening.
+        /// </summary>
+        public void MoveAlongPath(Vector3[] waypoints, float duration, bool setAsEdge, Action onComplete = null)
+        {
+            SetEdgeStatus(setAsEdge);
+            transform.DOKill();
+
+            transform.DOPath(waypoints, duration, PathType.CatmullRom)
+                .SetEase(Ease.OutQuad)
+                .OnComplete(() =>
+                {
+                    if (this != null && transform != null)
+                    {
+                        onComplete?.Invoke();
+                    }
+                });
+        }
+
+        /// <summary>
+        /// Moves customer from table to target edge slot position.
+        /// </summary>
+        public void MoveToEdgeSlot(Vector3 targetPosition, Action onComplete = null)
+        {
+            SetEdgeStatus(true);
+            transform.DOKill();
+
+            transform.DOMove(targetPosition, 0.6f)
+                .SetEase(Ease.OutQuad)
+                .OnComplete(() => onComplete?.Invoke());
+        }
+
+        /// <summary>
+        /// Handles item reception, performs exit scale-down animation, and defers slot release until customer fully vanishes.
+        /// </summary>
         public void ReceiveItem(StackItem stack, Action onComplete)
         {
             IsServed = true;
-            StartCoroutine(EatAndLeaveRoutine(onComplete));
-        }
+            SetEdgeStatus(false);
+            transform.DOKill();
 
-        private IEnumerator EatAndLeaveRoutine(Action onComplete)
-        {
-            yield return new WaitForSeconds(0.35f);
-            yield return new WaitForSeconds(0.4f);
-
-            transform.DOJump(transform.position, 0.6f, 1, 0.3f).OnComplete(() =>
-            {
-                onComplete?.Invoke();
-                Destroy(gameObject);
-            });
+            transform.DOScale(Vector3.zero, 0.4f)
+                .SetEase(Ease.InBack)
+                .OnComplete(() =>
+                {
+                    onComplete?.Invoke();
+                    Destroy(gameObject);
+                });
         }
     }
 }

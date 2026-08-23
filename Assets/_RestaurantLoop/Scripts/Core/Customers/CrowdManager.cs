@@ -1,6 +1,8 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using DG.Tweening;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -25,7 +27,7 @@ namespace RestaurantLoop.Core
     }
 
     /// <summary>
-    /// Manages active edge slots and automatically arranges station prefabs dynamically centered inside the conveyor bounds.
+    /// Manages active edge slots along the conveyor spline, station layouts, and organic entrance queue spawning.
     /// </summary>
     public class CrowdManager : MonoBehaviour
     {
@@ -34,8 +36,7 @@ namespace RestaurantLoop.Core
         [Header("Active Edge Setup")]
         [SerializeField] private int activeEdgeSlotCount = 6;
         [SerializeField] private float alignmentTolerance = 1.2f;
-        [SerializeField] private float marginX = 3.5f;
-        [SerializeField] private float marginZ = 4.0f;
+        [SerializeField] private float edgeInwardOffset = 1.5f;
 
         [Header("Central Station Layout Setup")]
         [SerializeField] private CustomerStationView stationPrefab;
@@ -43,14 +44,21 @@ namespace RestaurantLoop.Core
         [SerializeField] private float stationSpacingX = 2.5f;
         [SerializeField] private float stationSpacingZ = 2.5f;
 
+        [Header("Entrance Sequence Setup")]
+        [SerializeField] private float spawnInterval = 0.22f;
+        [SerializeField] private float moveDuration = 1.4f;
+        [SerializeField] private float pathJitterAmount = 0.4f;
+        [Tooltip("XYZ offset relative to the conveyor gap center.")]
+        [SerializeField] private Vector3 outerSpawnOffset = new Vector3(0f, 0f, -3.0f);
+
         [Header("Prefabs & References")]
         [SerializeField] private Customer customerPrefab;
         [SerializeField] private ConveyorBuilder conveyorBuilder;
-        [SerializeField] private SplineConveyorPath conveyorPath;
 
         private Customer[] activeEdgeSlots;
         private float[] slotSplineDistances;
         private List<CustomerStation> stations = new List<CustomerStation>();
+        private Coroutine entranceSequenceCoroutine;
 
         public int ActiveEdgeSlotCount => activeEdgeSlotCount;
 
@@ -89,19 +97,27 @@ namespace RestaurantLoop.Core
 
         public void InitializeGridSplineMapping()
         {
-            if (conveyorPath == null)
+            ConveyorManager conveyor = ConveyorManager.Instance != null ? ConveyorManager.Instance : FindFirstObjectByType<ConveyorManager>();
+            if (conveyor == null || conveyor.Path == null || conveyor.Path.Length <= 0f) return;
+
+            if (slotSplineDistances == null || slotSplineDistances.Length != activeEdgeSlotCount)
             {
-                conveyorPath = FindFirstObjectByType<SplineConveyorPath>();
+                slotSplineDistances = new float[activeEdgeSlotCount];
             }
 
-            if (conveyorPath == null || conveyorPath.Length <= 0f) return;
+            float pathLength = conveyor.Path.Length;
+            float startDist = conveyor.EntranceDistance;
+            float validTravelLength = conveyor.GetRequiredTravelDistance();
 
-            float pathLength = conveyorPath.Length;
+            float step = validTravelLength / (activeEdgeSlotCount + 1);
 
             for (int i = 0; i < activeEdgeSlotCount; i++)
             {
-                Vector3 slotPos = GetEdgeSlotWorldPosition(i);
-                slotSplineDistances[i] = FindClosestDistanceOnSpline(slotPos, pathLength);
+                float travelOffset = step * (i + 1);
+                float splineDist = (startDist + (conveyor.IsClockwise ? travelOffset : -travelOffset)) % pathLength;
+                if (splineDist < 0f) splineDist += pathLength;
+
+                slotSplineDistances[i] = splineDist;
             }
         }
 
@@ -119,12 +135,12 @@ namespace RestaurantLoop.Core
                 Vector3 spawnPos = layoutPositions[i];
 
                 CustomerStationView viewInstance = Instantiate(stationPrefab, spawnPos, Quaternion.identity, transform);
-                viewInstance.Initialize(cfg.itemData, cfg.remainingCount);
+                viewInstance.Initialize(cfg.itemData, 0);
 
                 CustomerStation station = new CustomerStation
                 {
                     itemData = cfg.itemData,
-                    remainingCount = cfg.remainingCount,
+                    remainingCount = 0,
                     position = spawnPos,
                     view = viewInstance
                 };
@@ -132,7 +148,133 @@ namespace RestaurantLoop.Core
                 stations.Add(station);
             }
 
-            PopulateInitialEdgeSlots();
+            if (entranceSequenceCoroutine != null) StopCoroutine(entranceSequenceCoroutine);
+            entranceSequenceCoroutine = StartCoroutine(SpawnLevelEntranceRoutine(configs));
+        }
+
+        private IEnumerator SpawnLevelEntranceRoutine(List<StationConfig> configs)
+        {
+            Vector3 spawnPos = GetOuterSpawnPosition();
+
+            List<ItemDataSO> incomingQueue = new List<ItemDataSO>();
+            Dictionary<ItemDataSO, int> stationTargetCounts = new Dictionary<ItemDataSO, int>();
+
+            foreach (var cfg in configs)
+            {
+                stationTargetCounts[cfg.itemData] = cfg.remainingCount;
+                for (int i = 0; i < cfg.remainingCount; i++)
+                {
+                    incomingQueue.Add(cfg.itemData);
+                }
+            }
+
+            // Shuffle queue randomly to avoid monochromatic blocks
+            for (int i = incomingQueue.Count - 1; i > 0; i--)
+            {
+                int randomIndex = UnityEngine.Random.Range(0, i + 1);
+                var temp = incomingQueue[i];
+                incomingQueue[i] = incomingQueue[randomIndex];
+                incomingQueue[randomIndex] = temp;
+            }
+
+            int edgeSlotIndex = 0;
+
+            for (int i = 0; i < incomingQueue.Count; i++)
+            {
+                ItemDataSO customerData = incomingQueue[i];
+                Customer newCustomer = Instantiate(customerPrefab, spawnPos, customerPrefab.transform.rotation, transform);
+                newCustomer.Initialize(customerData);
+
+                if (edgeSlotIndex < activeEdgeSlotCount)
+                {
+                    int slotIdx = edgeSlotIndex++;
+                    activeEdgeSlots[slotIdx] = newCustomer;
+
+                    Vector3 edgeTargetPos = GetEdgeSlotWorldPosition(slotIdx);
+                    Vector3[] waypoints = BuildOrganicPath(spawnPos, edgeTargetPos);
+
+                    newCustomer.MoveAlongPath(waypoints, moveDuration, true);
+
+                    EdgeCustomerReplacementStarted?.Invoke(newCustomer, slotIdx);
+                    stationTargetCounts[customerData]--;
+                }
+                else
+                {
+                    CustomerStation targetStation = stations.Find(s => s.itemData == customerData);
+                    if (targetStation != null)
+                    {
+                        Vector3 tableTargetPos = targetStation.position;
+                        Vector3[] waypoints = BuildOrganicPath(spawnPos, tableTargetPos);
+
+                        newCustomer.MoveAlongPath(waypoints, moveDuration, false, () =>
+                        {
+                            targetStation.remainingCount++;
+                            targetStation.UpdateUI();
+                            Destroy(newCustomer.gameObject);
+                        });
+                    }
+                }
+
+                yield return new WaitForSeconds(spawnInterval);
+            }
+        }
+
+        private Vector3[] BuildOrganicPath(Vector3 startPos, Vector3 targetPos)
+        {
+            Vector3 gapCenter = GetConveyorEntranceWorldPosition();
+            Vector3 roomCenter = conveyorBuilder != null ? conveyorBuilder.CenterPosition : transform.position;
+
+            Vector3 inboundDirection = (roomCenter - gapCenter).normalized;
+            Vector3 perpendicularDirection = Vector3.Cross(inboundDirection, Vector3.up);
+
+            float jitter = UnityEngine.Random.Range(-pathJitterAmount, pathJitterAmount);
+            Vector3 intermediateLandingPos = gapCenter + (inboundDirection * 2.0f) + (perpendicularDirection * jitter);
+
+            return new Vector3[] { startPos, gapCenter, intermediateLandingPos, targetPos };
+        }
+
+        public Vector3 GetOuterSpawnPosition()
+        {
+            Vector3 gapPos = GetConveyorEntranceWorldPosition();
+            return gapPos + outerSpawnOffset;
+        }
+
+        public Vector3 GetConveyorEntranceWorldPosition()
+        {
+            ConveyorManager conveyor = ConveyorManager.Instance != null ? ConveyorManager.Instance : FindFirstObjectByType<ConveyorManager>();
+
+            if (conveyor != null && conveyor.Path != null)
+            {
+                Vector3 entrancePos = conveyor.Path.GetPosition(conveyor.EntranceDistance);
+                Vector3 exitPos = conveyor.Path.GetPosition(conveyor.ExitDistance);
+                return (entrancePos + exitPos) * 0.5f;
+            }
+
+            return transform.position;
+        }
+
+        public Vector3 GetEdgeSlotWorldPosition(int index)
+        {
+            ConveyorManager conveyor = ConveyorManager.Instance != null ? ConveyorManager.Instance : FindFirstObjectByType<ConveyorManager>();
+
+            if (conveyor != null && conveyor.Path != null && conveyor.Path.Length > 0f)
+            {
+                if (slotSplineDistances == null || slotSplineDistances.Length != activeEdgeSlotCount || slotSplineDistances[index] == 0f)
+                {
+                    InitializeGridSplineMapping();
+                }
+
+                float splineDist = slotSplineDistances[index];
+                Vector3 beltPoint = conveyor.Path.GetPosition(splineDist);
+
+                Vector3 roomCenter = conveyorBuilder != null ? conveyorBuilder.CenterPosition : transform.position;
+                Vector3 inwardDir = (roomCenter - beltPoint).normalized;
+                inwardDir.y = 0f;
+
+                return beltPoint + inwardDir * edgeInwardOffset;
+            }
+
+            return transform.position;
         }
 
         private void ClearExistingStations()
@@ -167,14 +309,6 @@ namespace RestaurantLoop.Core
             }
 
             return positions;
-        }
-
-        private void PopulateInitialEdgeSlots()
-        {
-            for (int i = 0; i < activeEdgeSlotCount; i++)
-            {
-                TryFillEdgeSlot(i);
-            }
         }
 
         private void TryFillEdgeSlot(int slotIndex)
@@ -223,9 +357,10 @@ namespace RestaurantLoop.Core
 
         public Customer CheckServiceForBeltItem(float itemSplineDistance, ItemDataSO itemData)
         {
-            if (conveyorPath == null) return null;
+            ConveyorManager conveyor = ConveyorManager.Instance != null ? ConveyorManager.Instance : FindFirstObjectByType<ConveyorManager>();
+            if (conveyor == null || conveyor.Path == null) return null;
 
-            float pathLength = conveyorPath.Length;
+            float pathLength = conveyor.Path.Length;
             Customer bestCandidate = null;
             float minDelta = float.MaxValue;
 
@@ -266,74 +401,23 @@ namespace RestaurantLoop.Core
             }
         }
 
-        public Vector3 GetEdgeSlotWorldPosition(int index)
-        {
-            GetInnerBounds(out float minX, out float maxX, out float minZ, out float maxZ);
-
-            float perimeter = 2 * ((maxX - minX) + (maxZ - minZ));
-            float step = perimeter / activeEdgeSlotCount;
-            float currentDist = index * step;
-
-            float width = maxX - minX;
-            float height = maxZ - minZ;
-
-            if (currentDist <= width)
-                return new Vector3(minX + currentDist, transform.position.y, minZ);
-            currentDist -= width;
-
-            if (currentDist <= height)
-                return new Vector3(maxX, transform.position.y, minZ + currentDist);
-            currentDist -= height;
-
-            if (currentDist <= width)
-                return new Vector3(maxX - currentDist, transform.position.y, maxZ);
-            currentDist -= width;
-
-            return new Vector3(minX, transform.position.y, maxZ - currentDist);
-        }
-
-        private float FindClosestDistanceOnSpline(Vector3 worldPos, float pathLength)
-        {
-            float bestDist = 0f;
-            float minSqrMag = float.MaxValue;
-            int samples = 120;
-
-            for (int i = 0; i < samples; i++)
-            {
-                float dist = (i / (float)samples) * pathLength;
-                Vector3 samplePos = conveyorPath.GetPosition(dist);
-                float sqrMag = (samplePos - worldPos).sqrMagnitude;
-
-                if (sqrMag < minSqrMag)
-                {
-                    minSqrMag = sqrMag;
-                    bestDist = dist;
-                }
-            }
-
-            return bestDist;
-        }
-
-        private void GetInnerBounds(out float minX, out float maxX, out float minZ, out float maxZ)
-        {
-            Vector3 center = conveyorBuilder != null ? conveyorBuilder.CenterPosition : transform.position;
-
-            float halfW = (conveyorBuilder != null ? conveyorBuilder.Width * 0.5f : 7.5f) - marginX;
-            float halfH = (conveyorBuilder != null ? conveyorBuilder.Height * 0.5f : 10f) - marginZ;
-
-            minX = center.x - halfW;
-            maxX = center.x + halfW;
-            minZ = center.z - halfH;
-            maxZ = center.z + halfH;
-        }
-
         private void OnDrawGizmos()
         {
+            InitializeGridSplineMapping();
+
             Gizmos.color = Color.green;
             for (int i = 0; i < activeEdgeSlotCount; i++)
             {
                 Gizmos.DrawWireSphere(GetEdgeSlotWorldPosition(i), 0.4f);
             }
+
+            // Outer Spawn Point (Yellow)
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(GetOuterSpawnPosition(), 0.5f);
+
+            // Calculated Conveyor Gap Center (Cyan)
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(GetConveyorEntranceWorldPosition(), 0.5f);
 
             CrowdTestSpawner spawner = FindFirstObjectByType<CrowdTestSpawner>();
             if (spawner == null || spawner.StationConfigs == null || spawner.StationConfigs.Count == 0)
