@@ -1,8 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using DG.Tweening;
+// PoolManager'a ulaşmak için Utilities'i ekledik
+using RestaurantLoop.Core.Utilities; 
 
 namespace RestaurantLoop.Core
 {
@@ -53,7 +55,6 @@ namespace RestaurantLoop.Core
         {
             mainCamera = Camera.main;
 
-            // Auto-bind countText if reference was missed in Inspector
             if (countText == null)
             {
                 countText = GetComponentInChildren<TMP_Text>(true);
@@ -97,13 +98,18 @@ namespace RestaurantLoop.Core
                     int lastIndex = spawnedStackedItems.Count - 1;
                     if (lastIndex >= 0)
                     {
-                        if (spawnedStackedItems[lastIndex] != null) Destroy(spawnedStackedItems[lastIndex]);
+                        // DESTROY YERİNE DESPAWN (POOL İADESİ)
+                        if (spawnedStackedItems[lastIndex] != null) 
+                        {
+                            PoolManager.Instance.Despawn(spawnedStackedItems[lastIndex]);
+                        }
                         spawnedStackedItems.RemoveAt(lastIndex);
                     }
                 }
 
                 float totalStackHeight = remainingCount * yOffset;
                 UpdateCountText(true, totalStackHeight + textHeightOffset);
+                UpdateColliderBounds();
             }
             else
             {
@@ -136,10 +142,9 @@ namespace RestaurantLoop.Core
                 {
                     if (singleMeshModel != null)
                     {
-                        GameObject item = Instantiate(singleMeshModel, visualContainer);
-                        item.SetActive(true);
+                        // INSTANTIATE YERİNE SPAWN (HAVUZDAN ÇEK)
+                        GameObject item = PoolManager.Instance.Spawn(singleMeshModel, Vector3.zero, singleMeshModel.transform.rotation, visualContainer);
                         item.transform.localPosition = new Vector3(0f, (i * yOffset) + modelBaseOffsetY, 0f);
-                        item.transform.localRotation = singleMeshModel.transform.localRotation;
                         item.transform.localScale = singleMeshModel.transform.localScale;
                         spawnedStackedItems.Add(item);
                     }
@@ -148,13 +153,34 @@ namespace RestaurantLoop.Core
                 float totalStackHeight = remainingCount * yOffset;
                 UpdateCountText(true, totalStackHeight + textHeightOffset);
             }
+
+            UpdateColliderBounds();
+        }
+
+        private void UpdateColliderBounds()
+        {
+            BoxCollider boxCol = GetComponent<BoxCollider>();
+            if (boxCol == null) return;
+
+            if (currentMode == StackVisualMode.Stacked)
+            {
+                float totalHeight = remainingCount > 0 ? (remainingCount * yOffset) : 0.5f;
+                boxCol.size = new Vector3(1f, totalHeight, 1f);
+                boxCol.center = new Vector3(0f, (totalHeight / 2f) - (yOffset / 2f), 0f);
+            }
+            else
+            {
+                boxCol.size = new Vector3(1f, 1f, 1f); 
+                boxCol.center = Vector3.zero;
+            }
         }
 
         private void ClearStackedVisuals()
         {
             foreach (var item in spawnedStackedItems)
             {
-                if (item != null) Destroy(item);
+                // DESTROY YERİNE DESPAWN (POOL İADESİ)
+                if (item != null) PoolManager.Instance.Despawn(item);
             }
 
             spawnedStackedItems.Clear();
@@ -279,11 +305,14 @@ namespace RestaurantLoop.Core
 
                 if (singleMeshModel != null)
                 {
-                    GameObject flyingItem = Instantiate(singleMeshModel, transform.position, Quaternion.identity);
-                    flyingItem.SetActive(true);
-
+                    // FIRLATILAN OBJEYİ HAVUZDAN ÇEKİYORUZ
+                    GameObject flyingItem = PoolManager.Instance.Spawn(singleMeshModel, transform.position, Quaternion.identity);
+                    
                     flyingItem.transform.DOJump(targetCustomer.transform.position, 2f, 1, 0.35f)
-                        .OnComplete(() => { Destroy(flyingItem); });
+                        .OnComplete(() => { 
+                            // ANİMASYON BİTİNCE OBJEYİ SİLME, HAVUZA GERİ VER
+                            PoolManager.Instance.Despawn(flyingItem); 
+                        });
                 }
 
                 SetItemCount(remainingCount);
