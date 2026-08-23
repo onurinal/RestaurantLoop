@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: e5fd0f42ba934d14c8118f55417dee23
+guid: e4c7e51690ddf344ba30a0f3e2c8a1a4
 ModelImporter:
   serializedVersion: 24300
   internalIDToNameTable: []
@@ -7,18 +7,18 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: DefaultMaterial
-    second: {fileID: 2100000, guid: acc5a457e891fb846b97985057bd75e5, type: 2}
+      name: Material.012
+    second: {fileID: 2100000, guid: f77f37f401fc8df4bb1b74cd8588e487, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: Material.008
-    second: {fileID: 2100000, guid: d18bf22ecd17d1b4aacf08a6b459ff15, type: 2}
+      name: Material.013
+    second: {fileID: 2100000, guid: dd81f74e395573b458a9c9c366cc1875, type: 2}
   - first:
-      type: UnityEngine:Material
+      type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
-      name: Material.010
-    second: {fileID: 2100000, guid: f81c84a2248834940b57947b0e618fba, type: 2}
+      name: beef_low_Material.003_BaseMap
+    second: {fileID: 2800000, guid: 9a2070d06edbeff4580efa155df26cc7, type: 3}
   materials:
     materialImportMode: 2
     materialName: 0
