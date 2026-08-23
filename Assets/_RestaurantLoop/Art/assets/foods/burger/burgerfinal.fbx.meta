@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: bb6c90a7d3f591e49b1ada1da1293264
+guid: 201d31bd0085cde499f850cf400ca97e
 ModelImporter:
   serializedVersion: 24300
   internalIDToNameTable: []
@@ -7,23 +7,13 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: Material.008
-    second: {fileID: 2100000, guid: f45c97aa87e04c7449d896b538793208, type: 2}
+      name: DefaultMaterial
+    second: {fileID: 2100000, guid: 4443be6653cd6fd439af00598a6297b9, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Material.010
-    second: {fileID: 2100000, guid: 0730eb04f7c7c144089e4755ac70e4be, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Material.011
-    second: {fileID: 2100000, guid: 2a1484fb0ea36454db913303d1247a7c, type: 2}
-  - first:
-      type: UnityEngine:Texture2D
-      assembly: UnityEngine.CoreModule
-      name: "Ekran g\xF6r\xFCnt\xFCs\xFC 2026-08-20 135705"
-    second: {fileID: 2800000, guid: 0c5cc5c8264ccd040aa49a24e8c431a3, type: 3}
+    second: {fileID: 2100000, guid: 275c2fbaa0c8f4849a98f857b6f29fab, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
