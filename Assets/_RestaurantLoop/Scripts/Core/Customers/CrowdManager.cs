@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using RestaurantLoop.Infrastructure; // Object Pool için eklendi
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -139,7 +140,10 @@ namespace RestaurantLoop.Core
 
             Vector3 targetPos = GetEdgeSlotWorldPosition(slotIndex);
 
-            Customer newCustomer = Instantiate(customerPrefab, station.position, customerPrefab.transform.rotation, transform);
+            // Instantiate YERİNE POOLMANAGER KULLANIMI:
+            GameObject customerObj = PoolManager.Instance.Spawn(customerPrefab.gameObject, station.position, customerPrefab.transform.rotation, transform);
+            Customer newCustomer = customerObj.GetComponent<Customer>();
+            
             newCustomer.Initialize(station.itemData);
 
             edgeSlots.Occupy(slotIndex, newCustomer);

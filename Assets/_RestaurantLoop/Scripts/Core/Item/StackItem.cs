@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using DG.Tweening;
-// PoolManager'a ulaşmak için Utilities'i ekledik
-using RestaurantLoop.Core.Utilities; 
+using RestaurantLoop.Infrastructure;
 
 namespace RestaurantLoop.Core
 {
@@ -98,7 +97,6 @@ namespace RestaurantLoop.Core
                     int lastIndex = spawnedStackedItems.Count - 1;
                     if (lastIndex >= 0)
                     {
-                        // DESTROY YERİNE DESPAWN (POOL İADESİ)
                         if (spawnedStackedItems[lastIndex] != null) 
                         {
                             PoolManager.Instance.Despawn(spawnedStackedItems[lastIndex]);
@@ -142,7 +140,6 @@ namespace RestaurantLoop.Core
                 {
                     if (singleMeshModel != null)
                     {
-                        // INSTANTIATE YERİNE SPAWN (HAVUZDAN ÇEK)
                         GameObject item = PoolManager.Instance.Spawn(singleMeshModel, Vector3.zero, singleMeshModel.transform.rotation, visualContainer);
                         item.transform.localPosition = new Vector3(0f, (i * yOffset) + modelBaseOffsetY, 0f);
                         item.transform.localScale = singleMeshModel.transform.localScale;
@@ -179,7 +176,6 @@ namespace RestaurantLoop.Core
         {
             foreach (var item in spawnedStackedItems)
             {
-                // DESTROY YERİNE DESPAWN (POOL İADESİ)
                 if (item != null) PoolManager.Instance.Despawn(item);
             }
 
@@ -305,12 +301,10 @@ namespace RestaurantLoop.Core
 
                 if (singleMeshModel != null)
                 {
-                    // FIRLATILAN OBJEYİ HAVUZDAN ÇEKİYORUZ
                     GameObject flyingItem = PoolManager.Instance.Spawn(singleMeshModel, transform.position, Quaternion.identity);
                     
                     flyingItem.transform.DOJump(targetCustomer.transform.position, 2f, 1, 0.35f)
                         .OnComplete(() => { 
-                            // ANİMASYON BİTİNCE OBJEYİ SİLME, HAVUZA GERİ VER
                             PoolManager.Instance.Despawn(flyingItem); 
                         });
                 }

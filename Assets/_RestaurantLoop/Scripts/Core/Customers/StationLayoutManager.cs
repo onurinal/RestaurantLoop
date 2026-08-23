@@ -1,12 +1,9 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using RestaurantLoop.Infrastructure;
 
 namespace RestaurantLoop.Core
 {
-    /// <summary>
-    /// Owns the central station layout: grid positioning, instantiation/teardown of station views,
-    /// and availability queries used to route waiting customers.
-    /// </summary>
     public class StationLayoutManager
     {
         private readonly CustomerStationView stationPrefab;
@@ -39,7 +36,9 @@ namespace RestaurantLoop.Core
                 StationConfig cfg = configs[i];
                 Vector3 spawnPos = layoutPositions[i];
 
-                CustomerStationView viewInstance = Object.Instantiate(stationPrefab, spawnPos, Quaternion.identity, parent);
+                GameObject viewObj = PoolManager.Instance.Spawn(stationPrefab.gameObject, spawnPos, Quaternion.identity, parent);
+                CustomerStationView viewInstance = viewObj.GetComponent<CustomerStationView>();
+                
                 viewInstance.Initialize(cfg.itemData, 0);
 
                 stations.Add(new CustomerStation
@@ -56,7 +55,7 @@ namespace RestaurantLoop.Core
         {
             foreach (var station in stations)
             {
-                if (station.view != null) Object.Destroy(station.view.gameObject);
+                if (station.view != null) PoolManager.Instance.Despawn(station.view.gameObject);
             }
 
             stations.Clear();
@@ -88,9 +87,6 @@ namespace RestaurantLoop.Core
 
         public CustomerStation FindStationFor(ItemDataSO itemData) => stations.Find(s => s.itemData == itemData);
 
-        /// <summary>
-        /// Picks a random station that still has waiting customers and consumes one slot from it.
-        /// </summary>
         public bool TryConsumeAvailableStation(out CustomerStation station)
         {
             station = GetRandomAvailableStation();

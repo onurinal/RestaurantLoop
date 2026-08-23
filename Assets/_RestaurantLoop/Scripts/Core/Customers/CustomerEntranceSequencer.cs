@@ -2,13 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using RestaurantLoop.Infrastructure;
 
 namespace RestaurantLoop.Core
 {
-    /// <summary>
-    /// Runs the entrance spawn sequence for a level: instantiates customers in randomized order and
-    /// routes each one to a free edge slot, or to its station's waiting queue once edge slots are full.
-    /// </summary>
     public class CustomerEntranceSequencer
     {
         private readonly float spawnInterval;
@@ -48,7 +45,10 @@ namespace RestaurantLoop.Core
             for (int i = 0; i < incomingQueue.Count; i++)
             {
                 ItemDataSO customerData = incomingQueue[i];
-                Customer newCustomer = UnityEngine.Object.Instantiate(customerPrefab, spawnPos, customerPrefab.transform.rotation, parent);
+                
+                GameObject customerObj = PoolManager.Instance.Spawn(customerPrefab.gameObject, spawnPos, customerPrefab.transform.rotation, parent);
+                Customer newCustomer = customerObj.GetComponent<Customer>();
+                
                 newCustomer.Initialize(customerData);
                 activeWalkers++;
 
@@ -74,7 +74,8 @@ namespace RestaurantLoop.Core
                         {
                             targetStation.remainingCount++;
                             targetStation.UpdateUI();
-                            UnityEngine.Object.Destroy(newCustomer.gameObject);
+                            
+                            PoolManager.Instance.Despawn(newCustomer.gameObject);
                             activeWalkers--;
                         });
                     }
@@ -87,7 +88,6 @@ namespace RestaurantLoop.Core
                 yield return new WaitForSeconds(spawnInterval);
             }
 
-            // Wait until every spawned customer finishes walking and arrives at its destination.
             yield return new WaitUntil(() => activeWalkers <= 0);
 
             IsRunning = false;
@@ -104,7 +104,6 @@ namespace RestaurantLoop.Core
                 }
             }
 
-            // Fisher-Yates shuffle.
             for (int i = queue.Count - 1; i > 0; i--)
             {
                 int randomIndex = UnityEngine.Random.Range(0, i + 1);

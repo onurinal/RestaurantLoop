@@ -2,19 +2,15 @@
 using UnityEngine;
 using UnityEngine.Pool;
 
-namespace RestaurantLoop.Core.Utilities
+namespace RestaurantLoop.Infrastructure
 {
-    /// <summary>
-    /// Unity'nin yerleşik ObjectPool sistemini kullanan, over-engineering'den uzak temiz havuz yöneticisi.
-    /// </summary>
     public class PoolManager : MonoBehaviour
     {
         public static PoolManager Instance { get; private set; }
 
-        // Prefab'ı key olarak kullanarak her prefab tipi için ayrı bir havuz tutuyoruz
         private Dictionary<GameObject, ObjectPool<GameObject>> pools = new Dictionary<GameObject, ObjectPool<GameObject>>();
         
-        // Sahnedeki klonların hangi prefab'dan üretildiğini bulmak için ters referans haritası
+        // Maps spawned instances back to their original prefabs for accurate despawning
         private Dictionary<GameObject, GameObject> instanceToPrefabMap = new Dictionary<GameObject, GameObject>();
 
         private void Awake()
@@ -23,14 +19,10 @@ namespace RestaurantLoop.Core.Utilities
             else Destroy(gameObject);
         }
 
-        /// <summary>
-        /// Instantiate yerine kullanılır. Havuzda varsa getirir, yoksa yeni üretir.
-        /// </summary>
         public GameObject Spawn(GameObject prefab, Vector3 position, Quaternion rotation, Transform parent = null)
         {
             if (prefab == null) return null;
 
-            // Eğer bu prefab için daha önce havuz açılmadıysa, hemen temiz bir tane aç
             if (!pools.ContainsKey(prefab))
             {
                 pools[prefab] = new ObjectPool<GameObject>(
@@ -53,15 +45,11 @@ namespace RestaurantLoop.Core.Utilities
                 instance.transform.SetParent(parent);
             }
 
-            // Bu klonun hangi prefab'a ait olduğunu kaydediyoruz ki iade ederken (Despawn) bulalım
             instanceToPrefabMap[instance] = prefab;
 
             return instance;
         }
 
-        /// <summary>
-        /// Destroy yerine kullanılır. Objeyi silmez, kapatıp havuza geri gönderir.
-        /// </summary>
         public void Despawn(GameObject instance)
         {
             if (instance == null) return;
@@ -76,7 +64,7 @@ namespace RestaurantLoop.Core.Utilities
                 }
             }
 
-            // Eğer obje bizim havuz sistemimizden çıkmadıysa (yanlışlıkla normal üretildiyse) güvenli şekilde sil
+            // Fallback: Destroy if the object was not created by the pool system
             Destroy(instance);
         }
     }

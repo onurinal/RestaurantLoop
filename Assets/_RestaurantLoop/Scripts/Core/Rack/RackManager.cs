@@ -2,13 +2,10 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
+using RestaurantLoop.Infrastructure;
 
 namespace RestaurantLoop.Core
 {
-    /// <summary>
-    /// Manages dynamic rack slot spawning, item placement, and rack reuse dispatching.
-    /// Safely aligns relative to ConveyorController bounds.
-    /// </summary>
     public class RackManager : MonoBehaviour
     {
         public static RackManager Instance { get; private set; }
@@ -28,10 +25,7 @@ namespace RestaurantLoop.Core
         public Vector3 CenterPosition => GetCalculatedCenterPosition();
         public bool HasAvailableSlot => GetFirstEmptySlot() != null;
 
-        /// <summary>Raised after a stack is accepted into a rack slot and its return animation starts.</summary>
         public event Action<StackItem, RackSlot> StackAssignedToRack;
-
-        /// <summary>Raised after a rack stack is accepted for conveyor redeployment and its slot is cleared.</summary>
         public event Action<StackItem, RackSlot> RackStackRedeploymentStarted;
 
         private void Awake()
@@ -53,7 +47,6 @@ namespace RestaurantLoop.Core
 
         public Vector3 GetCalculatedCenterPosition()
         {
-            // Fallback to ConveyorController if beltAnchor is not manually assigned
             if (beltAnchor == null && ConveyorManager.Instance != null)
             {
                 beltAnchor = ConveyorManager.Instance.transform;
@@ -86,7 +79,9 @@ namespace RestaurantLoop.Core
             for (int i = 0; i < slotCount; i++)
             {
                 Vector3 slotPosition = new Vector3(startX + (i * slotSpacing), originPosition.y, originPosition.z);
-                RackSlot newSlot = Instantiate(slotPrefab, slotPosition, Quaternion.identity, transform);
+                
+                GameObject slotObj = PoolManager.Instance.Spawn(slotPrefab.gameObject, slotPosition, Quaternion.identity, transform);
+                RackSlot newSlot = slotObj.GetComponent<RackSlot>();
                 newSlot.gameObject.name = $"RackSlot_{i + 1}";
 
                 rackSlots.Add(newSlot);
@@ -144,8 +139,6 @@ namespace RestaurantLoop.Core
                 RackStackRedeploymentStarted?.Invoke(stack, targetSlot);
             }
 
-            // Preserve the prototype method's existing return contract. The event,
-            // unlike the method result, is emitted only when conveyor acceptance succeeds.
             return true;
         }
 
@@ -179,7 +172,7 @@ namespace RestaurantLoop.Core
         {
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
-                Destroy(transform.GetChild(i).gameObject);
+                PoolManager.Instance.Despawn(transform.GetChild(i).gameObject);
             }
 
             rackSlots.Clear();
