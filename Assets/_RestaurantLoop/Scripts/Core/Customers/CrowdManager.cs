@@ -10,6 +10,16 @@ using UnityEditor;
 
 namespace RestaurantLoop.Core
 {
+    [Serializable]
+    public class CustomerPrefabBinding
+    {
+        [SerializeField] private ItemDataSO itemData;
+        [SerializeField] private Customer customerPrefab;
+
+        public bool Matches(ItemDataSO data) => itemData == data;
+        public Customer CustomerPrefab => customerPrefab;
+    }
+
     public class CrowdManager : MonoBehaviour
     {
         public static CrowdManager Instance { get; private set; }
@@ -31,8 +41,12 @@ namespace RestaurantLoop.Core
         [SerializeField] private float pathJitterAmount = 0.4f;
         [SerializeField] private Vector3 outerSpawnOffset = new Vector3(0f, 0f, -3.0f);
 
-        [Header("Prefabs & References")]
+        [Header("Customer Prefabs")]
+        [Tooltip("Used for item types whose character art has not been created yet.")]
         [SerializeField] private Customer customerPrefab;
+        [SerializeField] private List<CustomerPrefabBinding> customerPrefabBindings = new List<CustomerPrefabBinding>();
+
+        [Header("References")]
         [SerializeField] private ConveyorBuilder conveyorBuilder;
 
         private EdgeSlotService edgeSlots;
@@ -89,7 +103,7 @@ namespace RestaurantLoop.Core
 
             yield return entranceSequencer.Run(
                 configs,
-                customerPrefab,
+                GetCustomerPrefab,
                 transform,
                 GetConveyor(),
                 spawnPos,
@@ -136,6 +150,13 @@ namespace RestaurantLoop.Core
 
             Vector3 targetPos = GetEdgeSlotWorldPosition(slotIndex);
 
+            Customer customerPrefab = GetCustomerPrefab(station.itemData);
+            if (customerPrefab == null)
+            {
+                Debug.LogError($"No customer prefab is configured for {station.itemData?.ItemName ?? "an unnamed item"}.");
+                return;
+            }
+
             GameObject customerObj = PoolManager.Instance.Spawn(customerPrefab.gameObject, station.position, customerPrefab.transform.rotation, transform);
             Customer newCustomer = customerObj.GetComponent<Customer>();
 
@@ -149,6 +170,19 @@ namespace RestaurantLoop.Core
         public List<Vector3> CalculateStationPositions(int count)
         {
             return stationLayout.CalculatePositions(count, GetRoomCenter());
+        }
+
+        private Customer GetCustomerPrefab(ItemDataSO itemData)
+        {
+            foreach (CustomerPrefabBinding binding in customerPrefabBindings)
+            {
+                if (binding != null && binding.Matches(itemData) && binding.CustomerPrefab != null)
+                {
+                    return binding.CustomerPrefab;
+                }
+            }
+
+            return customerPrefab;
         }
 
         private ConveyorManager GetConveyor()

@@ -26,7 +26,7 @@ namespace RestaurantLoop.Core
 
         public IEnumerator Run(
             List<StationConfig> configs,
-            Customer customerPrefab,
+            Func<ItemDataSO, Customer> customerPrefabResolver,
             Transform parent,
             ConveyorManager conveyor,
             Vector3 spawnPos,
@@ -45,6 +45,13 @@ namespace RestaurantLoop.Core
             for (int i = 0; i < incomingQueue.Count; i++)
             {
                 ItemDataSO customerData = incomingQueue[i];
+                Customer customerPrefab = customerPrefabResolver?.Invoke(customerData);
+
+                if (customerPrefab == null)
+                {
+                    Debug.LogError($"No customer prefab is configured for {customerData?.ItemName ?? "an unnamed item"}.");
+                    continue;
+                }
                 
                 GameObject customerObj = PoolManager.Instance.Spawn(customerPrefab.gameObject, spawnPos, customerPrefab.transform.rotation, parent);
                 Customer newCustomer = customerObj.GetComponent<Customer>();
