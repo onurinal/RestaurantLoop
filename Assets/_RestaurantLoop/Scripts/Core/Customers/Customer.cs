@@ -11,8 +11,9 @@ namespace RestaurantLoop.Core
         [Header("References")]
         [SerializeField] private OrderBalloon orderBalloon;
 
-        [Header("Animation")]
+        [Header("Animation & Visuals")]
         [SerializeField] private Animator animator;
+        [SerializeField] private Transform visualContainer;
 
         [Header("Data")]
         [SerializeField] private ItemDataSO requiredData;
@@ -25,37 +26,39 @@ namespace RestaurantLoop.Core
         private static readonly int EatHash = Animator.StringToHash("Eat");
         private static readonly int JumpHash = Animator.StringToHash("Jump");
 
+        private Transform ModelTransform => visualContainer != null ? visualContainer : (animator != null ? animator.transform : transform);
+
         private void Awake()
         {
-            if (orderBalloon == null)
-            {
-                orderBalloon = GetComponentInChildren<OrderBalloon>();
-            }
-            if (animator == null)
-            {
-                animator = GetComponentInChildren<Animator>();
-            }
+            if (orderBalloon == null) orderBalloon = GetComponentInChildren<OrderBalloon>();
+            if (animator == null) animator = GetComponentInChildren<Animator>();
         }
 
-        // Kill active tweens when disabled to prevent lingering movements in the object pool
-        private void OnDisable()
+        private void OnDestroy()
         {
             transform.DOKill();
+            ModelTransform.DOKill();
         }
 
         public void Initialize(ItemDataSO data)
         {
+            transform.DOKill();
+            ModelTransform.DOKill();
+
             requiredData = data;
             IsServed = false;
             IsEdgeCustomer = false;
-            
-            // Reset scale and rotation to default values when spawned from the pool
-            transform.localScale = Vector3.one;
-            transform.localRotation = Quaternion.identity;
 
-            if (orderBalloon != null && data != null)
+            // Keep root upright and reset model local orientation
+            transform.localScale = Vector3.one;
+            transform.rotation = Quaternion.identity;
+            ModelTransform.localRotation = Quaternion.identity;
+
+            // Set balloon static camera angle once
+            if (orderBalloon != null)
             {
-                orderBalloon.SetColorAndState(data.UIColor, false);
+                orderBalloon.transform.localRotation = Quaternion.Euler(30f, 0f, 0f);
+                if (data != null) orderBalloon.SetColorAndState(data.UIColor, false);
             }
         }
 
@@ -72,26 +75,23 @@ namespace RestaurantLoop.Core
         {
             SetEdgeStatus(setAsEdge);
             transform.DOKill();
+            ModelTransform.DOKill();
 
             if (animator != null) animator.SetBool(IsWalkingHash, true);
 
+            // Rotate ONLY the inner model, keeping root and balloon static
+            ModelTransform.DOLookAt(waypoints[waypoints.Length - 1], duration, AxisConstraint.Y);
+
             transform.DOPath(waypoints, duration, PathType.CatmullRom)
-                .SetLookAt(0.01f)
                 .SetEase(Ease.OutQuad)
                 .OnComplete(() =>
                 {
-                    if (this != null && transform != null)
+                    // Reset model local rotation when walking ends
+                    ModelTransform.DOLocalRotate(Vector3.zero, 0.2f).OnComplete(() =>
                     {
                         if (animator != null) animator.SetBool(IsWalkingHash, false);
-                        
-                        // Force all customers to have the exact same fixed rotation for perfect balloon alignment
-                        if (setAsEdge)
-                        {
-                            transform.DORotate(new Vector3(0f, 180f, 0f), 0.2f);
-                        }
-                        
                         onComplete?.Invoke();
-                    }
+                    });
                 });
         }
 
@@ -99,23 +99,28 @@ namespace RestaurantLoop.Core
         {
             SetEdgeStatus(true);
             transform.DOKill();
+            ModelTransform.DOKill();
 
             if (animator != null) animator.SetBool(IsWalkingHash, true);
 
-            Vector3 lookPos = targetPosition;
-            lookPos.y = transform.position.y;
-            transform.DOLookAt(lookPos, 0.2f);
+            Vector3 moveDir = targetPosition - transform.position;
+            moveDir.y = 0f;
+
+            if (moveDir.sqrMagnitude > 0.001f)
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(moveDir);
+                ModelTransform.DORotateQuaternion(targetRotation, 0.15f);
+            }
 
             transform.DOMove(targetPosition, 0.6f)
                 .SetEase(Ease.OutQuad)
-                .OnComplete(() => 
+                .OnComplete(() =>
                 {
-                    if (animator != null) animator.SetBool(IsWalkingHash, false);
-                    
-                    // Force all customers to have the exact same fixed rotation for perfect balloon alignment
-                    transform.DORotate(new Vector3(0f, 180f, 0f), 0.2f);
-                    
-                    onComplete?.Invoke();
+                    ModelTransform.DOLocalRotate(Vector3.zero, 0.2f).OnComplete(() =>
+                    {
+                        if (animator != null) animator.SetBool(IsWalkingHash, false);
+                        onComplete?.Invoke();
+                    });
                 });
         }
 
@@ -124,6 +129,7 @@ namespace RestaurantLoop.Core
             IsServed = true;
             SetEdgeStatus(false);
             transform.DOKill();
+            ModelTransform.DOKill();
 
             StartCoroutine(EatAndLeaveRoutine(onComplete));
         }
@@ -133,11 +139,11 @@ namespace RestaurantLoop.Core
             yield return new WaitForSeconds(0.35f);
 
             if (animator != null) animator.SetTrigger(EatHash);
-            
+
             yield return new WaitForSeconds(0.5f);
 
             if (animator != null) animator.SetTrigger(JumpHash);
-            
+
             transform.DOScale(Vector3.zero, 0.4f).SetEase(Ease.InBack);
             transform.DOJump(transform.position, 0.5f, 1, 0.4f)
                 .OnComplete(() =>

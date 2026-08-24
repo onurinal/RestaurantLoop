@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Pool;
+using DG.Tweening;
 
 namespace RestaurantLoop.Infrastructure
 {
@@ -9,8 +10,6 @@ namespace RestaurantLoop.Infrastructure
         public static PoolManager Instance { get; private set; }
 
         private Dictionary<GameObject, ObjectPool<GameObject>> pools = new Dictionary<GameObject, ObjectPool<GameObject>>();
-        
-        // Maps spawned instances back to their original prefabs for accurate despawning
         private Dictionary<GameObject, GameObject> instanceToPrefabMap = new Dictionary<GameObject, GameObject>();
 
         private void Awake()
@@ -28,7 +27,11 @@ namespace RestaurantLoop.Infrastructure
                 pools[prefab] = new ObjectPool<GameObject>(
                     createFunc: () => Instantiate(prefab),
                     actionOnGet: (obj) => { obj.SetActive(true); },
-                    actionOnRelease: (obj) => { obj.SetActive(false); obj.transform.SetParent(transform); },
+                    actionOnRelease: (obj) =>
+                    {
+                        obj.SetActive(false);
+                        obj.transform.SetParent(transform);
+                    },
                     actionOnDestroy: (obj) => Destroy(obj),
                     collectionCheck: false,
                     defaultCapacity: 10,
@@ -37,9 +40,10 @@ namespace RestaurantLoop.Infrastructure
             }
 
             GameObject instance = pools[prefab].Get();
+            instance.transform.DOKill();
             instance.transform.position = position;
             instance.transform.rotation = rotation;
-            
+
             if (parent != null)
             {
                 instance.transform.SetParent(parent);
@@ -54,6 +58,8 @@ namespace RestaurantLoop.Infrastructure
         {
             if (instance == null) return;
 
+            instance.transform.DOKill();
+
             if (instanceToPrefabMap.TryGetValue(instance, out GameObject prefab))
             {
                 if (pools.ContainsKey(prefab))
@@ -64,7 +70,6 @@ namespace RestaurantLoop.Infrastructure
                 }
             }
 
-            // Fallback: Destroy if the object was not created by the pool system
             Destroy(instance);
         }
     }
