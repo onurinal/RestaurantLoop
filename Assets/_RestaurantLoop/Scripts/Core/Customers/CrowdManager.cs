@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using RestaurantLoop.Infrastructure; // Object Pool için eklendi
+using RestaurantLoop.Infrastructure;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -10,10 +10,6 @@ using UnityEditor;
 
 namespace RestaurantLoop.Core
 {
-    /// <summary>
-    /// Orchestrates the customer crowd: wires together edge-slot tracking, central station layout,
-    /// and the entrance spawn sequence, and answers belt-side service queries.
-    /// </summary>
     public class CrowdManager : MonoBehaviour
     {
         public static CrowdManager Instance { get; private set; }
@@ -140,10 +136,9 @@ namespace RestaurantLoop.Core
 
             Vector3 targetPos = GetEdgeSlotWorldPosition(slotIndex);
 
-            // Instantiate YERİNE POOLMANAGER KULLANIMI:
             GameObject customerObj = PoolManager.Instance.Spawn(customerPrefab.gameObject, station.position, customerPrefab.transform.rotation, transform);
             Customer newCustomer = customerObj.GetComponent<Customer>();
-            
+
             newCustomer.Initialize(station.itemData);
 
             edgeSlots.Occupy(slotIndex, newCustomer);
