@@ -6,8 +6,29 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/_RestaurantLoop/Scenes/MainMenu.unity
+    guid: f913dbe8043912a4197610dd66c4d5b1
+  - enabled: 1
+    path: Assets/_RestaurantLoop/Scenes/Enes-Gameplay.unity
+    guid: ea868e0923459f74c9629c3536b04a49
+  - enabled: 1
+    path: Assets/_RestaurantLoop/Scenes/Hazar-Gameplay.unity
+    guid: 8167938de0b03704c8ee6bd89aaef74e
+  - enabled: 1
     path: Assets/_RestaurantLoop/Scenes/Gameplay.unity
     guid: 99c9720ab356a0642a771bea13969a05
+  - enabled: 1
+    path: Assets/_RestaurantLoop/Scenes/Graybox.unity
+    guid: cde55eeb21d45d943b76b41605ac2ba3
+  - enabled: 1
+    path: Assets/_RestaurantLoop/Scenes/Bengisu Scene.unity
+    guid: ad3c18ae0e31a1747a33e19d4933e4d2
+  - enabled: 1
+    path: Assets/_RestaurantLoop/Scenes/Main Menu.unity
+    guid: 6ff7009adc79cda45ba7428ce8aafdb3
+  - enabled: 1
+    path: Assets/_RestaurantLoop/Scenes/Onur-Gameplay.unity
+    guid: 49cf4a62b408c1f46902ec192f4854a3
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

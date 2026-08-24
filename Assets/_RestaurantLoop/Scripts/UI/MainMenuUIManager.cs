@@ -1,0 +1,77 @@
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+using UnityEngine.SceneManagement;
+
+namespace RestaurantLoop.UI
+{
+    public class MainMenuUIManager : MonoBehaviour
+    {
+        [Header("Panels")]
+        [SerializeField] private GameObject settingsPanel;
+
+        [Header("Main Menu Elements")]
+        [SerializeField] private Button playButton;
+        [SerializeField] private Button settingsButton;
+        [SerializeField] private TextMeshProUGUI levelText;
+
+        [Header("Settings Elements")]
+        [SerializeField] private Button closeSettingsButton;
+        [SerializeField] private Slider musicSlider; 
+        [SerializeField] private Slider sfxSlider;   
+
+        private void Start()
+        {
+            // Initial panel state
+            settingsPanel.SetActive(false);
+
+            // Add button listeners
+            playButton.onClick.AddListener(StartGame);
+            settingsButton.onClick.AddListener(OpenSettings);
+            closeSettingsButton.onClick.AddListener(CloseSettings);
+
+            // Load saved audio levels from device (defaults to 1f, max volume)
+            musicSlider.value = PlayerPrefs.GetFloat("MusicVolume", 1f);
+            sfxSlider.value = PlayerPrefs.GetFloat("SfxVolume", 1f);
+
+            // Bind functions to slider value changes
+            musicSlider.onValueChanged.AddListener(UpdateMusicVolume);
+            sfxSlider.onValueChanged.AddListener(UpdateSfxVolume);
+            
+            // Level text setup
+            int currentLevel = 1; 
+            levelText.text = $"Level {currentLevel}";
+        }
+
+        private void StartGame()
+        {
+            // Load the main gameplay scene
+            SceneManager.LoadScene("Graybox"); 
+        }
+
+        private void OpenSettings() => settingsPanel.SetActive(true);
+        private void CloseSettings() => settingsPanel.SetActive(false);
+
+        private void UpdateMusicVolume(float value)
+        {
+            // Save the slider value (between 0 and 1) to device
+            PlayerPrefs.SetFloat("MusicVolume", value);
+        }
+
+        private void UpdateSfxVolume(float value)
+        {
+            // Save the slider value (between 0 and 1) to device
+            PlayerPrefs.SetFloat("SfxVolume", value);
+        }
+
+        private void OnDestroy()
+        {
+            // Clean up listeners to prevent memory leaks
+            playButton.onClick.RemoveAllListeners();
+            settingsButton.onClick.RemoveAllListeners();
+            closeSettingsButton.onClick.RemoveAllListeners();
+            musicSlider.onValueChanged.RemoveAllListeners();
+            sfxSlider.onValueChanged.RemoveAllListeners();
+        }
+    }
+}
