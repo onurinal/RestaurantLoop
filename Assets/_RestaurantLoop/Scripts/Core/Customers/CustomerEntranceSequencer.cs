@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using RestaurantLoop.Infrastructure;
 
 namespace RestaurantLoop.Core
 {
+    /// <summary>
+    /// Spawns edge customers and visible crowd customers, placing remaining overflow customers directly as hidden instances.
+    /// </summary>
     public class CustomerEntranceSequencer
     {
         private readonly float spawnInterval;
@@ -25,99 +27,78 @@ namespace RestaurantLoop.Core
         }
 
         public IEnumerator Run(
-            List<StationConfig> configs,
-            Func<ItemDataSO, Customer> customerPrefabResolver,
+            Func<ItemDataSO> popDemandFunc,
+            Customer customerPrefab,
             Transform parent,
-            ConveyorManager conveyor,
             Vector3 spawnPos,
             Vector3 gapCenter,
             Vector3 roomCenter,
             EdgeSlotService edgeSlots,
-            StationLayoutManager stationLayout,
+            CentralCrowdService centralCrowd,
+            int maxVisibleCrowdCount,
+            Func<int, Vector3> getEdgeSlotPosFunc,
             Action<Customer, int> onEdgeSlotAssigned)
         {
             IsRunning = true;
 
-            List<ItemDataSO> incomingQueue = BuildShuffledQueue(configs);
-            int edgeSlotIndex = 0;
-            int activeWalkers = 0;
-
-            for (int i = 0; i < incomingQueue.Count; i++)
+            // 1. Populate active Edge Slots FIRST
+            for (int i = 0; i < edgeSlots.SlotCount; i++)
             {
-                ItemDataSO customerData = incomingQueue[i];
-                Customer customerPrefab = customerPrefabResolver?.Invoke(customerData);
+                ItemDataSO customerData = popDemandFunc?.Invoke();
+                if (customerData == null) break;
 
-                if (customerPrefab == null)
-                {
-                    Debug.LogError($"No customer prefab is configured for {customerData?.ItemName ?? "an unnamed item"}.");
-                    continue;
-                }
-                
-                GameObject customerObj = PoolManager.Instance.Spawn(customerPrefab.gameObject, spawnPos, customerPrefab.transform.rotation, parent);
-                Customer newCustomer = customerObj.GetComponent<Customer>();
-                
-                newCustomer.Initialize(customerData);
-                activeWalkers++;
+                Customer customer = SpawnCustomer(customerPrefab, customerData, spawnPos, parent);
+                edgeSlots.Occupy(i, customer);
 
-                if (edgeSlotIndex < edgeSlots.SlotCount)
-                {
-                    int slotIdx = edgeSlotIndex++;
-                    edgeSlots.Occupy(slotIdx, newCustomer);
+                Vector3 targetPos = getEdgeSlotPosFunc(i);
+                Vector3[] waypoints = EntrancePathUtility.BuildOrganicPath(spawnPos, targetPos, gapCenter, roomCenter, pathJitterAmount);
 
-                    Vector3 edgeTargetPos = edgeSlots.GetSlotWorldPosition(slotIdx, conveyor, roomCenter, parent.position);
-                    Vector3[] waypoints = EntrancePathUtility.BuildOrganicPath(spawnPos, edgeTargetPos, gapCenter, roomCenter, pathJitterAmount);
-
-                    newCustomer.MoveAlongPath(waypoints, moveDuration, true, () => activeWalkers--);
-                    onEdgeSlotAssigned?.Invoke(newCustomer, slotIdx);
-                }
-                else
-                {
-                    CustomerStation targetStation = stationLayout.FindStationFor(customerData);
-                    if (targetStation != null)
-                    {
-                        Vector3[] waypoints = EntrancePathUtility.BuildOrganicPath(spawnPos, targetStation.position, gapCenter, roomCenter, pathJitterAmount);
-
-                        newCustomer.MoveAlongPath(waypoints, moveDuration, false, () =>
-                        {
-                            targetStation.remainingCount++;
-                            targetStation.UpdateUI();
-                            
-                            PoolManager.Instance.Despawn(newCustomer.gameObject);
-                            activeWalkers--;
-                        });
-                    }
-                    else
-                    {
-                        activeWalkers--;
-                    }
-                }
+                customer.MoveAlongPath(waypoints, moveDuration, true);
+                onEdgeSlotAssigned?.Invoke(customer, i);
 
                 yield return new WaitForSeconds(spawnInterval);
             }
 
-            yield return new WaitUntil(() => activeWalkers <= 0);
+            // 2. Spawn and walk VISIBLE Central Crowd customers (up to maxVisibleCrowdCount)
+            int visibleCount = Mathf.Min(maxVisibleCrowdCount, centralCrowd.Count);
+            for (int i = 0; i < visibleCount; i++)
+            {
+                ItemDataSO customerData = popDemandFunc?.Invoke();
+                if (customerData == null) break;
+
+                Customer customer = SpawnCustomer(customerPrefab, customerData, spawnPos, parent);
+                CentralCrowdSlot slot = centralCrowd.Slots[i];
+                slot.OccupyingCustomer = customer;
+
+                Vector3[] waypoints = EntrancePathUtility.BuildOrganicPath(spawnPos, slot.Position, gapCenter, roomCenter, pathJitterAmount);
+                customer.MoveAlongPath(waypoints, moveDuration, false, targetYRotation: slot.YRotation);
+
+                yield return new WaitForSeconds(spawnInterval);
+            }
+
+            // 3. Spawn remaining HIDDEN Central Crowd customers instantly at their assigned positions
+            for (int i = visibleCount; i < centralCrowd.Count; i++)
+            {
+                ItemDataSO customerData = popDemandFunc?.Invoke();
+                if (customerData == null) break;
+
+                CentralCrowdSlot slot = centralCrowd.Slots[i];
+                Customer customer = SpawnCustomer(customerPrefab, customerData, slot.Position, parent);
+
+                customer.SetModelRotation(slot.YRotation);
+                customer.gameObject.SetActive(false); // Hide overflow customers
+                slot.OccupyingCustomer = customer;
+            }
 
             IsRunning = false;
         }
 
-        private static List<ItemDataSO> BuildShuffledQueue(List<StationConfig> configs)
+        private Customer SpawnCustomer(Customer prefab, ItemDataSO data, Vector3 position, Transform parent)
         {
-            List<ItemDataSO> queue = new List<ItemDataSO>();
-            foreach (var cfg in configs)
-            {
-                for (int i = 0; i < cfg.remainingCount; i++)
-                {
-                    queue.Add(cfg.itemData);
-                }
-            }
-
-            for (int i = queue.Count - 1; i > 0; i--)
-            {
-                int randomIndex = UnityEngine.Random.Range(0, i + 1);
-                (queue[i], queue[randomIndex]) = (queue[randomIndex], queue[i]);
-            }
-
-            return queue;
+            GameObject obj = PoolManager.Instance.Spawn(prefab.gameObject, position, Quaternion.identity, parent);
+            Customer customer = obj.GetComponent<Customer>();
+            customer.Initialize(data);
+            return customer;
         }
     }
 }

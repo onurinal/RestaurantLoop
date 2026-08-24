@@ -3,9 +3,6 @@ using UnityEngine;
 
 namespace RestaurantLoop.Core
 {
-    /// <summary>
-    /// Main entry singleton that coordinates level setup across domain managers from loaded LevelDataSO assets.
-    /// </summary>
     public class LevelManager : MonoBehaviour
     {
         public static LevelManager Instance { get; private set; }
@@ -32,23 +29,12 @@ namespace RestaurantLoop.Core
             LevelDataSO data = CurrentLevel;
             if (data == null) return;
 
-            // 1. CrowdManager Setup
+            // Notice: MaxVisibleCrowdCount is now managed internally by CrowdManager
             if (CrowdManager.Instance != null)
             {
-                List<StationConfig> crowdConfigs = new List<StationConfig>();
-                foreach (var cfg in data.stationConfigs)
-                {
-                    crowdConfigs.Add(new StationConfig
-                    {
-                        itemData = cfg.itemData,
-                        remainingCount = cfg.totalCustomerCount
-                    });
-                }
-
-                CrowdManager.Instance.SetupStations(crowdConfigs);
+                CrowdManager.Instance.SetupCrowd(data.customerDemands);
             }
 
-            // 2. QueueManager Setup
             if (QueueManager.Instance != null)
             {
                 QueueManager.Instance.SetupQueue(data);

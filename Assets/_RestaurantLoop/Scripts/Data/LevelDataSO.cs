@@ -5,7 +5,7 @@ using UnityEngine;
 namespace RestaurantLoop.Core
 {
     [Serializable]
-    public struct StationLevelConfig
+    public struct CustomerDemandConfig
     {
         public ItemDataSO itemData;
         public int totalCustomerCount;
@@ -28,10 +28,7 @@ namespace RestaurantLoop.Core
         [Range(1, 10)] public int rackSlotCount = 4;
 
         [Header("Queue Layout Setup")]
-        [Tooltip("Fixed column count defined for the queue layout.")]
         [Range(1, 8)] public int columnCount = 3;
-
-        [Tooltip("Calculated row depth automatically computed by LevelMathUtility based on total stacks.")]
         public int calculatedRowCount = 3;
 
         [Header("Queue Stack Size Constraints")]
@@ -41,19 +38,18 @@ namespace RestaurantLoop.Core
         [Header("Conveyor Settings")]
         public float conveyorSpeedMultiplier = 1.0f;
 
-        [Header("Station Demand Setup")]
-        public List<StationLevelConfig> stationConfigs = new List<StationLevelConfig>();
+        [Header("Customer Demand Setup")]
+        public List<CustomerDemandConfig> customerDemands = new List<CustomerDemandConfig>();
 
         [Header("Queue Initial Stack Setup")]
         public List<QueueStackConfig> queueStackConfigs = new List<QueueStackConfig>();
 
-        // Inspector Validation Properties
         public int TotalCustomerDemand
         {
             get
             {
                 int total = 0;
-                foreach (var c in stationConfigs) total += c.totalCustomerCount;
+                foreach (var c in customerDemands) total += c.totalCustomerCount;
                 return total;
             }
         }

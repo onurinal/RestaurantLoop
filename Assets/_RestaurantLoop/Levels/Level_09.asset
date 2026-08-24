@@ -15,29 +15,27 @@ MonoBehaviour:
   activeEdgeSlotCount: 5
   rackSlotCount: 5
   columnCount: 3
-  calculatedRowCount: 3
-  minStackSize: 10
-  maxStackSize: 25
+  calculatedRowCount: 2
+  minStackSize: 5
+  maxStackSize: 20
   conveyorSpeedMultiplier: 1
-  stationConfigs:
+  customerDemands:
   - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
-    totalCustomerCount: 35
+    totalCustomerCount: 15
   - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-    totalCustomerCount: 35
+    totalCustomerCount: 15
   - itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
-    totalCustomerCount: 35
+    totalCustomerCount: 15
   queueStackConfigs:
+  - itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
+    itemCount: 5
+  - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
+    itemCount: 15
   - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-    itemCount: 20
+    itemCount: 5
   - itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
     itemCount: 10
-  - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
-    itemCount: 25
-  - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-    itemCount: 15
-  - itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
-    itemCount: 15
   - itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
     itemCount: 10
-  - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
+  - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
     itemCount: 10

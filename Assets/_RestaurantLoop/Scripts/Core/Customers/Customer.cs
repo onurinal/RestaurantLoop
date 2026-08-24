@@ -26,13 +26,10 @@ namespace RestaurantLoop.Core
         private static readonly int EatHash = Animator.StringToHash("Eat");
         private static readonly int JumpHash = Animator.StringToHash("Jump");
 
-        private Vector3 authoredLocalScale;
-
         private Transform ModelTransform => visualContainer != null ? visualContainer : (animator != null ? animator.transform : transform);
 
         private void Awake()
         {
-            authoredLocalScale = transform.localScale;
             if (orderBalloon == null) orderBalloon = GetComponentInChildren<OrderBalloon>();
             if (animator == null) animator = GetComponentInChildren<Animator>();
         }
@@ -52,17 +49,19 @@ namespace RestaurantLoop.Core
             IsServed = false;
             IsEdgeCustomer = false;
 
-            // Keep root upright and reset model local orientation
-            transform.localScale = authoredLocalScale;
+            transform.localScale = Vector3.one;
             transform.rotation = Quaternion.identity;
             ModelTransform.localRotation = Quaternion.identity;
 
-            // Set balloon static camera angle once
-            if (orderBalloon != null)
+            if (orderBalloon != null && data != null)
             {
-                orderBalloon.transform.localRotation = Quaternion.Euler(30f, 0f, 0f);
-                if (data != null) orderBalloon.SetColorAndState(data.UIColor, false);
+                orderBalloon.SetColorAndState(data.UIColor, false);
             }
+        }
+
+        public void SetModelRotation(float yAngle)
+        {
+            ModelTransform.localRotation = Quaternion.Euler(0f, yAngle, 0f);
         }
 
         public void SetEdgeStatus(bool isEdge)
@@ -74,7 +73,7 @@ namespace RestaurantLoop.Core
             }
         }
 
-        public void MoveAlongPath(Vector3[] waypoints, float duration, bool setAsEdge, Action onComplete = null)
+        public void MoveAlongPath(Vector3[] waypoints, float duration, bool setAsEdge, float targetYRotation = 0f, Action onComplete = null)
         {
             SetEdgeStatus(setAsEdge);
             transform.DOKill();
@@ -82,15 +81,13 @@ namespace RestaurantLoop.Core
 
             if (animator != null) animator.SetBool(IsWalkingHash, true);
 
-            // Rotate ONLY the inner model, keeping root and balloon static
             ModelTransform.DOLookAt(waypoints[waypoints.Length - 1], duration, AxisConstraint.Y);
 
             transform.DOPath(waypoints, duration, PathType.CatmullRom)
                 .SetEase(Ease.OutQuad)
                 .OnComplete(() =>
                 {
-                    // Reset model local rotation when walking ends
-                    ModelTransform.DOLocalRotate(Vector3.zero, 0.2f).OnComplete(() =>
+                    ModelTransform.DOLocalRotate(new Vector3(0f, targetYRotation, 0f), 0.2f).OnComplete(() =>
                     {
                         if (animator != null) animator.SetBool(IsWalkingHash, false);
                         onComplete?.Invoke();

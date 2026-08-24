@@ -10,55 +10,59 @@ using UnityEditor;
 
 namespace RestaurantLoop.Core
 {
-    [Serializable]
-    public class CustomerPrefabBinding
-    {
-        [SerializeField] private ItemDataSO itemData;
-        [SerializeField] private Customer customerPrefab;
-
-        public bool Matches(ItemDataSO data) => itemData == data;
-        public Customer CustomerPrefab => customerPrefab;
-    }
-
     public class CrowdManager : MonoBehaviour
     {
         public static CrowdManager Instance { get; private set; }
 
         [Header("Active Edge Setup")]
+        [Tooltip("How many customers can eat at the belt simultaneously.")]
         [SerializeField] private int activeEdgeSlotCount = 6;
+        [Tooltip("Acceptable distance margin for a customer to detect and grab food from the belt.")]
         [SerializeField] private float alignmentTolerance = 1.2f;
+        [Tooltip("Distance from the belt where the customer stands/sits.")]
         [SerializeField] private float edgeInwardOffset = 1.5f;
 
-        [Header("Central Station Layout Setup")]
-        [SerializeField] private CustomerStationView stationPrefab;
-        [Range(1, 5)] [SerializeField] private int maxStationsPerRow = 2;
-        [SerializeField] private float stationSpacingX = 2.5f;
-        [SerializeField] private float stationSpacingZ = 2.5f;
+        [Header("Central Crowd Layout Type & Limits")]
+        [SerializeField] private CrowdLayoutType layoutType = CrowdLayoutType.Circular;
+        [SerializeField] private Vector3 crowdCenterOffset = Vector3.zero;
+
+        [Tooltip("Used when LayoutType is set to Rectangular.")]
+        [SerializeField] private Vector2 crowdAreaSize = new Vector2(4f, 6f);
+
+        [Tooltip("Used when LayoutType is set to Circular.")]
+        [SerializeField] private float crowdRadius = 4f;
+
+        [SerializeField] private float minCustomerDistance = 0.7f;
+
+        [Tooltip("Maximum number of visible customer models present in the central crowd area at once.")]
+        [Range(10, 100)]
+        [SerializeField] private int maxVisibleCrowdCount = 100;
 
         [Header("Entrance Sequence Setup")]
-        [SerializeField] private float spawnInterval = 0.22f;
-        [SerializeField] private float moveDuration = 1.4f;
-        [SerializeField] private float pathJitterAmount = 0.4f;
+        [SerializeField] private float spawnInterval = 0.15f;
+        [SerializeField] private float moveDuration = 1.2f;
+        [SerializeField] private float pathJitterAmount = 0.5f;
         [SerializeField] private Vector3 outerSpawnOffset = new Vector3(0f, 0f, -3.0f);
 
-        [Header("Customer Prefabs")]
-        [Tooltip("Used for item types whose character art has not been created yet.")]
+        [Header("Prefabs & References")]
         [SerializeField] private Customer customerPrefab;
-        [SerializeField] private List<CustomerPrefabBinding> customerPrefabBindings = new List<CustomerPrefabBinding>();
-
-        [Header("References")]
         [SerializeField] private ConveyorBuilder conveyorBuilder;
 
         private EdgeSlotService edgeSlots;
-        private StationLayoutManager stationLayout;
+        private CentralCrowdService centralCrowd;
         private CustomerEntranceSequencer entranceSequencer;
         private Coroutine entranceSequenceCoroutine;
 
-        public int ActiveEdgeSlotCount => edgeSlots.SlotCount;
-        public bool IsSpawningCustomers => entranceSequencer.IsRunning;
+        private List<ItemDataSO> unspawnedDemandPool = new List<ItemDataSO>();
+        private Dictionary<ItemDataSO, int> remainingDemandPerType = new Dictionary<ItemDataSO, int>();
+
+        public int ActiveEdgeSlotCount => edgeSlots != null ? edgeSlots.SlotCount : activeEdgeSlotCount;
+        public bool IsSpawningCustomers => entranceSequencer != null && entranceSequencer.IsRunning;
+        public int TotalRemainingDemand { get; private set; }
 
         public event Action<Customer, int> EdgeCustomerReplacementStarted;
         public event Action<Customer, int> CustomerExitCompleted;
+        public event Action<int, Dictionary<ItemDataSO, int>> OnDemandChanged;
 
         private void Awake()
         {
@@ -66,7 +70,7 @@ namespace RestaurantLoop.Core
             else Destroy(gameObject);
 
             edgeSlots = new EdgeSlotService(activeEdgeSlotCount, alignmentTolerance, edgeInwardOffset);
-            stationLayout = new StationLayoutManager(stationPrefab, maxStationsPerRow, stationSpacingX, stationSpacingZ);
+            centralCrowd = new CentralCrowdService();
             entranceSequencer = new CustomerEntranceSequencer(spawnInterval, moveDuration, pathJitterAmount, outerSpawnOffset);
         }
 
@@ -84,54 +88,67 @@ namespace RestaurantLoop.Core
 
         public void InitializeGridSplineMapping()
         {
-            edgeSlots?.RecalculateSplineMapping(GetConveyor());
+            if (!Application.isPlaying || edgeSlots == null || edgeSlots.SlotCount != activeEdgeSlotCount)
+            {
+                edgeSlots = new EdgeSlotService(activeEdgeSlotCount, alignmentTolerance, edgeInwardOffset);
+            }
+
+            edgeSlots.RecalculateSplineMapping(GetConveyor());
         }
 
-        public void SetupStations(List<StationConfig> configs)
+        public void SetupCrowd(List<CustomerDemandConfig> demands)
         {
-            stationLayout.Setup(configs, transform, GetRoomCenter());
+            ClearCrowd();
+
+            TotalRemainingDemand = 0;
+            remainingDemandPerType.Clear();
+
+            foreach (var cfg in demands)
+            {
+                TotalRemainingDemand += cfg.totalCustomerCount;
+                remainingDemandPerType[cfg.itemData] = cfg.totalCustomerCount;
+
+                for (int i = 0; i < cfg.totalCustomerCount; i++)
+                {
+                    unspawnedDemandPool.Add(cfg.itemData);
+                }
+            }
+
+            for (int i = unspawnedDemandPool.Count - 1; i > 0; i--)
+            {
+                int rand = UnityEngine.Random.Range(0, i + 1);
+                (unspawnedDemandPool[i], unspawnedDemandPool[rand]) = (unspawnedDemandPool[rand], unspawnedDemandPool[i]);
+            }
+
+            int centralCrowdCount = Mathf.Max(0, TotalRemainingDemand - activeEdgeSlotCount);
+            if (centralCrowd == null) centralCrowd = new CentralCrowdService();
+
+            centralCrowd.SetupLayout(layoutType, centralCrowdCount, GetRoomCenter(), crowdCenterOffset, crowdAreaSize, crowdRadius, minCustomerDistance);
+
+            NotifyDemandChanged();
 
             if (entranceSequenceCoroutine != null) StopCoroutine(entranceSequenceCoroutine);
-            entranceSequenceCoroutine = StartCoroutine(RunEntranceSequence(configs));
+            entranceSequenceCoroutine = StartCoroutine(RunEntranceSequence());
         }
 
-        private IEnumerator RunEntranceSequence(List<StationConfig> configs)
+        private IEnumerator RunEntranceSequence()
         {
             Vector3 spawnPos = GetOuterSpawnPosition();
             Vector3 gapCenter = GetConveyorEntranceWorldPosition();
             Vector3 roomCenter = GetRoomCenter();
 
             yield return entranceSequencer.Run(
-                configs,
-                GetCustomerPrefab,
+                PopUnspawnedDemand,
+                customerPrefab,
                 transform,
-                GetConveyor(),
                 spawnPos,
                 gapCenter,
                 roomCenter,
                 edgeSlots,
-                stationLayout,
-                (customer, slotIndex) => EdgeCustomerReplacementStarted?.Invoke(customer, slotIndex));
-        }
-
-        public Vector3 GetOuterSpawnPosition()
-        {
-            return EntrancePathUtility.GetOuterSpawnPosition(GetConveyorEntranceWorldPosition(), entranceSequencer.OuterSpawnOffset);
-        }
-
-        public Vector3 GetConveyorEntranceWorldPosition()
-        {
-            return EntrancePathUtility.GetConveyorGapCenter(GetConveyor(), transform.position);
-        }
-
-        public Vector3 GetEdgeSlotWorldPosition(int index)
-        {
-            return edgeSlots.GetSlotWorldPosition(index, GetConveyor(), GetRoomCenter(), transform.position);
-        }
-
-        public Customer CheckServiceForBeltItem(float itemSplineDistance, ItemDataSO itemData)
-        {
-            return edgeSlots.FindServiceCandidate(itemSplineDistance, itemData, GetConveyor());
+                centralCrowd,
+                maxVisibleCrowdCount,
+                GetEdgeSlotWorldPosition,
+                (c, slotIdx) => EdgeCustomerReplacementStarted?.Invoke(c, slotIdx));
         }
 
         public void OnCustomerServed(Customer customer)
@@ -139,90 +156,114 @@ namespace RestaurantLoop.Core
             if (customer == null) return;
             if (!edgeSlots.TryGetSlotIndex(customer, out int slotIndex)) return;
 
+            DecrementDemandForType(customer.RequiredData);
             edgeSlots.Release(slotIndex);
             CustomerExitCompleted?.Invoke(customer, slotIndex);
-            TryFillEdgeSlot(slotIndex);
+
+            PromoteCrowdToEdgeSlot(slotIndex);
         }
 
-        private void TryFillEdgeSlot(int slotIndex)
+        private void PromoteCrowdToEdgeSlot(int edgeSlotIndex)
         {
-            if (!stationLayout.TryConsumeAvailableStation(out CustomerStation station)) return;
+            CentralCrowdSlot visibleSlot = centralCrowd.GetRandomVisibleSlot();
 
-            Vector3 targetPos = GetEdgeSlotWorldPosition(slotIndex);
-
-            Customer customerPrefab = GetCustomerPrefab(station.itemData);
-            if (customerPrefab == null)
+            if (visibleSlot != null && visibleSlot.OccupyingCustomer != null)
             {
-                Debug.LogError($"No customer prefab is configured for {station.itemData?.ItemName ?? "an unnamed item"}.");
-                return;
+                Customer promotedCustomer = visibleSlot.OccupyingCustomer;
+                visibleSlot.OccupyingCustomer = null;
+
+                edgeSlots.Occupy(edgeSlotIndex, promotedCustomer);
+                Vector3 edgePos = GetEdgeSlotWorldPosition(edgeSlotIndex);
+
+                promotedCustomer.MoveToEdgeSlot(edgePos);
+                EdgeCustomerReplacementStarted?.Invoke(promotedCustomer, edgeSlotIndex);
+
+                RevealHiddenCrowdCustomer();
+            }
+        }
+
+        private void RevealHiddenCrowdCustomer()
+        {
+            CentralCrowdSlot hiddenSlot = centralCrowd.GetFirstHiddenOccupiedSlot();
+            if (hiddenSlot != null && hiddenSlot.OccupyingCustomer != null)
+            {
+                hiddenSlot.OccupyingCustomer.gameObject.SetActive(true);
+            }
+        }
+
+        private ItemDataSO PopUnspawnedDemand()
+        {
+            if (unspawnedDemandPool.Count == 0) return null;
+            ItemDataSO data = unspawnedDemandPool[0];
+            unspawnedDemandPool.RemoveAt(0);
+            return data;
+        }
+
+        private void DecrementDemandForType(ItemDataSO data)
+        {
+            if (data == null) return;
+            TotalRemainingDemand = Mathf.Max(0, TotalRemainingDemand - 1);
+
+            if (remainingDemandPerType.ContainsKey(data))
+            {
+                remainingDemandPerType[data] = Mathf.Max(0, remainingDemandPerType[data] - 1);
             }
 
-            GameObject customerObj = PoolManager.Instance.Spawn(customerPrefab.gameObject, station.position, customerPrefab.transform.rotation, transform);
-            Customer newCustomer = customerObj.GetComponent<Customer>();
-
-            newCustomer.Initialize(station.itemData);
-
-            edgeSlots.Occupy(slotIndex, newCustomer);
-            newCustomer.MoveToEdgeSlot(targetPos, null);
-            EdgeCustomerReplacementStarted?.Invoke(newCustomer, slotIndex);
+            NotifyDemandChanged();
         }
 
-        public List<Vector3> CalculateStationPositions(int count)
+        private void NotifyDemandChanged()
         {
-            return stationLayout.CalculatePositions(count, GetRoomCenter());
+            OnDemandChanged?.Invoke(TotalRemainingDemand, remainingDemandPerType);
         }
 
-        private Customer GetCustomerPrefab(ItemDataSO itemData)
+        public void ClearCrowd()
         {
-            foreach (CustomerPrefabBinding binding in customerPrefabBindings)
+            for (int i = transform.childCount - 1; i >= 0; i--)
             {
-                if (binding != null && binding.Matches(itemData) && binding.CustomerPrefab != null)
-                {
-                    return binding.CustomerPrefab;
-                }
+                Customer c = transform.GetChild(i).GetComponent<Customer>();
+                if (c != null) PoolManager.Instance.Despawn(c.gameObject);
             }
 
-            return customerPrefab;
+            if (centralCrowd != null) centralCrowd.Clear();
+            unspawnedDemandPool.Clear();
         }
 
-        private ConveyorManager GetConveyor()
-        {
-            return ConveyorManager.Instance != null ? ConveyorManager.Instance : FindFirstObjectByType<ConveyorManager>();
-        }
+        public Vector3 GetOuterSpawnPosition() => EntrancePathUtility.GetOuterSpawnPosition(GetConveyorEntranceWorldPosition(), outerSpawnOffset);
+        public Vector3 GetConveyorEntranceWorldPosition() => EntrancePathUtility.GetConveyorGapCenter(GetConveyor(), transform.position);
+        public Vector3 GetEdgeSlotWorldPosition(int index) => edgeSlots.GetSlotWorldPosition(index, GetConveyor(), GetRoomCenter(), transform.position);
+        public Customer CheckServiceForBeltItem(float dist, ItemDataSO data) => edgeSlots.FindServiceCandidate(dist, data, GetConveyor());
 
-        private Vector3 GetRoomCenter()
-        {
-            return conveyorBuilder != null ? conveyorBuilder.CenterPosition : transform.position;
-        }
+        private ConveyorManager GetConveyor() => ConveyorManager.Instance != null ? ConveyorManager.Instance : FindFirstObjectByType<ConveyorManager>();
+        private Vector3 GetRoomCenter() => conveyorBuilder != null ? conveyorBuilder.CenterPosition : transform.position;
 
         private void OnDrawGizmos()
         {
-            if (edgeSlots == null) return;
-
             InitializeGridSplineMapping();
 
-            Gizmos.color = Color.green;
-            for (int i = 0; i < edgeSlots.SlotCount; i++)
+            if (edgeSlots != null)
             {
-                Gizmos.DrawWireSphere(GetEdgeSlotWorldPosition(i), 0.4f);
+                Gizmos.color = Color.green;
+                for (int i = 0; i < edgeSlots.SlotCount; i++)
+                {
+                    Gizmos.DrawWireSphere(GetEdgeSlotWorldPosition(i), 0.4f);
+                }
             }
 
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(GetOuterSpawnPosition(), 0.5f);
-
             Gizmos.color = Color.cyan;
             Gizmos.DrawWireSphere(GetConveyorEntranceWorldPosition(), 0.5f);
 
-            CrowdTestSpawner spawner = FindFirstObjectByType<CrowdTestSpawner>();
-            if (spawner == null || spawner.StationConfigs == null || spawner.StationConfigs.Count == 0) return;
+            if (centralCrowd == null) centralCrowd = new CentralCrowdService();
 
-            List<Vector3> previewPositions = CalculateStationPositions(spawner.StationConfigs.Count);
-            Gizmos.color = Color.magenta;
-
-            foreach (var pos in previewPositions)
+            // Always use maxVisibleCrowdCount directly from this component for Gizmo preview
+            if (!Application.isPlaying || centralCrowd.Count == 0)
             {
-                Gizmos.DrawWireCube(pos + Vector3.up * 0.5f, new Vector3(1.2f, 1f, 1.2f));
+                centralCrowd.SetupLayout(layoutType, maxVisibleCrowdCount, GetRoomCenter(), crowdCenterOffset, crowdAreaSize, crowdRadius, minCustomerDistance);
             }
+
+            centralCrowd.DrawGizmos(layoutType, GetRoomCenter(), crowdCenterOffset, crowdAreaSize, crowdRadius);
         }
     }
 }

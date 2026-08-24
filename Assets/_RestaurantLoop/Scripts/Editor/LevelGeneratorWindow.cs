@@ -5,21 +5,24 @@ using RestaurantLoop.Core;
 
 namespace RestaurantLoop.EditorTools
 {
-    /// <summary>
-    /// Custom Editor Window for batch generating solvable LevelDataSO assets using 5-step quantized stack bounds.
-    /// </summary>
     public class LevelGeneratorWindow : EditorWindow
     {
         [SerializeField] private List<ItemDataSO> availableItems = new List<ItemDataSO>();
         [SerializeField] private int totalLevelsToGenerate = 30;
         [SerializeField] private string outputFolder = "Assets/_RestaurantLoop/Levels";
 
+        [Header("Difficulty & Demand Curve")]
+        [Tooltip("Total customers for Level 1")]
+        [SerializeField] private int minTotalCustomers = 20;
+        [Tooltip("Total customers for the final level")]
+        [SerializeField] private int maxTotalCustomers = 120;
+
         [Header("Layout Constraints")]
         [SerializeField] private int defaultColumnCount = 3;
         [SerializeField] private int minRackSlots = 4;
         [SerializeField] private int maxRackSlots = 6;
 
-        [Header("Stack Size Constraints (Multiples of 5)")]
+        [Header("Stack Size Constraints (Step: 5)")]
         [SerializeField] private int minStackSize = 10;
         [SerializeField] private int maxStackSize = 40;
 
@@ -31,7 +34,7 @@ namespace RestaurantLoop.EditorTools
         public static void ShowWindow()
         {
             LevelGeneratorWindow window = GetWindow<LevelGeneratorWindow>("Level Generator");
-            window.minSize = new Vector2(350, 560);
+            window.minSize = new Vector2(350, 550);
         }
 
         private void OnEnable()
@@ -58,6 +61,15 @@ namespace RestaurantLoop.EditorTools
             outputFolder = EditorGUILayout.TextField("Output Folder", outputFolder);
 
             EditorGUILayout.Space();
+            GUILayout.Label("Difficulty & Demand Curve", EditorStyles.boldLabel);
+            minTotalCustomers = EditorGUILayout.IntField("Min Total Customers (Lvl 1)", minTotalCustomers);
+            maxTotalCustomers = EditorGUILayout.IntField("Max Total Customers (Last Lvl)", maxTotalCustomers);
+
+            // Validate multiples of 5
+            minTotalCustomers = Mathf.Max(10, Mathf.RoundToInt((float)minTotalCustomers / 5f) * 5);
+            maxTotalCustomers = Mathf.Max(minTotalCustomers, Mathf.RoundToInt((float)maxTotalCustomers / 5f) * 5);
+
+            EditorGUILayout.Space();
             GUILayout.Label("Layout Constraints", EditorStyles.boldLabel);
             defaultColumnCount = EditorGUILayout.IntSlider("Queue Column Count", defaultColumnCount, 1, 6);
             minRackSlots = EditorGUILayout.IntField("Min Rack Slots", minRackSlots);
@@ -68,7 +80,6 @@ namespace RestaurantLoop.EditorTools
             minStackSize = EditorGUILayout.IntField("Min Stack Size", minStackSize);
             maxStackSize = EditorGUILayout.IntField("Max Stack Size", maxStackSize);
 
-            // Force GUI input validation to 5-step bounds
             minStackSize = Mathf.Max(5, Mathf.RoundToInt((float)minStackSize / 5f) * 5);
             maxStackSize = Mathf.Max(minStackSize, Mathf.RoundToInt((float)maxStackSize / 5f) * 5);
 
@@ -110,37 +121,40 @@ namespace RestaurantLoop.EditorTools
 
                 int colorCount = Mathf.Clamp(2 + (i / 8), 2, availableItems.Count);
 
-                // Base demand progressive step curve (multiples of 5)
-                int totalDemand = 20 + (i * 10);
+                // Lerp total demand between min and max based on level progression
+                float progress = (float)(i - 1) / Mathf.Max(1, totalLevelsToGenerate - 1);
+                int targetTotalDemand = Mathf.RoundToInt(Mathf.Lerp(minTotalCustomers, maxTotalCustomers, progress));
+                targetTotalDemand = Mathf.Max(minStackSize * colorCount, Mathf.RoundToInt((float)targetTotalDemand / 5f) * 5);
+
                 int currentLevelMaxStack = Mathf.Clamp(minStackSize + ((i / 3) * 5), minStackSize, maxStackSize);
 
                 level.activeEdgeSlotCount = Mathf.Clamp(5 + (i / 10), 5, 8);
                 level.rackSlotCount = Mathf.Clamp(minRackSlots + (i / 10), minRackSlots, maxRackSlots);
                 level.columnCount = defaultColumnCount;
-
                 level.minStackSize = minStackSize;
                 level.maxStackSize = currentLevelMaxStack;
 
-                // Guarantee color demand is strictly quantized to a multiple of 5
-                int rawDemandPerColor = totalDemand / colorCount;
-                int demandPerColor = Mathf.Max(minStackSize, Mathf.RoundToInt((float)rawDemandPerColor / 5f) * 5);
+                // Distribute total demand across available colors for this level
+                int baseDemandPerColor = Mathf.RoundToInt((float)(targetTotalDemand / colorCount) / 5f) * 5;
+                baseDemandPerColor = Mathf.Max(minStackSize, baseDemandPerColor);
 
-                level.stationConfigs = new List<StationLevelConfig>();
+                level.customerDemands = new List<CustomerDemandConfig>();
 
                 for (int c = 0; c < colorCount; c++)
                 {
                     if (availableItems[c] != null)
                     {
-                        level.stationConfigs.Add(new StationLevelConfig
+                        level.customerDemands.Add(new CustomerDemandConfig
                         {
                             itemData = availableItems[c],
-                            totalCustomerCount = demandPerColor
+                            totalCustomerCount = baseDemandPerColor
                         });
                     }
                 }
 
+                // Partition the mathematically guaranteed demand into stack chunks
                 level.queueStackConfigs = LevelMathUtility.PartitionDemandToStacks(
-                    level.stationConfigs,
+                    level.customerDemands,
                     minStackSize,
                     currentLevelMaxStack,
                     level.columnCount,
