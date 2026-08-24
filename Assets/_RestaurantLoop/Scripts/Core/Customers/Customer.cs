@@ -2,7 +2,7 @@
 using System.Collections;
 using UnityEngine;
 using DG.Tweening;
-using RestaurantLoop.Infrastructure; // Added for PoolManager
+using RestaurantLoop.Infrastructure;
 
 namespace RestaurantLoop.Core
 {
@@ -37,7 +37,8 @@ namespace RestaurantLoop.Core
             }
         }
 
-        private void OnDestroy()
+        // Kill active tweens when disabled to prevent lingering movements in the object pool
+        private void OnDisable()
         {
             transform.DOKill();
         }
@@ -48,8 +49,9 @@ namespace RestaurantLoop.Core
             IsServed = false;
             IsEdgeCustomer = false;
             
-            // Reset scale for object pooling since it scales down to zero on exit
+            // Reset scale and rotation to default values when spawned from the pool
             transform.localScale = Vector3.one;
+            transform.localRotation = Quaternion.identity;
 
             if (orderBalloon != null && data != null)
             {
@@ -81,6 +83,13 @@ namespace RestaurantLoop.Core
                     if (this != null && transform != null)
                     {
                         if (animator != null) animator.SetBool(IsWalkingHash, false);
+                        
+                        // Force all customers to have the exact same fixed rotation for perfect balloon alignment
+                        if (setAsEdge)
+                        {
+                            transform.DORotate(new Vector3(0f, 180f, 0f), 0.2f);
+                        }
+                        
                         onComplete?.Invoke();
                     }
                 });
@@ -102,6 +111,10 @@ namespace RestaurantLoop.Core
                 .OnComplete(() => 
                 {
                     if (animator != null) animator.SetBool(IsWalkingHash, false);
+                    
+                    // Force all customers to have the exact same fixed rotation for perfect balloon alignment
+                    transform.DORotate(new Vector3(0f, 180f, 0f), 0.2f);
+                    
                     onComplete?.Invoke();
                 });
         }
