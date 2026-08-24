@@ -58,6 +58,12 @@ namespace RestaurantLoop.Core
             {
                 countText = GetComponentInChildren<TMP_Text>(true);
             }
+
+            if(singleMeshModel == null)
+            {
+                singleMeshModel = transform.GetComponentInChildren<MeshRenderer>(true)?.gameObject;
+            }
+
         }
 
         private void LateUpdate()
