@@ -26,10 +26,13 @@ namespace RestaurantLoop.Core
         private static readonly int EatHash = Animator.StringToHash("Eat");
         private static readonly int JumpHash = Animator.StringToHash("Jump");
 
+        private Vector3 authoredLocalScale;
+
         private Transform ModelTransform => visualContainer != null ? visualContainer : (animator != null ? animator.transform : transform);
 
         private void Awake()
         {
+            authoredLocalScale = transform.localScale;
             if (orderBalloon == null) orderBalloon = GetComponentInChildren<OrderBalloon>();
             if (animator == null) animator = GetComponentInChildren<Animator>();
         }
@@ -50,7 +53,7 @@ namespace RestaurantLoop.Core
             IsEdgeCustomer = false;
 
             // Keep root upright and reset model local orientation
-            transform.localScale = Vector3.one;
+            transform.localScale = authoredLocalScale;
             transform.rotation = Quaternion.identity;
             ModelTransform.localRotation = Quaternion.identity;
 
