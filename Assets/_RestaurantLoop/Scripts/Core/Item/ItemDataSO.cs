@@ -13,9 +13,14 @@ namespace RestaurantLoop.Core
         [SerializeField] private Sprite balloonIcon;
         [SerializeField] private GameObject stackPrefab;
 
+        [Header("Customer")]
+        [Tooltip("The dedicated customer archetype for this food. Leave empty to use CrowdManager's generic fallback.")]
+        [SerializeField] private Customer customerPrefab;
+
         public string ItemName => itemName;
         public Color UIColor => uiColor;
         public Sprite BalloonIcon => balloonIcon;
         public GameObject StackPrefab => stackPrefab;
+        public Customer CustomerPrefab => customerPrefab;
     }
 }

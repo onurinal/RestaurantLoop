@@ -107,12 +107,6 @@ namespace RestaurantLoop.Core
                 return null;
             }
 
-            if (!prefab.CanAcceptOrder(data))
-            {
-                Debug.LogError($"Customer prefab '{prefab.name}' is locked to a different food type than {data?.ItemName ?? "an empty item"}.");
-                return null;
-            }
-
             GameObject obj = PoolManager.Instance.Spawn(prefab.gameObject, position, Quaternion.identity, parent);
             Customer customer = obj.GetComponent<Customer>();
             customer.Initialize(data);
