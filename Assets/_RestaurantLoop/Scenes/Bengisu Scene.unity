@@ -2544,6 +2544,71 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &854751266
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -5.454071
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.61
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -5.3415456
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -1698204874550665044, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: b432f0d0a9a69a84e8e4f12dd1797de1, type: 2}
+    - target: {fileID: 919132149155446097, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
+      propertyPath: m_Name
+      value: sushi girl t pose
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 127fab3e4a714a243ab4b7c9b7912a43, type: 2}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
 --- !u!1 &907504158
 GameObject:
   m_ObjectHideFlags: 0
@@ -6227,3 +6292,4 @@ SceneRoots:
   - {fileID: 793503947}
   - {fileID: 1565218212}
   - {fileID: 1559276372}
+  - {fileID: 854751266}
