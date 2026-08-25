@@ -2485,7 +2485,7 @@ PrefabInstance:
     - target: {fileID: 4479131403190146329, guid: 10fbc157363de524f8f48356b1e9ee52, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 18d1a84c661d36544b538032c0a6d6fe, type: 2}
+      objectReference: {fileID: 2100000, guid: 2a5fc5989f41fe24d8c794368daf2172, type: 2}
     - target: {fileID: 5866666021909216657, guid: 10fbc157363de524f8f48356b1e9ee52, type: 3}
       propertyPath: m_Controller
       value: 
@@ -4521,6 +4521,10 @@ PrefabInstance:
       propertyPath: m_ConstrainProportionsScale
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: -3966371081001939914, guid: 2f12d8f73cf4fee419bf9b58469cd47c, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 25c621372de84b3459a97797f86baeb7, type: 2}
     - target: {fileID: 919132149155446097, guid: 2f12d8f73cf4fee419bf9b58469cd47c, type: 3}
       propertyPath: m_Name
       value: burgergirl_tpose
