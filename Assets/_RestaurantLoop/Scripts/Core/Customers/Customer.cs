@@ -16,9 +16,7 @@ namespace RestaurantLoop.Core
         [SerializeField] private Transform visualContainer;
 
         [Header("Data")]
-        [Tooltip("When enabled, this prefab can only be spawned for its assigned Required Data. Leave disabled on the generic fallback prefab.")]
-        [SerializeField] private bool lockRequiredData;
-        [SerializeField] private ItemDataSO requiredData;
+        private ItemDataSO requiredData;
 
         public bool IsServed { get; private set; }
         public bool IsEdgeCustomer { get; private set; }
@@ -44,20 +42,12 @@ namespace RestaurantLoop.Core
             ModelTransform.DOKill();
         }
 
-        public bool CanAcceptOrder(ItemDataSO data)
-        {
-            return !lockRequiredData || requiredData == data;
-        }
-
         public void Initialize(ItemDataSO data)
         {
             transform.DOKill();
             ModelTransform.DOKill();
 
-            if (!lockRequiredData)
-            {
-                requiredData = data;
-            }
+            requiredData = data;
             IsServed = false;
             IsEdgeCustomer = false;
 

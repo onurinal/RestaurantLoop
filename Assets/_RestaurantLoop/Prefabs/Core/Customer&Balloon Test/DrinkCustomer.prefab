@@ -556,7 +556,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: e20deb7007866de41a1665196fa1bdb2, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 3e02eca1ffe9b344c85b58ff37edb7bc, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -1462,7 +1462,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 2f12d8f73cf4fee419bf9b58469cd47c, type: 3}
       propertyPath: m_Name
-      value: BeefCustomer
+      value: DrinkCustomer
       objectReference: {fileID: 0}
     - target: {fileID: 5866666021909216657, guid: 2f12d8f73cf4fee419bf9b58469cd47c, type: 3}
       propertyPath: m_Avatar
@@ -1525,7 +1525,7 @@ MonoBehaviour:
   animator: {fileID: 2540100366620885114}
   visualContainer: {fileID: 0}
   lockRequiredData: 1
-  requiredData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
+  requiredData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
 --- !u!136 &1745397839349243798
 CapsuleCollider:
   m_ObjectHideFlags: 0
