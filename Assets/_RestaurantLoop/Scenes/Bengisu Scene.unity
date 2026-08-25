@@ -2595,7 +2595,7 @@ PrefabInstance:
     - target: {fileID: -1698204874550665044, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: b432f0d0a9a69a84e8e4f12dd1797de1, type: 2}
+      objectReference: {fileID: 2100000, guid: d6f7819f8c461174bb0905477f90120d, type: 2}
     - target: {fileID: 919132149155446097, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
       propertyPath: m_Name
       value: sushi girl t pose
@@ -4417,16 +4417,28 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 30c1b46b15f88ee49b47661b138e2e80, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.34946
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 30c1b46b15f88ee49b47661b138e2e80, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.34946
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 30c1b46b15f88ee49b47661b138e2e80, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.34946
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 30c1b46b15f88ee49b47661b138e2e80, type: 3}
       propertyPath: m_LocalPosition.x
       value: -9.44
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 30c1b46b15f88ee49b47661b138e2e80, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.08
+      value: 1.45
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 30c1b46b15f88ee49b47661b138e2e80, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 3.534505
+      value: -4.96
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 30c1b46b15f88ee49b47661b138e2e80, type: 3}
       propertyPath: m_LocalRotation.w
