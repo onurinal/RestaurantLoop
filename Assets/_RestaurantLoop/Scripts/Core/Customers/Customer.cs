@@ -11,6 +11,8 @@ namespace RestaurantLoop.Core
         [Header("Animation & Visuals")]
         [SerializeField] private Animator animator;
         [SerializeField] private Transform visualContainer;
+        [Tooltip("Child GameObject containing the balloon sprite (preset at 40 degrees camera pitch).")]
+        [SerializeField] private GameObject balloonObject;
 
         [Header("Data")]
         private ItemDataSO requiredData;
@@ -51,6 +53,15 @@ namespace RestaurantLoop.Core
             transform.rotation = Quaternion.identity;
             ModelTransform.localRotation = Quaternion.identity;
 
+            SetBalloonActive(false);
+        }
+
+        public void SetBalloonActive(bool active)
+        {
+            if (balloonObject != null)
+            {
+                balloonObject.SetActive(active);
+            }
         }
 
         public void SetModelRotation(float yAngle)
@@ -66,6 +77,8 @@ namespace RestaurantLoop.Core
         public void MoveAlongPath(Vector3[] waypoints, float duration, bool setAsEdge, float targetYRotation = 0f, Action onComplete = null)
         {
             SetEdgeStatus(setAsEdge);
+            SetBalloonActive(false);
+
             transform.DOKill();
             ModelTransform.DOKill();
 
@@ -80,14 +93,22 @@ namespace RestaurantLoop.Core
                     ModelTransform.DOLocalRotate(new Vector3(0f, targetYRotation, 0f), 0.2f).OnComplete(() =>
                     {
                         if (animator != null) animator.SetBool(IsWalkingHash, false);
+
+                        if (IsEdgeCustomer)
+                        {
+                            SetBalloonActive(true);
+                        }
+
                         onComplete?.Invoke();
                     });
                 });
         }
 
-        public void MoveToEdgeSlot(Vector3 targetPosition, Action onComplete = null)
+        public void MoveToEdgeSlot(Vector3 targetPosition, float targetYRotation = 0f, Action onComplete = null)
         {
             SetEdgeStatus(true);
+            SetBalloonActive(false);
+
             transform.DOKill();
             ModelTransform.DOKill();
 
@@ -106,9 +127,10 @@ namespace RestaurantLoop.Core
                 .SetEase(Ease.OutQuad)
                 .OnComplete(() =>
                 {
-                    ModelTransform.DOLocalRotate(Vector3.zero, 0.2f).OnComplete(() =>
+                    ModelTransform.DOLocalRotate(new Vector3(0f, targetYRotation, 0f), 0.2f).OnComplete(() =>
                     {
                         if (animator != null) animator.SetBool(IsWalkingHash, false);
+                        SetBalloonActive(true);
                         onComplete?.Invoke();
                     });
                 });
@@ -118,6 +140,8 @@ namespace RestaurantLoop.Core
         {
             IsServed = true;
             SetEdgeStatus(false);
+            SetBalloonActive(false);
+
             transform.DOKill();
             ModelTransform.DOKill();
 

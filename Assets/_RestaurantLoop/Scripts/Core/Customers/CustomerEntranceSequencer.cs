@@ -5,9 +5,6 @@ using RestaurantLoop.Infrastructure;
 
 namespace RestaurantLoop.Core
 {
-    /// <summary>
-    /// Spawns edge customers and visible crowd customers, placing remaining overflow customers directly as hidden instances.
-    /// </summary>
     public class CustomerEntranceSequencer
     {
         private readonly float spawnInterval;
@@ -37,6 +34,7 @@ namespace RestaurantLoop.Core
             CentralCrowdService centralCrowd,
             int maxVisibleCrowdCount,
             Func<int, Vector3> getEdgeSlotPosFunc,
+            Func<int, float> getEdgeSlotRotFunc,
             Action<Customer, int> onEdgeSlotAssigned)
         {
             IsRunning = true;
@@ -53,9 +51,11 @@ namespace RestaurantLoop.Core
                 edgeSlots.Occupy(i, customer);
 
                 Vector3 targetPos = getEdgeSlotPosFunc(i);
+                float targetRotation = getEdgeSlotRotFunc != null ? getEdgeSlotRotFunc(i) : 0f;
+
                 Vector3[] waypoints = EntrancePathUtility.BuildOrganicPath(spawnPos, targetPos, gapCenter, roomCenter, pathJitterAmount);
 
-                customer.MoveAlongPath(waypoints, moveDuration, true);
+                customer.MoveAlongPath(waypoints, moveDuration, true, targetYRotation: targetRotation);
                 onEdgeSlotAssigned?.Invoke(customer, i);
 
                 yield return new WaitForSeconds(spawnInterval);

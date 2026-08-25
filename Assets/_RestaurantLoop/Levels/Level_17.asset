@@ -17,7 +17,7 @@ MonoBehaviour:
   columnCount: 3
   calculatedRowCount: 3
   minStackSize: 5
-  maxStackSize: 20
+  maxStackSize: 15
   conveyorSpeedMultiplier: 1
   customerDemands:
   - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
@@ -29,21 +29,21 @@ MonoBehaviour:
   - itemData: {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
     totalCustomerCount: 20
   queueStackConfigs:
-  - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
+  - itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
     itemCount: 5
-  - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
-    itemCount: 15
   - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-    itemCount: 20
-  - itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
-    itemCount: 5
-  - itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
     itemCount: 5
   - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
-    itemCount: 5
+    itemCount: 10
   - itemData: {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
-    itemCount: 5
-  - itemData: {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
-    itemCount: 15
+    itemCount: 10
+  - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
+    itemCount: 10
   - itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
     itemCount: 15
+  - itemData: {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
+    itemCount: 5
+  - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
+    itemCount: 15
+  - itemData: {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
+    itemCount: 5

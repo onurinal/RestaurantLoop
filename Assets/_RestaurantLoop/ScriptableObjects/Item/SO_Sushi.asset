@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6188d261b4bb40bba52a9ed5fdd04069, type: 3}
-  m_Name: SO_Yellow
+  m_Name: SO_Sushi
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.ItemDataSO
-  itemName: Yellow Item
-  uiColor: {r: 1, g: 0.86514914, b: 0, a: 1}
-  balloonIcon: {fileID: 0}
-  stackPrefab: {fileID: 3873658242560358701, guid: 94cbe1c01aad43649a60828499f9a9bc, type: 3}
-  customerPrefab: {fileID: 2628981055829915685, guid: 017d314280ec0fe43a243a12938dd3c1, type: 3}
+  itemName: White Item
+  uiColor: {r: 1, g: 1, b: 1, a: 1}
+  balloonIcon: {fileID: 21300000, guid: 97f5d2a6109288244892bb2fc46dcac9, type: 3}
+  stackPrefab: {fileID: 3873658242560358701, guid: 989f682506c549147a022fea42783e1b, type: 3}
+  customerPrefab: {fileID: 2410512822927052154, guid: 2cfb9f0cf1d51f64494ec354e715179c, type: 3}

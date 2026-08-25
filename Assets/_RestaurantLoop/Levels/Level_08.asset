@@ -27,15 +27,15 @@ MonoBehaviour:
   - itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
     totalCustomerCount: 15
   queueStackConfigs:
-  - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
-    itemCount: 5
-  - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
-    itemCount: 5
-  - itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
-    itemCount: 15
-  - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-    itemCount: 5
-  - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
-    itemCount: 5
   - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
     itemCount: 10
+  - itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
+    itemCount: 5
+  - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
+    itemCount: 5
+  - itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
+    itemCount: 10
+  - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
+    itemCount: 10
+  - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
+    itemCount: 5
