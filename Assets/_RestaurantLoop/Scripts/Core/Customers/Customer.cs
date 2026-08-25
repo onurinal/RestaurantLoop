@@ -3,6 +3,7 @@ using System.Collections;
 using UnityEngine;
 using DG.Tweening;
 using RestaurantLoop.Infrastructure;
+using RestaurantLoop.Audio; // Added to access AudioManager
 
 namespace RestaurantLoop.Core
 {
@@ -150,13 +151,27 @@ namespace RestaurantLoop.Core
 
         private IEnumerator EatAndLeaveRoutine(Action onComplete)
         {
+            // Wait for the plate flight duration (0.35s)
             yield return new WaitForSeconds(0.35f);
 
-            if (animator != null) animator.SetTrigger(EatHash);
+            // 1. Plate is caught by the customer -> Play "Pop" sound
+            if (AudioManager.Instance != null && AudioManager.Instance.popSound != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.popSound);
 
+            if (animator != null) animator.SetTrigger(EatHash);
+            
+            // 2. Customer starts eating -> Play "Nom-nom" sound
+            if (AudioManager.Instance != null && AudioManager.Instance.nomNomSound != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.nomNomSound);
+
+            // Wait for the eating animation to finish (0.5s)
             yield return new WaitForSeconds(0.5f);
 
             if (animator != null) animator.SetTrigger(JumpHash);
+
+            // 3. Customer finishes eating and jumps happily -> Play "Happy Jump" sound
+            if (AudioManager.Instance != null && AudioManager.Instance.happyJumpSound != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.happyJumpSound);
 
             transform.DOScale(Vector3.zero, 0.4f).SetEase(Ease.InBack);
             transform.DOJump(transform.position, 0.5f, 1, 0.4f)

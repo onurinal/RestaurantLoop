@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using RestaurantLoop.Audio; // Added to access AudioManager
 
 namespace RestaurantLoop.UI
 {
@@ -25,13 +26,26 @@ namespace RestaurantLoop.UI
             musicSlider.value = PlayerPrefs.GetFloat("MusicVolume", 1f);
             sfxSlider.value = PlayerPrefs.GetFloat("SfxVolume", 1f);
 
-            // Add button listeners
+            // Add button listeners for core logic
             gameSettingsButton.onClick.AddListener(OpenSettings);
             closeSettingsButton.onClick.AddListener(CloseSettings);
             
+            // Add button listeners for tap sound
+            gameSettingsButton.onClick.AddListener(PlayTapSound);
+            closeSettingsButton.onClick.AddListener(PlayTapSound);
+
             // Bind functions to slider value changes
             musicSlider.onValueChanged.AddListener(UpdateMusicVolume);
             sfxSlider.onValueChanged.AddListener(UpdateSfxVolume);
+        }
+
+        private void PlayTapSound()
+        {
+            // If AudioManager exists, play the tap sound
+            if (AudioManager.Instance != null && AudioManager.Instance.tapSound != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.tapSound);
+            }
         }
 
         private void OpenSettings() => settingsPanel.SetActive(true);

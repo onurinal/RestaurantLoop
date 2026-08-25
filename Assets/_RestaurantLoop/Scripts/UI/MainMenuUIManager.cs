@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
-
+using RestaurantLoop.Audio; 
 namespace RestaurantLoop.UI
 {
     public class MainMenuUIManager : MonoBehaviour
@@ -25,10 +25,15 @@ namespace RestaurantLoop.UI
             // Initial panel state
             settingsPanel.SetActive(false);
 
-            // Add button listeners
+            // Add button listeners for core logic
             playButton.onClick.AddListener(StartGame);
             settingsButton.onClick.AddListener(OpenSettings);
             closeSettingsButton.onClick.AddListener(CloseSettings);
+
+            // Add button listeners for tap sound
+            playButton.onClick.AddListener(PlayTapSound);
+            settingsButton.onClick.AddListener(PlayTapSound);
+            closeSettingsButton.onClick.AddListener(PlayTapSound);
 
             // Load saved audio levels from device (defaults to 1f, max volume)
             musicSlider.value = PlayerPrefs.GetFloat("MusicVolume", 1f);
@@ -41,6 +46,15 @@ namespace RestaurantLoop.UI
             // Level text setup
             int currentLevel = 1; 
             levelText.text = $"Level {currentLevel}";
+        }
+
+        private void PlayTapSound()
+        {
+            // If AudioManager exists, play the tap sound
+            if (AudioManager.Instance != null && AudioManager.Instance.tapSound != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.tapSound);
+            }
         }
 
         private void StartGame()

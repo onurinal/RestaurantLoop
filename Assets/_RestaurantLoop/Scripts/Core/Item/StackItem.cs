@@ -4,7 +4,7 @@ using UnityEngine;
 using TMPro;
 using DG.Tweening;
 using RestaurantLoop.Infrastructure;
-
+using RestaurantLoop.Audio; 
 namespace RestaurantLoop.Core
 {
     public enum StackVisualMode
@@ -63,7 +63,6 @@ namespace RestaurantLoop.Core
             {
                 singleMeshModel = transform.GetComponentInChildren<MeshRenderer>(true)?.gameObject;
             }
-
         }
 
         private void LateUpdate()
@@ -214,10 +213,16 @@ namespace RestaurantLoop.Core
                 .OnComplete(() => { transform.localPosition = Vector3.zero; });
         }
 
-        public void OnTap()
+       public void OnTap()
         {
             if (IsJumping) return;
             if (CrowdManager.Instance != null && CrowdManager.Instance.IsSpawningCustomers) return;
+
+            
+            if (AudioManager.Instance != null && AudioManager.Instance.tapSound != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.tapSound);
+            }
 
             GetComponentInParent<BaseSlot>()?.OnStackTapped(this);
         }
@@ -274,6 +279,11 @@ namespace RestaurantLoop.Core
                 {
                     IsJumping = false;
                     SetVisualMode(StackVisualMode.Stacked);
+
+                    // Play board click sound ("şık") when the plate lands on the conveyor
+                    if (AudioManager.Instance != null && AudioManager.Instance.boardClickSound != null)
+                        AudioManager.Instance.PlaySFX(AudioManager.Instance.boardClickSound);
+
                     onComplete?.Invoke();
                 });
         }
@@ -290,6 +300,11 @@ namespace RestaurantLoop.Core
                     transform.localPosition = Vector3.zero;
 
                     SetVisualMode(StackVisualMode.SingleWithUI);
+
+                    // Play rack drop sound ("tık") when the plate lands on the rack
+                    if (AudioManager.Instance != null && AudioManager.Instance.rackDropSound != null)
+                        AudioManager.Instance.PlaySFX(AudioManager.Instance.rackDropSound);
+
                     onComplete?.Invoke();
                 });
         }
@@ -309,6 +324,10 @@ namespace RestaurantLoop.Core
                 {
                     GameObject flyingItem = PoolManager.Instance.Spawn(singleMeshModel, transform.position, Quaternion.identity);
                     
+                    // Play throw sound ("fyuu") when the plate is thrown to the customer
+                    if (AudioManager.Instance != null && AudioManager.Instance.throwSound != null)
+                        AudioManager.Instance.PlaySFX(AudioManager.Instance.throwSound);
+
                     flyingItem.transform.DOJump(targetCustomer.transform.position, 2f, 1, 0.35f)
                         .OnComplete(() => { 
                             PoolManager.Instance.Despawn(flyingItem); 
