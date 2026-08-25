@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 4578641455973652328}
   - component: {fileID: 5377942344807420386}
   m_Layer: 0
-  m_Name: Purple
+  m_Name: Cake
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -74,7 +74,7 @@ MonoBehaviour:
   jumpDuration: 0.5
   itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
   visualContainer: {fileID: 7296015360992186765}
-  singleMeshModel: {fileID: 0}
+  singleMeshModel: {fileID: 2904996590130224851}
   yOffset: 0.66
   countText: {fileID: 3785995653462671066}
   textHeightOffset: 0.5
@@ -366,5 +366,10 @@ PrefabInstance:
 --- !u!4 &2529703222275114089 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 8e61c14b2229115408dce08f3bf3000b, type: 3}
+  m_PrefabInstance: {fileID: 2635158630208627586}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &2904996590130224851 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 8e61c14b2229115408dce08f3bf3000b, type: 3}
   m_PrefabInstance: {fileID: 2635158630208627586}
   m_PrefabAsset: {fileID: 0}

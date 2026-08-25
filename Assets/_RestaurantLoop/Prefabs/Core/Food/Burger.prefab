@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 4578641455973652328}
   - component: {fileID: 5377942344807420386}
   m_Layer: 0
-  m_Name: Red
+  m_Name: Burger
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -74,7 +74,7 @@ MonoBehaviour:
   jumpDuration: 0.5
   itemData: {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
   visualContainer: {fileID: 7296015360992186765}
-  singleMeshModel: {fileID: 0}
+  singleMeshModel: {fileID: 600715293892310521}
   yOffset: 0.66
   countText: {fileID: 4890528748861177742}
   textHeightOffset: 0.5
@@ -366,5 +366,10 @@ PrefabInstance:
 --- !u!4 &224612410519465795 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 201d31bd0085cde499f850cf400ca97e, type: 3}
+  m_PrefabInstance: {fileID: 330806427282393256}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &600715293892310521 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 201d31bd0085cde499f850cf400ca97e, type: 3}
   m_PrefabInstance: {fileID: 330806427282393256}
   m_PrefabAsset: {fileID: 0}

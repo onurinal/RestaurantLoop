@@ -151,6 +151,7 @@ namespace RestaurantLoop.Core
                 centralCrowd,
                 maxVisibleCrowdCount,
                 GetEdgeSlotWorldPosition,
+                GetEdgeSlotYRotation,
                 (c, slotIdx) => EdgeCustomerReplacementStarted?.Invoke(c, slotIdx));
         }
 
@@ -177,8 +178,9 @@ namespace RestaurantLoop.Core
 
                 edgeSlots.Occupy(edgeSlotIndex, promotedCustomer);
                 Vector3 edgePos = GetEdgeSlotWorldPosition(edgeSlotIndex);
+                float edgeRot = GetEdgeSlotYRotation(edgeSlotIndex);
 
-                promotedCustomer.MoveToEdgeSlot(edgePos);
+                promotedCustomer.MoveToEdgeSlot(edgePos, edgeRot);
                 EdgeCustomerReplacementStarted?.Invoke(promotedCustomer, edgeSlotIndex);
 
                 RevealHiddenCrowdCustomer();
@@ -237,6 +239,15 @@ namespace RestaurantLoop.Core
 
             if (centralCrowd != null) centralCrowd.Clear();
             unspawnedDemandPool.Clear();
+        }
+
+        public float GetEdgeSlotYRotation(int index)
+        {
+            Vector3 slotPos = GetEdgeSlotWorldPosition(index);
+            Vector3 conveyorCenter = GetRoomCenter();
+            Vector3 dir = (conveyorCenter - slotPos);
+            dir.y = 0f;
+            return dir.sqrMagnitude > 0.001f ? Quaternion.LookRotation(dir).eulerAngles.y : 0f;
         }
 
         public Vector3 GetOuterSpawnPosition() => EntrancePathUtility.GetOuterSpawnPosition(GetConveyorEntranceWorldPosition(), outerSpawnOffset);
