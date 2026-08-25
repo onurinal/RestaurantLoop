@@ -8,9 +8,6 @@ namespace RestaurantLoop.Core
 {
     public class Customer : MonoBehaviour
     {
-        [Header("References")]
-        [SerializeField] private OrderBalloon orderBalloon;
-
         [Header("Animation & Visuals")]
         [SerializeField] private Animator animator;
         [SerializeField] private Transform visualContainer;
@@ -32,7 +29,6 @@ namespace RestaurantLoop.Core
         private void Awake()
         {
             authoredLocalScale = transform.localScale;
-            if (orderBalloon == null) orderBalloon = GetComponentInChildren<OrderBalloon>();
             if (animator == null) animator = GetComponentInChildren<Animator>();
         }
 
@@ -55,10 +51,6 @@ namespace RestaurantLoop.Core
             transform.rotation = Quaternion.identity;
             ModelTransform.localRotation = Quaternion.identity;
 
-            if (orderBalloon != null && requiredData != null)
-            {
-                orderBalloon.SetColorAndState(requiredData.UIColor, false);
-            }
         }
 
         public void SetModelRotation(float yAngle)
@@ -69,10 +61,6 @@ namespace RestaurantLoop.Core
         public void SetEdgeStatus(bool isEdge)
         {
             IsEdgeCustomer = isEdge;
-            if (orderBalloon != null && requiredData != null)
-            {
-                orderBalloon.SetColorAndState(requiredData.UIColor, isEdge);
-            }
         }
 
         public void MoveAlongPath(Vector3[] waypoints, float duration, bool setAsEdge, float targetYRotation = 0f, Action onComplete = null)
