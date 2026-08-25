@@ -16,6 +16,8 @@ namespace RestaurantLoop.Core
         [SerializeField] private Transform visualContainer;
 
         [Header("Data")]
+        [Tooltip("When enabled, this prefab can only be spawned for its assigned Required Data. Leave disabled on the generic fallback prefab.")]
+        [SerializeField] private bool lockRequiredData;
         [SerializeField] private ItemDataSO requiredData;
 
         public bool IsServed { get; private set; }
@@ -26,10 +28,12 @@ namespace RestaurantLoop.Core
         private static readonly int EatHash = Animator.StringToHash("Eat");
         private static readonly int JumpHash = Animator.StringToHash("Jump");
 
+        private Vector3 authoredLocalScale;
         private Transform ModelTransform => visualContainer != null ? visualContainer : (animator != null ? animator.transform : transform);
 
         private void Awake()
         {
+            authoredLocalScale = transform.localScale;
             if (orderBalloon == null) orderBalloon = GetComponentInChildren<OrderBalloon>();
             if (animator == null) animator = GetComponentInChildren<Animator>();
         }
@@ -40,22 +44,30 @@ namespace RestaurantLoop.Core
             ModelTransform.DOKill();
         }
 
+        public bool CanAcceptOrder(ItemDataSO data)
+        {
+            return !lockRequiredData || requiredData == data;
+        }
+
         public void Initialize(ItemDataSO data)
         {
             transform.DOKill();
             ModelTransform.DOKill();
 
-            requiredData = data;
+            if (!lockRequiredData)
+            {
+                requiredData = data;
+            }
             IsServed = false;
             IsEdgeCustomer = false;
 
-            transform.localScale = Vector3.one;
+            transform.localScale = authoredLocalScale;
             transform.rotation = Quaternion.identity;
             ModelTransform.localRotation = Quaternion.identity;
 
-            if (orderBalloon != null && data != null)
+            if (orderBalloon != null && requiredData != null)
             {
-                orderBalloon.SetColorAndState(data.UIColor, false);
+                orderBalloon.SetColorAndState(requiredData.UIColor, false);
             }
         }
 

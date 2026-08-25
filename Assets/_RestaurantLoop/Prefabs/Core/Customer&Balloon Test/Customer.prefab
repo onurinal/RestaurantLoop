@@ -268,4 +268,5 @@ MonoBehaviour:
   orderBalloon: {fileID: 1855864900198061946}
   animator: {fileID: 0}
   visualContainer: {fileID: 0}
+  lockRequiredData: 0
   requiredData: {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}

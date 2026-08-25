@@ -10,6 +10,16 @@ using UnityEditor;
 
 namespace RestaurantLoop.Core
 {
+    [Serializable]
+    public class CustomerPrefabBinding
+    {
+        [SerializeField] private ItemDataSO itemData;
+        [SerializeField] private Customer customerPrefab;
+
+        public bool Matches(ItemDataSO data) => itemData == data;
+        public Customer CustomerPrefab => customerPrefab;
+    }
+
     public class CrowdManager : MonoBehaviour
     {
         public static CrowdManager Instance { get; private set; }
@@ -44,8 +54,12 @@ namespace RestaurantLoop.Core
         [SerializeField] private float pathJitterAmount = 0.5f;
         [SerializeField] private Vector3 outerSpawnOffset = new Vector3(0f, 0f, -3.0f);
 
-        [Header("Prefabs & References")]
+        [Header("Customer Prefabs")]
+        [Tooltip("Used for food types whose dedicated character art has not been created yet.")]
         [SerializeField] private Customer customerPrefab;
+        [SerializeField] private List<CustomerPrefabBinding> customerPrefabBindings = new List<CustomerPrefabBinding>();
+
+        [Header("References")]
         [SerializeField] private ConveyorBuilder conveyorBuilder;
 
         private EdgeSlotService edgeSlots;
@@ -139,7 +153,7 @@ namespace RestaurantLoop.Core
 
             yield return entranceSequencer.Run(
                 PopUnspawnedDemand,
-                customerPrefab,
+                GetCustomerPrefab,
                 transform,
                 spawnPos,
                 gapCenter,
@@ -197,6 +211,19 @@ namespace RestaurantLoop.Core
             ItemDataSO data = unspawnedDemandPool[0];
             unspawnedDemandPool.RemoveAt(0);
             return data;
+        }
+
+        private Customer GetCustomerPrefab(ItemDataSO itemData)
+        {
+            foreach (CustomerPrefabBinding binding in customerPrefabBindings)
+            {
+                if (binding != null && binding.Matches(itemData))
+                {
+                    return binding.CustomerPrefab;
+                }
+            }
+
+            return customerPrefab;
         }
 
         private void DecrementDemandForType(ItemDataSO data)

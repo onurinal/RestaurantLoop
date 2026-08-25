@@ -28,7 +28,7 @@ namespace RestaurantLoop.Core
 
         public IEnumerator Run(
             Func<ItemDataSO> popDemandFunc,
-            Customer customerPrefab,
+            Func<ItemDataSO, Customer> customerPrefabResolver,
             Transform parent,
             Vector3 spawnPos,
             Vector3 gapCenter,
@@ -47,7 +47,9 @@ namespace RestaurantLoop.Core
                 ItemDataSO customerData = popDemandFunc?.Invoke();
                 if (customerData == null) break;
 
+                Customer customerPrefab = customerPrefabResolver?.Invoke(customerData);
                 Customer customer = SpawnCustomer(customerPrefab, customerData, spawnPos, parent);
+                if (customer == null) continue;
                 edgeSlots.Occupy(i, customer);
 
                 Vector3 targetPos = getEdgeSlotPosFunc(i);
@@ -66,7 +68,9 @@ namespace RestaurantLoop.Core
                 ItemDataSO customerData = popDemandFunc?.Invoke();
                 if (customerData == null) break;
 
+                Customer customerPrefab = customerPrefabResolver?.Invoke(customerData);
                 Customer customer = SpawnCustomer(customerPrefab, customerData, spawnPos, parent);
+                if (customer == null) continue;
                 CentralCrowdSlot slot = centralCrowd.Slots[i];
                 slot.OccupyingCustomer = customer;
 
@@ -83,7 +87,9 @@ namespace RestaurantLoop.Core
                 if (customerData == null) break;
 
                 CentralCrowdSlot slot = centralCrowd.Slots[i];
+                Customer customerPrefab = customerPrefabResolver?.Invoke(customerData);
                 Customer customer = SpawnCustomer(customerPrefab, customerData, slot.Position, parent);
+                if (customer == null) continue;
 
                 customer.SetModelRotation(slot.YRotation);
                 customer.gameObject.SetActive(false); // Hide overflow customers
@@ -95,6 +101,18 @@ namespace RestaurantLoop.Core
 
         private Customer SpawnCustomer(Customer prefab, ItemDataSO data, Vector3 position, Transform parent)
         {
+            if (prefab == null)
+            {
+                Debug.LogError($"No customer prefab is configured for {data?.ItemName ?? "an empty item"}.");
+                return null;
+            }
+
+            if (!prefab.CanAcceptOrder(data))
+            {
+                Debug.LogError($"Customer prefab '{prefab.name}' is locked to a different food type than {data?.ItemName ?? "an empty item"}.");
+                return null;
+            }
+
             GameObject obj = PoolManager.Instance.Spawn(prefab.gameObject, position, Quaternion.identity, parent);
             Customer customer = obj.GetComponent<Customer>();
             customer.Initialize(data);

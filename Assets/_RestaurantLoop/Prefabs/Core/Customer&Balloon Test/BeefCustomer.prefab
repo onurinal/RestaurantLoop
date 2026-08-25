@@ -1618,7 +1618,8 @@ MonoBehaviour:
   orderBalloon: {fileID: 5148270609480348875}
   animator: {fileID: 2540100366620885114}
   visualContainer: {fileID: 0}
-  requiredData: {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
+  lockRequiredData: 1
+  requiredData: {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
 --- !u!136 &1745397839349243798
 CapsuleCollider:
   m_ObjectHideFlags: 0
