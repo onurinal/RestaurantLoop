@@ -5,7 +5,7 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
+  - enabled: 1
     path: Assets/_RestaurantLoop/Scenes/MainMenu.unity
     guid: f913dbe8043912a4197610dd66c4d5b1
   - enabled: 0
@@ -29,6 +29,9 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/_RestaurantLoop/Scenes/Onur-Gameplay.unity
     guid: 49cf4a62b408c1f46902ec192f4854a3
+  - enabled: 1
+    path: Assets/_RestaurantLoop/Scenes/Onur-2.unity
+    guid: 4333b263317bd174793144f44a16cf15
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
