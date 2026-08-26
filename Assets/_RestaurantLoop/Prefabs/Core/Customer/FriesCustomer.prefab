@@ -50,7 +50,7 @@ MonoBehaviour:
   animator: {fileID: 8730626983997512572}
   visualContainer: {fileID: 4530157772214526369}
   balloonObject: {fileID: 7899637567665015631}
-  customerRenderer: {fileID: 0}
+  customerRenderer: {fileID: 9200553319964948353}
 --- !u!95 &8730626983997512572
 Animator:
   serializedVersion: 7
@@ -1059,7 +1059,7 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 4874126678125670354, guid: 3fba55e676e546d4cb2cf6fad6b5d587, type: 3}
+  - {fileID: 2100000, guid: 41b596a76fd221541962a871fce145df, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

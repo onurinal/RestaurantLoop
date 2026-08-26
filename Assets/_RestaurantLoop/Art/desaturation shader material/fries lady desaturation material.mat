@@ -14,7 +14,7 @@ Material:
   m_ValidKeywords: []
   m_InvalidKeywords: []
   m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
+  m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
@@ -68,6 +68,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _SampleTexture2D_2f6efeaf4b334ecbb1ddb7637cffbd56_Texture_1_Texture2D:
+        m_Texture: {fileID: 2800000, guid: 977a7062492f765459bec53a4c7d0e55, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _SampleTexture2D_c9efa88ecaef4ca58982b31a9cf4eb40_Texture_1_Texture2D:
         m_Texture: {fileID: 2800000, guid: 4ad4b3416169f264292632b9df88ad78, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -100,7 +104,7 @@ Material:
     - _ClearCoatSmoothness: 0
     - _Cull: 2
     - _Cutoff: 0.5
-    - _Desaturation: 0.708
+    - _Desaturation: 0
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
     - _DstBlend: 0

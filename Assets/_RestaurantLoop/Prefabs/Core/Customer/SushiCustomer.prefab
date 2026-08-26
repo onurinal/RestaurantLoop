@@ -249,7 +249,7 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: d6f7819f8c461174bb0905477f90120d, type: 2}
+  - {fileID: 2100000, guid: 66524f518b5a8cd46a17d4f92c4b95b3, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -651,7 +651,7 @@ MonoBehaviour:
   animator: {fileID: 8333086003675903323}
   visualContainer: {fileID: 7732375738813501851}
   balloonObject: {fileID: 7854997873470414988}
-  customerRenderer: {fileID: 0}
+  customerRenderer: {fileID: 3263163523415701937}
 --- !u!95 &8333086003675903323
 Animator:
   serializedVersion: 7
