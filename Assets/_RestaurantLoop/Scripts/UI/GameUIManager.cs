@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using TMPro; // Added to handle TextMeshPro elements
 using UnityEngine.SceneManagement;
 using RestaurantLoop.Audio;
 using RestaurantLoop.Core; 
@@ -13,11 +14,14 @@ namespace RestaurantLoop.UI
         [SerializeField] private GameObject winPanel;
         [SerializeField] private GameObject losePanel;
 
-        [Header("Buttons & Sliders")]
+        [Header("In-Game UI Elements")]
+        [SerializeField] private TextMeshProUGUI topLevelText; // Text element at the top of the screen
         [SerializeField] private Button gameSettingsButton;
         [SerializeField] private Button closeSettingsButton;
         [SerializeField] private Slider musicSlider;
         [SerializeField] private Slider sfxSlider;
+        
+        [Header("Game State Buttons")]
         [SerializeField] private Button nextLevelButton;
         [SerializeField] private Button winMainMenuButton;
         [SerializeField] private Button retryButton;
@@ -44,11 +48,15 @@ namespace RestaurantLoop.UI
             musicSlider.onValueChanged.AddListener(UpdateMusicVolume);
             sfxSlider.onValueChanged.AddListener(UpdateSfxVolume);
 
-            // Subscribe to LevelManager events for win/lose panels
+            // Subscribe to LevelManager events
             if (LevelManager.Instance != null)
             {
                 LevelManager.Instance.OnLevelWon += ShowWinPanel;
                 LevelManager.Instance.OnLevelLost += ShowLosePanel;
+                LevelManager.Instance.OnLevelLoaded += UpdateTopLevelText; // Subscribe to level loads
+                
+                // Set the initial text when scene starts
+                UpdateTopLevelText(LevelManager.Instance.CurrentLevelNumber);
             }
 
             // Bind game state button events
@@ -68,6 +76,15 @@ namespace RestaurantLoop.UI
             if (AudioManager.Instance != null && AudioManager.Instance.tapSound != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.tapSound);
+            }
+        }
+        
+        // --- UI Updates ---
+        private void UpdateTopLevelText(int levelNumber)
+        {
+            if (topLevelText != null)
+            {
+                topLevelText.text = $"Level {levelNumber}";
             }
         }
 
@@ -103,6 +120,7 @@ namespace RestaurantLoop.UI
             {
                 LevelManager.Instance.OnLevelWon -= ShowWinPanel;
                 LevelManager.Instance.OnLevelLost -= ShowLosePanel;
+                LevelManager.Instance.OnLevelLoaded -= UpdateTopLevelText;
             }
 
             // Clean up button listeners

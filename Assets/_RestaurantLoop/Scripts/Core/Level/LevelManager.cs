@@ -23,9 +23,15 @@ namespace RestaurantLoop.Core
 
         public LevelState CurrentState { get; private set; } = LevelState.Playing;
         public bool IsGameActive => CurrentState == LevelState.Playing;
+        
+        // Expose human-readable level number (1-based index) for UI
+        public int CurrentLevelNumber => currentLevelIndex + 1;
 
         public event Action OnLevelWon;
         public event Action OnLevelLost;
+        
+        // Event to notify UI when a new level loads
+        public event Action<int> OnLevelLoaded;
 
         private void Awake()
         {
@@ -33,9 +39,8 @@ namespace RestaurantLoop.Core
             {
                 Instance = this;
                 
-                // Read the saved level from device storage (defaults to 1).
-                // Subtract 1 to map the human-readable level to the 0-based list index.
-                currentLevelIndex = PlayerPrefs.GetInt("CurrentLevel", 1) - 1;
+                // MVP Simplification: No save state. Always start at index 0 (Level 1) on fresh launch.
+                currentLevelIndex = 0;
             }
             else
             {
@@ -87,7 +92,10 @@ namespace RestaurantLoop.Core
                 QueueManager.Instance.SetupQueue(data);
             }
 
-            Debug.Log($"<color=cyan>[LEVEL START]</color> Loaded Level Index: {currentLevelIndex} (UI Level: {currentLevelIndex + 1})");
+            // Notify UI to update the top level text
+            OnLevelLoaded?.Invoke(CurrentLevelNumber);
+
+            Debug.Log($"<color=cyan>[LEVEL START]</color> Loaded Level Index: {currentLevelIndex} (UI Level: {CurrentLevelNumber})");
         }
 
         /// <summary>
@@ -128,10 +136,7 @@ namespace RestaurantLoop.Core
         {
             currentLevelIndex++;
             
-            // Save the new level to PlayerPrefs, adding 1 for the human-readable UI format.
-            PlayerPrefs.SetInt("CurrentLevel", currentLevelIndex + 1);
-            PlayerPrefs.Save();
-            
+            // MVP Simplification: Removed PlayerPrefs save logic. Progression is session-only.
             LoadCurrentLevel();
         }
     }
