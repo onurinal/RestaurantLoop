@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using DG.Tweening;
 using RestaurantLoop.Infrastructure;
 
 namespace RestaurantLoop.Core
@@ -18,6 +19,12 @@ namespace RestaurantLoop.Core
         [Tooltip("Local rotation applied on belt (Stacked Mode).")]
         [SerializeField] private Vector3 stackedModeRotation = Vector3.zero;
 
+        [Header("Stack Transition Animation")]
+        [Tooltip("Delay between individual food items appearing or collapsing.")]
+        [SerializeField, Min(0f)] private float itemTransitionStagger = 0.035f;
+        [SerializeField, Min(0.01f)] private float itemTransitionDuration = 0.12f;
+        [SerializeField, Min(0f)] private float rotationTransitionDuration = 0.14f;
+
         [Header("UI Setup")]
         [SerializeField] private TMP_Text countText;
         [Tooltip("Interpolation speed for smooth text position transitions around conveyor corners.")]
@@ -27,6 +34,8 @@ namespace RestaurantLoop.Core
         private Camera mainCamera;
         private StackVisualMode currentMode = StackVisualMode.SingleWithUI;
         private float activeTextDistance = 1.1f;
+        private Vector3 singleModelBaseLocalPosition;
+        private Vector3 singleModelBaseLocalScale;
 
         public GameObject SingleMeshModel => singleMeshModel;
 
@@ -35,6 +44,12 @@ namespace RestaurantLoop.Core
             mainCamera = Camera.main;
             if (countText == null) countText = GetComponentInChildren<TMP_Text>(true);
             if (singleMeshModel == null) singleMeshModel = transform.GetComponentInChildren<MeshRenderer>(true)?.gameObject;
+
+            if (singleMeshModel != null)
+            {
+                singleModelBaseLocalPosition = singleMeshModel.transform.localPosition;
+                singleModelBaseLocalScale = singleMeshModel.transform.localScale;
+            }
         }
 
         private void LateUpdate()
@@ -62,25 +77,14 @@ namespace RestaurantLoop.Core
                 if (singleMeshModel != null)
                 {
                     singleMeshModel.SetActive(true);
+                    singleMeshModel.transform.localPosition = singleModelBaseLocalPosition;
+                    singleMeshModel.transform.localScale = singleModelBaseLocalScale;
                     singleMeshModel.transform.localRotation = Quaternion.Euler(singleModeRotation);
                 }
             }
             else
             {
-                if (singleMeshModel != null) singleMeshModel.SetActive(false);
-
-                float baseOffsetY = singleMeshModel != null ? singleMeshModel.transform.localPosition.y : 0f;
-
-                for (int i = 0; i < remainingCount; i++)
-                {
-                    if (singleMeshModel == null) continue;
-
-                    GameObject item = PoolManager.Instance.Spawn(singleMeshModel, Vector3.zero, Quaternion.identity, visualContainer);
-                    item.transform.localPosition = new Vector3(0f, (i * yOffset) + baseOffsetY, 0f);
-                    item.transform.localRotation = Quaternion.Euler(stackedModeRotation);
-                    item.transform.localScale = singleMeshModel.transform.localScale;
-                    spawnedStackedItems.Add(item);
-                }
+                BuildStackImmediately(remainingCount);
             }
 
             UpdateCountText(true, remainingCount);
@@ -89,17 +93,34 @@ namespace RestaurantLoop.Core
         public void SetItemCountVisuals(int count, StackVisualMode mode)
         {
             currentMode = mode;
-            if (currentMode == StackVisualMode.Stacked && spawnedStackedItems.Count > count)
+            if (currentMode == StackVisualMode.Stacked)
             {
-                int itemsToRemove = spawnedStackedItems.Count - count;
-                for (int i = 0; i < itemsToRemove; i++)
+                int visualCount = GetStackedVisualCount();
+                while (visualCount > count)
                 {
-                    int lastIndex = spawnedStackedItems.Count - 1;
-                    if (lastIndex >= 0)
+                    if (spawnedStackedItems.Count > 0)
                     {
-                        if (spawnedStackedItems[lastIndex] != null) PoolManager.Instance.Despawn(spawnedStackedItems[lastIndex]);
+                        int lastIndex = spawnedStackedItems.Count - 1;
+                        GameObject item = spawnedStackedItems[lastIndex];
                         spawnedStackedItems.RemoveAt(lastIndex);
+                        if (item != null)
+                        {
+                            item.transform.DOKill();
+                            PoolManager.Instance.Despawn(item);
+                        }
                     }
+                    else if (singleMeshModel != null)
+                    {
+                        singleMeshModel.SetActive(false);
+                    }
+
+                    visualCount--;
+                }
+
+                while (visualCount < count)
+                {
+                    AddStackedItem(visualCount, false);
+                    visualCount++;
                 }
 
                 UpdateCountText(true, count);
@@ -107,6 +128,54 @@ namespace RestaurantLoop.Core
             else
             {
                 RefreshVisuals(mode, count);
+            }
+        }
+
+        /// <summary>Builds the belt stack from its existing single food model, bottom to top.</summary>
+        public void TransitionToStacked(int remainingCount)
+        {
+            currentMode = StackVisualMode.Stacked;
+            ClearStackedVisuals();
+            UpdateCountText(true, remainingCount);
+
+            if (singleMeshModel == null || remainingCount <= 0)
+            {
+                if (singleMeshModel != null) singleMeshModel.SetActive(false);
+                return;
+            }
+
+            ResetSingleModelForStack();
+            TweenSingleModelRotation(stackedModeRotation);
+
+            for (int itemIndex = 1; itemIndex < remainingCount; itemIndex++)
+            {
+                int index = itemIndex;
+                DOVirtual.DelayedCall((index - 1) * itemTransitionStagger, () => AddStackedItem(index, true))
+                    .SetTarget(this);
+            }
+        }
+
+        /// <summary>Collapses a belt stack from the top down while it travels to a rack slot.</summary>
+        public void CollapseToSingle()
+        {
+            currentMode = StackVisualMode.SingleWithUI;
+            DOTween.Kill(this);
+
+            if (singleMeshModel == null) return;
+
+            ResetSingleModelForStack();
+            TweenSingleModelRotation(singleModeRotation);
+
+            for (int itemIndex = spawnedStackedItems.Count - 1, collapseOrder = 0; itemIndex >= 0; itemIndex--, collapseOrder++)
+            {
+                GameObject item = spawnedStackedItems[itemIndex];
+                if (item == null) continue;
+
+                float delay = collapseOrder * itemTransitionStagger;
+                item.transform.DOKill();
+                item.transform.DOLocalMove(GetStackedLocalPosition(itemIndex), itemTransitionDuration).SetDelay(delay).SetEase(Ease.InQuad);
+                item.transform.DOScale(Vector3.zero, itemTransitionDuration).SetDelay(delay).SetEase(Ease.InQuad)
+                    .OnComplete(() => DespawnStackedItem(item));
             }
         }
 
@@ -167,12 +236,93 @@ namespace RestaurantLoop.Core
 
         public void ClearStackedVisuals()
         {
+            DOTween.Kill(this);
             foreach (var item in spawnedStackedItems)
             {
-                if (item != null) PoolManager.Instance.Despawn(item);
+                if (item != null)
+                {
+                    item.transform.DOKill();
+                    PoolManager.Instance.Despawn(item);
+                }
             }
 
             spawnedStackedItems.Clear();
+        }
+
+        private void BuildStackImmediately(int count)
+        {
+            if (singleMeshModel == null) return;
+
+            if (count <= 0)
+            {
+                singleMeshModel.SetActive(false);
+                return;
+            }
+
+            ResetSingleModelForStack();
+            singleMeshModel.transform.localRotation = Quaternion.Euler(stackedModeRotation);
+            for (int itemIndex = 1; itemIndex < count; itemIndex++) AddStackedItem(itemIndex, false);
+        }
+
+        private void AddStackedItem(int index, bool animate)
+        {
+            if (singleMeshModel == null || !singleMeshModel.activeInHierarchy) return;
+
+            GameObject item = PoolManager.Instance.Spawn(singleMeshModel, Vector3.zero, Quaternion.identity, visualContainer);
+            Transform itemTransform = item.transform;
+            Vector3 targetPosition = GetStackedLocalPosition(index);
+
+            itemTransform.localRotation = Quaternion.Euler(stackedModeRotation);
+            itemTransform.localScale = singleModelBaseLocalScale;
+            itemTransform.localPosition = animate
+                ? GetStackedLocalPosition(index - 1)
+                : targetPosition;
+
+            spawnedStackedItems.Add(item);
+
+            if (!animate) return;
+
+            itemTransform.localScale = Vector3.zero;
+            itemTransform.DOLocalMove(targetPosition, itemTransitionDuration).SetEase(Ease.OutBack);
+            itemTransform.DOScale(singleModelBaseLocalScale, itemTransitionDuration).SetEase(Ease.OutBack);
+        }
+
+        private int GetStackedVisualCount()
+        {
+            return (singleMeshModel != null && singleMeshModel.activeSelf ? 1 : 0) + spawnedStackedItems.Count;
+        }
+
+        private Vector3 GetStackedLocalPosition(int itemIndex)
+        {
+            return singleModelBaseLocalPosition + Vector3.up * (itemIndex * yOffset);
+        }
+
+        private void ResetSingleModelForStack()
+        {
+            singleMeshModel.transform.DOKill();
+            singleMeshModel.SetActive(true);
+            singleMeshModel.transform.localPosition = singleModelBaseLocalPosition;
+            singleMeshModel.transform.localScale = singleModelBaseLocalScale;
+        }
+
+        private void TweenSingleModelRotation(Vector3 targetRotation)
+        {
+            singleMeshModel.transform.DOKill();
+            if (rotationTransitionDuration <= 0f)
+            {
+                singleMeshModel.transform.localRotation = Quaternion.Euler(targetRotation);
+                return;
+            }
+
+            singleMeshModel.transform.DOLocalRotate(targetRotation, rotationTransitionDuration).SetEase(Ease.OutQuad);
+        }
+
+        private void DespawnStackedItem(GameObject item)
+        {
+            if (item == null) return;
+
+            spawnedStackedItems.Remove(item);
+            PoolManager.Instance.Despawn(item);
         }
     }
 }

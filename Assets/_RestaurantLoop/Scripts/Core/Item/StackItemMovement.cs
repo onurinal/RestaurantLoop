@@ -1,14 +1,19 @@
 ﻿using System;
 using UnityEngine;
+using DG.Tweening;
 
 namespace RestaurantLoop.Core
 {
     public class StackItemMovement : MonoBehaviour
     {
+        [Header("Conveyor Entry Animation")]
+        [SerializeField, Min(0f)] private float conveyorEntryRotationDuration = 0.16f;
+
         private float currentDistance;
         private float traveledDistance;
         private float targetTravelDistance;
         private bool isWaitingForRack;
+        private Tween conveyorRotationTween;
 
         public float CurrentDistance => currentDistance;
 
@@ -25,7 +30,7 @@ namespace RestaurantLoop.Core
             targetTravelDistance = totalDistanceToExit;
             isWaitingForRack = false;
 
-            UpdateTransform(path, true);
+            UpdateTransform(path, true, true);
         }
 
         public void MoveAlongBelt(SplineConveyorPath path, float speed, bool isClockwise, float deltaTime, Action onExitReached)
@@ -52,7 +57,7 @@ namespace RestaurantLoop.Core
             }
         }
 
-        public void UpdateTransform(SplineConveyorPath path, bool isClockwise)
+        public void UpdateTransform(SplineConveyorPath path, bool isClockwise, bool animateRotation = false)
         {
             if (path == null) return;
 
@@ -60,8 +65,25 @@ namespace RestaurantLoop.Core
             Vector3 direction = path.GetDirection(currentDistance, isClockwise);
             if (direction != Vector3.zero)
             {
-                transform.rotation = Quaternion.LookRotation(direction);
+                Quaternion targetRotation = Quaternion.LookRotation(direction);
+                if (animateRotation && conveyorEntryRotationDuration > 0f)
+                {
+                    conveyorRotationTween?.Kill();
+                    conveyorRotationTween = transform
+                        .DORotateQuaternion(targetRotation, conveyorEntryRotationDuration)
+                        .SetEase(Ease.OutQuad);
+                }
+                else if (conveyorRotationTween == null || !conveyorRotationTween.IsActive())
+                {
+                    transform.rotation = targetRotation;
+                }
             }
+        }
+
+        private void OnDisable()
+        {
+            conveyorRotationTween?.Kill();
+            conveyorRotationTween = null;
         }
     }
 }

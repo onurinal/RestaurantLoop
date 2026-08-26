@@ -84,7 +84,8 @@ namespace RestaurantLoop.Core
         public void InitializeOnBelt(SplineConveyorPath path, float startDistance, float totalDistanceToExit)
         {
             serviceCooldown = 0f;
-            SetVisualMode(StackVisualMode.Stacked);
+            currentMode = StackVisualMode.Stacked;
+            visuals.TransitionToStacked(remainingCount);
             movement.InitializeOnBelt(path, startDistance, totalDistanceToExit);
         }
 
@@ -106,8 +107,6 @@ namespace RestaurantLoop.Core
         {
             animator.JumpToConveyor(targetPosition, () =>
             {
-                SetVisualMode(StackVisualMode.Stacked);
-
                 if (AudioManager.Instance != null && AudioManager.Instance.boardClickSound != null)
                     AudioManager.Instance.PlaySFX(AudioManager.Instance.boardClickSound);
 
@@ -117,10 +116,11 @@ namespace RestaurantLoop.Core
 
         public void JumpToSlot(Transform slotTransform, Action onComplete = null)
         {
+            currentMode = StackVisualMode.SingleWithUI;
+            visuals.CollapseToSingle();
+
             animator.JumpToSlot(slotTransform, () =>
             {
-                SetVisualMode(StackVisualMode.SingleWithUI);
-
                 if (AudioManager.Instance != null && AudioManager.Instance.rackDropSound != null)
                     AudioManager.Instance.PlaySFX(AudioManager.Instance.rackDropSound);
 
