@@ -52,6 +52,10 @@ namespace RestaurantLoop.Core
         private CustomerEntranceSequencer entranceSequencer;
         private Coroutine entranceSequenceCoroutine;
         private Transform gridVisualRoot;
+#if UNITY_EDITOR
+        private Transform editorPreviewRoot;
+        private bool editorPreviewQueued;
+#endif
         private readonly List<FoodCell> boardCells = new List<FoodCell>();
         private readonly List<Vector3> boardCellPositions = new List<Vector3>();
         private readonly List<int> edgeSlotCellIndices = new List<int>();
@@ -79,7 +83,15 @@ namespace RestaurantLoop.Core
         private void OnValidate()
         {
 #if UNITY_EDITOR
+            if (!Application.isPlaying) QueueEditorPreviewRefresh();
             SceneView.RepaintAll();
+#endif
+        }
+
+        private void OnDisable()
+        {
+#if UNITY_EDITOR
+            if (!Application.isPlaying) ClearEditorPreview();
 #endif
         }
 
@@ -352,12 +364,118 @@ namespace RestaurantLoop.Core
             foreach (FoodCell cell in boardCells) cell?.Clear();
         }
 
+#if UNITY_EDITOR
+        private void QueueEditorPreviewRefresh()
+        {
+            if (editorPreviewQueued) return;
+
+            editorPreviewQueued = true;
+            EditorApplication.delayCall += () =>
+            {
+                editorPreviewQueued = false;
+                if (this != null && !Application.isPlaying) BuildEditorPreview();
+            };
+        }
+
+        public void RefreshEditorPreview()
+        {
+            if (!Application.isPlaying) BuildEditorPreview();
+        }
+
+        private void BuildEditorPreview()
+        {
+            ClearEditorPreview();
+            if (gridCellPrefab == null) return;
+
+            RecalculateBoardGrid();
+            GameObject root = new GameObject("Dining Board Grid Preview (Generated)");
+            root.hideFlags = HideFlags.DontSaveInEditor;
+            root.transform.SetParent(transform, false);
+            editorPreviewRoot = root.transform;
+
+            Vector2 cellSize = GetBoardCellSize() * cellFill;
+            for (int i = 0; i < boardCellPositions.Count; i++)
+            {
+                FoodCell cell = Instantiate(gridCellPrefab, editorPreviewRoot);
+                cell.name = $"Preview Cell {i % boardColumns + 1}-{i / boardColumns + 1}";
+                cell.gameObject.hideFlags = HideFlags.DontSaveInEditor;
+                cell.transform.position = boardCellPositions[i] + Vector3.up * gridCellYOffset;
+                cell.transform.rotation = Quaternion.identity;
+                cell.transform.localScale = Vector3.Scale(cell.transform.localScale, new Vector3(cellSize.x, 1f, cellSize.y));
+                cell.Clear();
+            }
+        }
+
+        private void ClearEditorPreview()
+        {
+            if (editorPreviewRoot == null)
+            {
+                Transform existingPreview = transform.Find("Dining Board Grid Preview (Generated)");
+                if (existingPreview != null) editorPreviewRoot = existingPreview;
+            }
+
+            if (editorPreviewRoot != null)
+            {
+                DestroyImmediate(editorPreviewRoot.gameObject);
+                editorPreviewRoot = null;
+            }
+        }
+#endif
+
         private void OnDrawGizmos()
         {
             InitializeGridSplineMapping();
             Vector2 size = GetBoardWorldSize();
             Gizmos.color = new Color(1f, 0.75f, 0.15f, 0.5f);
             Gizmos.DrawWireCube(GetRoomCenter(), new Vector3(size.x, 0.05f, size.y));
+
+            Vector2 cellSize = GetBoardCellSize();
+            Gizmos.color = new Color(1f, 1f, 1f, 0.25f);
+            foreach (Vector3 cellPosition in boardCellPositions)
+            {
+                Gizmos.DrawWireCube(cellPosition, new Vector3(cellSize.x, 0.02f, cellSize.y));
+            }
+
+            Gizmos.color = Color.green;
+            foreach (int boardIndex in edgeSlotCellIndices)
+            {
+                if (boardIndex >= 0 && boardIndex < boardCellPositions.Count)
+                {
+                    Gizmos.DrawWireCube(boardCellPositions[boardIndex], new Vector3(cellSize.x * 0.75f, 0.03f, cellSize.y * 0.75f));
+                }
+            }
         }
     }
 }
+
+#if UNITY_EDITOR
+namespace RestaurantLoop.Core
+{
+    [CustomEditor(typeof(CrowdManager))]
+    public class CrowdManagerEditor : Editor
+    {
+        public override void OnInspectorGUI()
+        {
+            EditorGUI.BeginChangeCheck();
+            DrawDefaultInspector();
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                foreach (UnityEngine.Object selected in targets)
+                {
+                    ((CrowdManager)selected).RefreshEditorPreview();
+                }
+            }
+
+            GUILayout.Space(6f);
+            if (GUILayout.Button("Refresh Dining Board Preview"))
+            {
+                foreach (UnityEngine.Object selected in targets)
+                {
+                    ((CrowdManager)selected).RefreshEditorPreview();
+                }
+            }
+        }
+    }
+}
+#endif
