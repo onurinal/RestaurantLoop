@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using DG.Tweening; // Added for DOKill
+using RestaurantLoop.Infrastructure; // Added to access PoolManager
 
 namespace RestaurantLoop.Core
 {
@@ -103,6 +105,34 @@ namespace RestaurantLoop.Core
             Vector3 entrancePosition = path.GetPosition(EntranceDistance);
             stack.JumpToConveyor(entrancePosition, () => TryAddStack(stack));
             return true;
+        }
+
+        // --- NEW FUNCTION: Cleans up the conveyor for new levels ---
+        /// <summary>
+        /// Removes and despawns all items currently moving on the conveyor belt. 
+        /// Called during level transitions to ensure a clean state.
+        /// </summary>
+        public void ClearAllItems()
+        {
+            // Iterate backwards since we are removing items
+            for (int i = activeStacks.Count - 1; i >= 0; i--)
+            {
+                if (activeStacks[i] != null)
+                {
+                    // Kill any active jump or movement tweens to prevent null errors
+                    activeStacks[i].transform.DOKill();
+                    
+                    // Return the item back to the pool
+                    PoolManager.Instance.Despawn(activeStacks[i].gameObject);
+                }
+            }
+
+            // Reset tracking variables
+            activeStacks.Clear();
+            occupiedCapacity = 0;
+            
+            // Notify UI or other systems that the capacity is now completely empty
+            CapacityChanged?.Invoke(occupiedCapacity, maxCapacity);
         }
 
         public float GetRequiredTravelDistance()

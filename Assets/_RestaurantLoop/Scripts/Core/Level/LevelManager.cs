@@ -63,6 +63,18 @@ namespace RestaurantLoop.Core
             LevelDataSO data = CurrentLevel;
             if (data == null) return;
 
+            // Clear leftover items in the rack from the previous level to ensure a clean state
+            if (RackManager.Instance != null)
+            {
+                RackManager.Instance.ClearAllItems();
+            }
+
+            // Clear leftover items on the conveyor from the previous level
+            if (ConveyorManager.Instance != null)
+            {
+                ConveyorManager.Instance.ClearAllItems();
+            }
+
             if (CrowdManager.Instance != null)
             {
                 CrowdManager.Instance.OnDemandChanged -= HandleDemandChanged;
@@ -86,7 +98,10 @@ namespace RestaurantLoop.Core
             if (CurrentState != LevelState.Playing) return;
 
             CurrentState = LevelState.Lost;
-            Debug.LogError("<color=red>[LEVEL FAILED]</color> Conveyor stack reached exit while Rack is full!");
+            
+            // Changed from LogError to LogWarning to prevent Error Pause in the editor and Build crashes
+            Debug.LogWarning("<color=orange>[LEVEL FAILED]</color> Conveyor stack reached exit while Rack is full!");
+            
             OnLevelLost?.Invoke();
         }
 
