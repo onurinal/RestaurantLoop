@@ -16,4 +16,4 @@ MonoBehaviour:
   uiColor: {r: 0.058107615, g: 1, b: 0, a: 1}
   balloonIcon: {fileID: 21300000, guid: 3e02eca1ffe9b344c85b58ff37edb7bc, type: 3}
   stackPrefab: {fileID: 3873658242560358701, guid: 656a6f7ff357a70498085d64b109c774, type: 3}
-  customerPrefab: {fileID: 1472488936689842900, guid: 2cae29f062d832f41868b9c9927ed2e0, type: 3}
+  customerPrefab: {fileID: 746159430835400799, guid: 2cae29f062d832f41868b9c9927ed2e0, type: 3}
