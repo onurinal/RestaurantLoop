@@ -13,6 +13,12 @@ namespace RestaurantLoop.Core
 
         private void Update()
         {
+            // Block all input raycasts when level is won or lost
+            if (LevelManager.Instance != null && !LevelManager.Instance.IsGameActive)
+            {
+                return;
+            }
+
             if (!Input.GetMouseButtonDown(0))
             {
                 return;

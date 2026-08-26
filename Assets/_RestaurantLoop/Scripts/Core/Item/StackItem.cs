@@ -48,7 +48,7 @@ namespace RestaurantLoop.Core
             remainingCount = Mathf.Max(0, count);
             currentMode = StackVisualMode.SingleWithUI;
 
-            visuals.SetItemData(itemData); // Passes ItemDataSO to visuals controller to assign custom text offset
+            visuals.SetItemData(itemData);
             visuals.RefreshVisuals(currentMode, remainingCount);
         }
 
@@ -68,7 +68,10 @@ namespace RestaurantLoop.Core
 
         public void OnTap()
         {
-            if (IsJumping || (CrowdManager.Instance != null && CrowdManager.Instance.IsSpawningCustomers)) return;
+            // Disable interactions when jumping, spawning customers, or when game state is not active
+            if (IsJumping ||
+                (CrowdManager.Instance != null && CrowdManager.Instance.IsSpawningCustomers) ||
+                (LevelManager.Instance != null && !LevelManager.Instance.IsGameActive)) return;
 
             if (AudioManager.Instance != null && AudioManager.Instance.tapSound != null)
             {
@@ -168,6 +171,7 @@ namespace RestaurantLoop.Core
             if (rack == null || !rack.HasAvailableSlot)
             {
                 movement.IsWaitingForRack = true;
+                LevelManager.Instance?.ReportRackOverflow();
                 return;
             }
 
@@ -176,6 +180,7 @@ namespace RestaurantLoop.Core
             if (!rack.TryAddStackToRack(this))
             {
                 movement.IsWaitingForRack = true;
+                LevelManager.Instance?.ReportRackOverflow();
             }
         }
     }
