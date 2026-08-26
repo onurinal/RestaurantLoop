@@ -19,11 +19,16 @@ namespace RestaurantLoop.Core
         [Tooltip("The dedicated customer archetype for this food. Leave empty to use CrowdManager's generic fallback.")]
         [SerializeField] private Customer customerPrefab;
 
+        [Header("UI Settings")]
+        [Tooltip("Distance offset for the count text. Increase this value for larger food 3D models.")]
+        [SerializeField] private float uiTextOffsetDistance = 1.1f;
+
         public string ItemName => itemName;
         public Color UIColor => uiColor;
         public Sprite BalloonIcon => balloonIcon;
         public GameObject StackPrefab => stackPrefab;
         public Material CellMaterial => cellMaterial;
         public Customer CustomerPrefab => customerPrefab;
+        public float UITextOffsetDistance => uiTextOffsetDistance;
     }
 }

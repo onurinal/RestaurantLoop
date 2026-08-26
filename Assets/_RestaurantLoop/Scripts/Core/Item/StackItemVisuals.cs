@@ -20,14 +20,13 @@ namespace RestaurantLoop.Core
 
         [Header("UI Setup")]
         [SerializeField] private TMP_Text countText;
-        [Tooltip("Text offset in Queue and Rack slots (Single Mode).")]
-        [SerializeField] private Vector3 singleModeTextOffset = new Vector3(0f, 0.25f, -1.1f);
         [Tooltip("Interpolation speed for smooth text position transitions around conveyor corners.")]
         [SerializeField] private float textOffsetLerpSpeed = 12f;
 
         private readonly List<GameObject> spawnedStackedItems = new List<GameObject>();
         private Camera mainCamera;
         private StackVisualMode currentMode = StackVisualMode.SingleWithUI;
+        private float activeTextDistance = 1.1f;
 
         public GameObject SingleMeshModel => singleMeshModel;
 
@@ -45,6 +44,12 @@ namespace RestaurantLoop.Core
                 countText.transform.rotation = mainCamera.transform.rotation;
                 UpdateTextOffsetByRotation();
             }
+        }
+
+        public void SetItemData(ItemDataSO itemData)
+        {
+            // Dynamically assign text offset distance based on ItemDataSO configuration
+            activeTextDistance = itemData != null ? itemData.UITextOffsetDistance : 1.1f;
         }
 
         public void RefreshVisuals(StackVisualMode mode, int remainingCount)
@@ -128,7 +133,8 @@ namespace RestaurantLoop.Core
 
             if (currentMode == StackVisualMode.SingleWithUI)
             {
-                targetOffset = singleModeTextOffset;
+                // Single Mode (Queue and Rack slots) also scales dynamically with activeTextDistance
+                targetOffset = new Vector3(0f, 0.25f, -activeTextDistance);
             }
             else
             {
@@ -136,19 +142,19 @@ namespace RestaurantLoop.Core
 
                 if (yAngle >= 0f && yAngle < 90f)
                 {
-                    targetOffset = new Vector3(0f, 0.25f, -1.1f);
+                    targetOffset = new Vector3(0f, 0.25f, -activeTextDistance);
                 }
                 else if (yAngle >= 90f && yAngle < 180f)
                 {
-                    targetOffset = new Vector3(1.1f, 0.25f, 0f);
+                    targetOffset = new Vector3(activeTextDistance, 0.25f, 0f);
                 }
                 else if (yAngle >= 180f && yAngle < 270f)
                 {
-                    targetOffset = new Vector3(0f, 0.25f, 1.1f);
+                    targetOffset = new Vector3(0f, 0.25f, activeTextDistance);
                 }
                 else
                 {
-                    targetOffset = new Vector3(-1.1f, 0.25f, 0f);
+                    targetOffset = new Vector3(-activeTextDistance, 0.25f, 0f);
                 }
             }
 

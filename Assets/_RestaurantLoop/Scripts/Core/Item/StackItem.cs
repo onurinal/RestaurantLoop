@@ -47,6 +47,8 @@ namespace RestaurantLoop.Core
             itemData = data;
             remainingCount = Mathf.Max(0, count);
             currentMode = StackVisualMode.SingleWithUI;
+
+            visuals.SetItemData(itemData); // Passes ItemDataSO to visuals controller to assign custom text offset
             visuals.RefreshVisuals(currentMode, remainingCount);
         }
 
