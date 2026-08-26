@@ -3,7 +3,7 @@ using System.Collections;
 using UnityEngine;
 using DG.Tweening;
 using RestaurantLoop.Infrastructure;
-using RestaurantLoop.Audio; // Added to access AudioManager
+using RestaurantLoop.Audio;
 
 namespace RestaurantLoop.Core
 {
@@ -12,11 +12,15 @@ namespace RestaurantLoop.Core
         [Header("Animation & Visuals")]
         [SerializeField] private Animator animator;
         [SerializeField] private Transform visualContainer;
-        [Tooltip("Child GameObject containing the balloon sprite (preset at 40 degrees camera pitch).")]
+        [Tooltip("Child GameObject containing the balloon sprite.")]
         [SerializeField] private GameObject balloonObject;
+        [SerializeField] private Renderer customerRenderer;
 
         [Header("Data")]
         private ItemDataSO requiredData;
+        private MaterialPropertyBlock propBlock;
+        private static readonly int DesatProperty = Shader.PropertyToID("_Desaturation");
+        private float currentDesat = 1f;
 
         public bool IsServed { get; private set; }
         public bool IsEdgeCustomer { get; private set; }
@@ -33,6 +37,9 @@ namespace RestaurantLoop.Core
         {
             authoredLocalScale = transform.localScale;
             if (animator == null) animator = GetComponentInChildren<Animator>();
+            if (customerRenderer == null) customerRenderer = GetComponentInChildren<SkinnedMeshRenderer>();
+
+            propBlock = new MaterialPropertyBlock();
         }
 
         private void OnDestroy()
@@ -55,14 +62,34 @@ namespace RestaurantLoop.Core
             ModelTransform.localRotation = Quaternion.identity;
 
             SetBalloonActive(false);
+            SetDesaturation(1f, 0f);
+        }
+
+        public void SetDesaturation(float targetValue, float duration = 0.5f)
+        {
+            if (customerRenderer == null) return;
+
+            if (duration <= 0f)
+            {
+                currentDesat = targetValue;
+                customerRenderer.GetPropertyBlock(propBlock);
+                propBlock.SetFloat(DesatProperty, targetValue);
+                customerRenderer.SetPropertyBlock(propBlock);
+                return;
+            }
+
+            DOVirtual.Float(currentDesat, targetValue, duration, v =>
+            {
+                currentDesat = v;
+                customerRenderer.GetPropertyBlock(propBlock);
+                propBlock.SetFloat(DesatProperty, v);
+                customerRenderer.SetPropertyBlock(propBlock);
+            });
         }
 
         public void SetBalloonActive(bool active)
         {
-            if (balloonObject != null)
-            {
-                balloonObject.SetActive(active);
-            }
+            if (balloonObject != null) balloonObject.SetActive(active);
         }
 
         public void SetModelRotation(float yAngle)
@@ -75,10 +102,16 @@ namespace RestaurantLoop.Core
             IsEdgeCustomer = isEdge;
         }
 
-        public void MoveAlongPath(Vector3[] waypoints, float duration, bool setAsEdge, float targetYRotation = 0f, Action onComplete = null)
+        public void MoveAlongPath(Vector3[] waypoints, float duration, bool setAsEdge, float targetYRotation = 0f, Vector3 roomCenter = default,
+            Action onComplete = null)
         {
             SetEdgeStatus(setAsEdge);
             SetBalloonActive(false);
+
+            if (setAsEdge)
+            {
+                SetDesaturation(0f, 0.4f);
+            }
 
             transform.DOKill();
             ModelTransform.DOKill();
@@ -94,9 +127,9 @@ namespace RestaurantLoop.Core
                     ModelTransform.DOLocalRotate(new Vector3(0f, targetYRotation, 0f), 0.2f).OnComplete(() =>
                     {
                         if (animator != null) animator.SetBool(IsWalkingHash, false);
-
                         if (IsEdgeCustomer)
                         {
+                            AlignBalloonToCenter(roomCenter);
                             SetBalloonActive(true);
                         }
 
@@ -105,10 +138,12 @@ namespace RestaurantLoop.Core
                 });
         }
 
-        public void MoveToEdgeSlot(Vector3 targetPosition, float targetYRotation = 0f, Action onComplete = null)
+        public void MoveToEdgeSlot(Vector3 targetPosition, float targetYRotation = 0f, Vector3 roomCenter = default, Action onComplete = null)
         {
             SetEdgeStatus(true);
             SetBalloonActive(false);
+
+            SetDesaturation(0f, 0.4f);
 
             transform.DOKill();
             ModelTransform.DOKill();
@@ -131,10 +166,38 @@ namespace RestaurantLoop.Core
                     ModelTransform.DOLocalRotate(new Vector3(0f, targetYRotation, 0f), 0.2f).OnComplete(() =>
                     {
                         if (animator != null) animator.SetBool(IsWalkingHash, false);
+                        AlignBalloonToCenter(roomCenter);
                         SetBalloonActive(true);
                         onComplete?.Invoke();
                     });
                 });
+        }
+
+        public void AlignBalloonToCenter(Vector3 roomCenter)
+        {
+            if (balloonObject == null) return;
+
+            bool isRightSide = transform.position.x > roomCenter.x;
+
+            Vector3 localPos = balloonObject.transform.localPosition;
+            Vector3 localScale = balloonObject.transform.localScale;
+
+            float absX = Mathf.Abs(localPos.x != 0 ? localPos.x : 1.4f);
+            float absScaleX = Mathf.Abs(localScale.x);
+
+            if (isRightSide)
+            {
+                localPos.x = -absX;
+                localScale.x = -absScaleX;
+            }
+            else
+            {
+                localPos.x = absX;
+                localScale.x = absScaleX;
+            }
+
+            balloonObject.transform.localPosition = localPos;
+            balloonObject.transform.localScale = localScale;
         }
 
         public void ReceiveItem(StackItem stack, Action onComplete)
@@ -151,25 +214,20 @@ namespace RestaurantLoop.Core
 
         private IEnumerator EatAndLeaveRoutine(Action onComplete)
         {
-            // Wait for the plate flight duration (0.35s)
             yield return new WaitForSeconds(0.35f);
 
-            // 1. Plate is caught by the customer -> Play "Pop" sound
             if (AudioManager.Instance != null && AudioManager.Instance.popSound != null)
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.popSound);
 
             if (animator != null) animator.SetTrigger(EatHash);
-            
-            // 2. Customer starts eating -> Play "Nom-nom" sound
+
             if (AudioManager.Instance != null && AudioManager.Instance.nomNomSound != null)
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.nomNomSound);
 
-            // Wait for the eating animation to finish (0.5s)
             yield return new WaitForSeconds(0.5f);
 
             if (animator != null) animator.SetTrigger(JumpHash);
 
-            // 3. Customer finishes eating and jumps happily -> Play "Happy Jump" sound
             if (AudioManager.Instance != null && AudioManager.Instance.happyJumpSound != null)
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.happyJumpSound);
 

@@ -69,13 +69,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b65564dacd6b4cdca185dfb62d819ee9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.StackItem
+  itemData: {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
   remainingCount: 10
   jumpPower: 1.5
   jumpDuration: 0.5
-  itemData: {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
   visualContainer: {fileID: 7296015360992186765}
   singleMeshModel: {fileID: 4475095186802745863}
   yOffset: 0.42
+  singleModeRotation: {x: 0, y: 0, z: 0}
+  stackedModeRotation: {x: 0, y: 0, z: 0}
   countText: {fileID: 8896031000473755918}
   textHeightOffset: 0.5
 --- !u!1 &4418145506771092432
@@ -300,15 +302,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 30c1b46b15f88ee49b47661b138e2e80, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.75251
+      value: 0.65
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 30c1b46b15f88ee49b47661b138e2e80, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.75251
+      value: 0.65
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 30c1b46b15f88ee49b47661b138e2e80, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.75251
+      value: 0.65
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 30c1b46b15f88ee49b47661b138e2e80, type: 3}
       propertyPath: m_LocalPosition.x
@@ -349,6 +351,10 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: 30c1b46b15f88ee49b47661b138e2e80, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 30c1b46b15f88ee49b47661b138e2e80, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 30c1b46b15f88ee49b47661b138e2e80, type: 3}
       propertyPath: m_Name

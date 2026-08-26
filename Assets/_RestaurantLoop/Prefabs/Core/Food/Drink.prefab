@@ -210,7 +210,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 5181387514208122253}
   - {fileID: 7296015360992186765}
@@ -236,8 +236,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.87, y: 1.1243906, z: 0.87}
-  m_Center: {x: 0, y: -0.068050295, z: 0}
+  m_Size: {x: 1.2386554, y: 1.3718233, z: 2.4879036}
+  m_Center: {x: 0.018313706, y: 0.8137164, z: 0.26290536}
 --- !u!114 &5377942344807420386
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -250,13 +250,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b65564dacd6b4cdca185dfb62d819ee9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.StackItem
+  itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   remainingCount: 10
   jumpPower: 1.5
   jumpDuration: 0.5
-  itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   visualContainer: {fileID: 7296015360992186765}
   singleMeshModel: {fileID: 5524840120893878071}
   yOffset: 1.35
+  singleModeRotation: {x: 300, y: 0, z: 0}
+  stackedModeRotation: {x: 270, y: 0, z: 0}
   countText: {fileID: 9047534107090354303}
   textHeightOffset: 0.5
 --- !u!1 &4418145506771092432
@@ -300,15 +302,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.5
+      value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.5
+      value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.5
+      value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
       propertyPath: m_LocalPosition.x
@@ -316,7 +318,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.5
+      value: 0.85
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
       propertyPath: m_LocalPosition.z
@@ -324,19 +326,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.7071068
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.7071068
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.000000030908623
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0.000000030908623
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x

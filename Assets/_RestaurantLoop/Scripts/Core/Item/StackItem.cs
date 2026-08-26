@@ -4,7 +4,8 @@ using UnityEngine;
 using TMPro;
 using DG.Tweening;
 using RestaurantLoop.Infrastructure;
-using RestaurantLoop.Audio; 
+using RestaurantLoop.Audio;
+
 namespace RestaurantLoop.Core
 {
     public enum StackVisualMode
@@ -16,26 +17,31 @@ namespace RestaurantLoop.Core
     [RequireComponent(typeof(BoxCollider))]
     public class StackItem : MonoBehaviour, IInteractable
     {
+        [Header("Item Configuration")]
+        [SerializeField] private ItemDataSO itemData;
         [SerializeField] private int remainingCount = 10;
         [SerializeField] private float jumpPower = 1.5f;
         [SerializeField] private float jumpDuration = 0.5f;
 
-        [Header("Data")]
-        [SerializeField] private ItemDataSO itemData;
-
-        [Header("Visual Settings")]
+        [Header("Visual Setup")]
         [SerializeField] private Transform visualContainer;
         [SerializeField] private GameObject singleMeshModel;
         [SerializeField] private float yOffset = 1.0f;
 
-        [Header("UI Settings")]
+        [Header("Rotation Overrides")]
+        [Tooltip("Local rotation applied in Queue slots (Single Mode).")]
+        [SerializeField] private Vector3 singleModeRotation = Vector3.zero;
+        [Tooltip("Local rotation applied on belt (Stacked Mode). Keep X and Z at 0 to avoid spiraling.")]
+        [SerializeField] private Vector3 stackedModeRotation = Vector3.zero;
+
+        [Header("UI Setup")]
         [SerializeField] private TMP_Text countText;
         [SerializeField] private float textHeightOffset = 0.8f;
 
         private float currentDistance;
         private float traveledDistance;
         private float targetTravelDistance;
-        private float serviceCooldown = 0f;
+        private float serviceCooldown;
         private bool isWaitingForRack;
 
         private StackVisualMode currentMode = StackVisualMode.SingleWithUI;
@@ -53,16 +59,8 @@ namespace RestaurantLoop.Core
         private void Awake()
         {
             mainCamera = Camera.main;
-
-            if (countText == null)
-            {
-                countText = GetComponentInChildren<TMP_Text>(true);
-            }
-
-            if(singleMeshModel == null)
-            {
-                singleMeshModel = transform.GetComponentInChildren<MeshRenderer>(true)?.gameObject;
-            }
+            if (countText == null) countText = GetComponentInChildren<TMP_Text>(true);
+            if (singleMeshModel == null) singleMeshModel = transform.GetComponentInChildren<MeshRenderer>(true)?.gameObject;
         }
 
         private void LateUpdate()
@@ -81,15 +79,6 @@ namespace RestaurantLoop.Core
             RefreshVisuals();
         }
 
-        public void InitializeData(ItemDataSO data)
-        {
-            if (data != null)
-            {
-                itemData = data;
-                RefreshVisuals();
-            }
-        }
-
         public void SetItemCount(int newCount)
         {
             remainingCount = Mathf.Max(0, newCount);
@@ -102,17 +91,12 @@ namespace RestaurantLoop.Core
                     int lastIndex = spawnedStackedItems.Count - 1;
                     if (lastIndex >= 0)
                     {
-                        if (spawnedStackedItems[lastIndex] != null) 
-                        {
-                            PoolManager.Instance.Despawn(spawnedStackedItems[lastIndex]);
-                        }
+                        if (spawnedStackedItems[lastIndex] != null) PoolManager.Instance.Despawn(spawnedStackedItems[lastIndex]);
                         spawnedStackedItems.RemoveAt(lastIndex);
                     }
                 }
 
-                float totalStackHeight = remainingCount * yOffset;
-                UpdateCountText(true, totalStackHeight + textHeightOffset);
-                UpdateColliderBounds();
+                UpdateCountText(true, (remainingCount * yOffset) + textHeightOffset);
             }
             else
             {
@@ -132,48 +116,32 @@ namespace RestaurantLoop.Core
 
             if (currentMode == StackVisualMode.SingleWithUI)
             {
-                if (singleMeshModel != null) singleMeshModel.SetActive(true);
+                if (singleMeshModel != null)
+                {
+                    singleMeshModel.SetActive(true);
+                    singleMeshModel.transform.localRotation = Quaternion.Euler(singleModeRotation);
+                }
+
                 UpdateCountText(true, yOffset + textHeightOffset);
             }
             else
             {
                 if (singleMeshModel != null) singleMeshModel.SetActive(false);
 
-                float modelBaseOffsetY = singleMeshModel != null ? singleMeshModel.transform.localPosition.y : 0f;
+                float baseOffsetY = singleMeshModel != null ? singleMeshModel.transform.localPosition.y : 0f;
 
                 for (int i = 0; i < remainingCount; i++)
                 {
-                    if (singleMeshModel != null)
-                    {
-                        GameObject item = PoolManager.Instance.Spawn(singleMeshModel, Vector3.zero, singleMeshModel.transform.rotation, visualContainer);
-                        item.transform.localPosition = new Vector3(0f, (i * yOffset) + modelBaseOffsetY, 0f);
-                        item.transform.localScale = singleMeshModel.transform.localScale;
-                        spawnedStackedItems.Add(item);
-                    }
+                    if (singleMeshModel == null) continue;
+
+                    GameObject item = PoolManager.Instance.Spawn(singleMeshModel, Vector3.zero, Quaternion.identity, visualContainer);
+                    item.transform.localPosition = new Vector3(0f, (i * yOffset) + baseOffsetY, 0f);
+                    item.transform.localRotation = Quaternion.Euler(stackedModeRotation);
+                    item.transform.localScale = singleMeshModel.transform.localScale;
+                    spawnedStackedItems.Add(item);
                 }
 
-                float totalStackHeight = remainingCount * yOffset;
-                UpdateCountText(true, totalStackHeight + textHeightOffset);
-            }
-
-            UpdateColliderBounds();
-        }
-
-        private void UpdateColliderBounds()
-        {
-            BoxCollider boxCol = GetComponent<BoxCollider>();
-            if (boxCol == null) return;
-
-            if (currentMode == StackVisualMode.Stacked)
-            {
-                float totalHeight = remainingCount > 0 ? (remainingCount * yOffset) : 0.5f;
-                boxCol.size = new Vector3(1f, totalHeight, 1f);
-                boxCol.center = new Vector3(0f, (totalHeight / 2f) - (yOffset / 2f), 0f);
-            }
-            else
-            {
-                boxCol.size = new Vector3(1f, 1f, 1f); 
-                boxCol.center = Vector3.zero;
+                UpdateCountText(true, (remainingCount * yOffset) + textHeightOffset);
             }
         }
 
@@ -213,12 +181,10 @@ namespace RestaurantLoop.Core
                 .OnComplete(() => { transform.localPosition = Vector3.zero; });
         }
 
-       public void OnTap()
+        public void OnTap()
         {
-            if (IsJumping) return;
-            if (CrowdManager.Instance != null && CrowdManager.Instance.IsSpawningCustomers) return;
+            if (IsJumping || (CrowdManager.Instance != null && CrowdManager.Instance.IsSpawningCustomers)) return;
 
-            
             if (AudioManager.Instance != null && AudioManager.Instance.tapSound != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.tapSound);
@@ -255,6 +221,7 @@ namespace RestaurantLoop.Core
             float remainingTravelDistance = Mathf.Max(0f, targetTravelDistance - traveledDistance);
             float stepDistance = Mathf.Min(Mathf.Abs(speed * deltaTime), remainingTravelDistance);
             float moveDelta = isClockwise ? stepDistance : -stepDistance;
+
             currentDistance = (currentDistance + moveDelta) % path.Length;
             if (currentDistance < 0f) currentDistance += path.Length;
 
@@ -280,7 +247,6 @@ namespace RestaurantLoop.Core
                     IsJumping = false;
                     SetVisualMode(StackVisualMode.Stacked);
 
-                    // Play board click sound ("şık") when the plate lands on the conveyor
                     if (AudioManager.Instance != null && AudioManager.Instance.boardClickSound != null)
                         AudioManager.Instance.PlaySFX(AudioManager.Instance.boardClickSound);
 
@@ -292,16 +258,19 @@ namespace RestaurantLoop.Core
         {
             IsJumping = true;
             transform.DOKill();
+
+            transform.DORotateQuaternion(slotTransform.rotation, jumpDuration);
+
             transform.DOJump(slotTransform.position, jumpPower, 1, jumpDuration)
                 .OnComplete(() =>
                 {
                     IsJumping = false;
                     transform.SetParent(slotTransform);
                     transform.localPosition = Vector3.zero;
+                    transform.localRotation = Quaternion.identity;
 
                     SetVisualMode(StackVisualMode.SingleWithUI);
 
-                    // Play rack drop sound ("tık") when the plate lands on the rack
                     if (AudioManager.Instance != null && AudioManager.Instance.rackDropSound != null)
                         AudioManager.Instance.PlaySFX(AudioManager.Instance.rackDropSound);
 
@@ -314,32 +283,27 @@ namespace RestaurantLoop.Core
             if (IsJumping || itemData == null || CrowdManager.Instance == null || remainingCount <= 0) return;
 
             Customer targetCustomer = CrowdManager.Instance.CheckServiceForBeltItem(currentDistance, itemData);
+            if (targetCustomer == null) return;
 
-            if (targetCustomer != null)
+            serviceCooldown = 0.5f;
+            remainingCount--;
+
+            if (singleMeshModel != null)
             {
-                serviceCooldown = 0.5f;
-                remainingCount--;
+                GameObject flyingItem = PoolManager.Instance.Spawn(singleMeshModel, transform.position, Quaternion.identity);
 
-                if (singleMeshModel != null)
-                {
-                    GameObject flyingItem = PoolManager.Instance.Spawn(singleMeshModel, transform.position, Quaternion.identity);
-                    
-                    // Play throw sound ("fyuu") when the plate is thrown to the customer
-                    if (AudioManager.Instance != null && AudioManager.Instance.throwSound != null)
-                        AudioManager.Instance.PlaySFX(AudioManager.Instance.throwSound);
+                if (AudioManager.Instance != null && AudioManager.Instance.throwSound != null)
+                    AudioManager.Instance.PlaySFX(AudioManager.Instance.throwSound);
 
-                    flyingItem.transform.DOJump(targetCustomer.transform.position, 2f, 1, 0.35f)
-                        .OnComplete(() => { 
-                            PoolManager.Instance.Despawn(flyingItem); 
-                        });
-                }
-
-                SetItemCount(remainingCount);
-                FoodCommittedToCustomer?.Invoke(this, targetCustomer, itemData);
-                targetCustomer.ReceiveItem(this, () => { CrowdManager.Instance.OnCustomerServed(targetCustomer); });
-
-                if (remainingCount <= 0) DepleteAndDestroy();
+                flyingItem.transform.DOJump(targetCustomer.transform.position, 2f, 1, 0.35f)
+                    .OnComplete(() => { PoolManager.Instance.Despawn(flyingItem); });
             }
+
+            SetItemCount(remainingCount);
+            FoodCommittedToCustomer?.Invoke(this, targetCustomer, itemData);
+            targetCustomer.ReceiveItem(this, () => { CrowdManager.Instance.OnCustomerServed(targetCustomer); });
+
+            if (remainingCount <= 0) DepleteAndDestroy();
         }
 
         private void DepleteAndDestroy()

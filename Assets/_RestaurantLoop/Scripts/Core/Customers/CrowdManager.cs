@@ -180,7 +180,7 @@ namespace RestaurantLoop.Core
                 Vector3 edgePos = GetEdgeSlotWorldPosition(edgeSlotIndex);
                 float edgeRot = GetEdgeSlotYRotation(edgeSlotIndex);
 
-                promotedCustomer.MoveToEdgeSlot(edgePos, edgeRot);
+                promotedCustomer.MoveToEdgeSlot(edgePos, edgeRot, GetRoomCenter());
                 EdgeCustomerReplacementStarted?.Invoke(promotedCustomer, edgeSlotIndex);
 
                 RevealHiddenCrowdCustomer();
@@ -245,18 +245,33 @@ namespace RestaurantLoop.Core
         {
             Vector3 slotPos = GetEdgeSlotWorldPosition(index);
             Vector3 conveyorCenter = GetRoomCenter();
-            Vector3 dir = (conveyorCenter - slotPos);
+
+            Vector3 dir = (slotPos - conveyorCenter);
             dir.y = 0f;
+
             return dir.sqrMagnitude > 0.001f ? Quaternion.LookRotation(dir).eulerAngles.y : 0f;
         }
 
         public Vector3 GetOuterSpawnPosition() => EntrancePathUtility.GetOuterSpawnPosition(GetConveyorEntranceWorldPosition(), outerSpawnOffset);
         public Vector3 GetConveyorEntranceWorldPosition() => EntrancePathUtility.GetConveyorGapCenter(GetConveyor(), transform.position);
-        public Vector3 GetEdgeSlotWorldPosition(int index) => edgeSlots.GetSlotWorldPosition(index, GetConveyor(), GetRoomCenter(), transform.position);
+
+        public Vector3 GetEdgeSlotWorldPosition(int index)
+        {
+            Vector3 pos = edgeSlots.GetSlotWorldPosition(index, GetConveyor(), GetRoomCenter(), transform.position);
+            pos.y = 0f;
+            return pos;
+        }
+
         public Customer CheckServiceForBeltItem(float dist, ItemDataSO data) => edgeSlots.FindServiceCandidate(dist, data, GetConveyor());
 
         private ConveyorManager GetConveyor() => ConveyorManager.Instance != null ? ConveyorManager.Instance : FindFirstObjectByType<ConveyorManager>();
-        private Vector3 GetRoomCenter() => conveyorBuilder != null ? conveyorBuilder.CenterPosition : transform.position;
+
+        private Vector3 GetRoomCenter()
+        {
+            Vector3 center = conveyorBuilder != null ? conveyorBuilder.CenterPosition : transform.position;
+            center.y = 0f;
+            return center;
+        }
 
         private void OnDrawGizmos()
         {

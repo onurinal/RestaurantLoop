@@ -21,9 +21,9 @@ namespace RestaurantLoop.Core
         [SerializeField] private float speed = 3f;
 
         [Header("Transform Adjustments")]
-        [Tooltip("Local height offset relative to belt orientation.")]
+        [Tooltip("Local height offset relative to belt orientation (Y = float height).")]
         [SerializeField] private Vector3 localPositionOffset = new Vector3(0f, 0.08f, 0f);
-        [Tooltip("Rotate arrows to align with camera and belt movement direction.")]
+        [Tooltip("Camera angle tilt alignment.")]
         [SerializeField] private Vector3 rotationOffset = new Vector3(30f, 0f, 0f);
 
         private readonly List<Transform> spawnedArrows = new List<Transform>();
@@ -46,9 +46,6 @@ namespace RestaurantLoop.Core
             }
         }
 
-        /// <summary>
-        /// Call this method to dynamically swap direction at runtime.
-        /// </summary>
         public void SetDirection(bool reversed)
         {
             isReversed = reversed;
@@ -82,26 +79,23 @@ namespace RestaurantLoop.Core
 
             float currentSpeed = speed;
 
-            // Direction calculation based on modular flag
+            // Direction multiplier
             float directionMultiplier = isReversed ? -1f : 1f;
-
-            // Convert movement distance to normalized progress (0.0 to 1.0)
             float deltaProgress = (currentSpeed * directionMultiplier * Time.deltaTime) / splineLength;
 
             for (int i = 0; i < spawnedArrows.Count; i++)
             {
                 arrowProgresses[i] += deltaProgress;
 
-                // Seamless loop around the full spline
                 if (arrowProgresses[i] >= 1f) arrowProgresses[i] -= 1f;
                 if (arrowProgresses[i] < 0f) arrowProgresses[i] += 1f;
 
                 SplineSample sample = splineComputer.Evaluate((double)arrowProgresses[i]);
 
-                Quaternion finalRotation = sample.rotation * Quaternion.Euler(rotationOffset);
+                Quaternion flowRotation = sample.rotation * Quaternion.Euler(0f, isReversed ? 180f : 0f, 0f);
+                Quaternion finalRotation = flowRotation * Quaternion.Euler(rotationOffset);
 
-                // Offset calculated in local orientation to prevent belt clipping on curves
-                spawnedArrows[i].position = sample.position + (finalRotation * localPositionOffset);
+                spawnedArrows[i].position = sample.position + (sample.rotation * localPositionOffset);
                 spawnedArrows[i].rotation = finalRotation;
             }
         }

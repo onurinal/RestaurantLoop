@@ -55,8 +55,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.5, y: 0.5987899, z: 1.5}
-  m_Center: {x: 0, y: 0.38059244, z: 0}
+  m_Size: {x: 1.6323725, y: 0.5987899, z: 1.6645255}
+  m_Center: {x: 0.0033228993, y: 0.38059244, z: -0.007086754}
 --- !u!114 &5377942344807420386
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -69,13 +69,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b65564dacd6b4cdca185dfb62d819ee9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.StackItem
+  itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
   remainingCount: 10
   jumpPower: 1.5
   jumpDuration: 0.5
-  itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
   visualContainer: {fileID: 7296015360992186765}
   singleMeshModel: {fileID: 2904996590130224851}
   yOffset: 0.66
+  singleModeRotation: {x: 0, y: 0, z: 0}
+  stackedModeRotation: {x: 0, y: 0, z: 0}
   countText: {fileID: 3785995653462671066}
   textHeightOffset: 0.5
 --- !u!1 &4418145506771092432
@@ -300,15 +302,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 8e61c14b2229115408dce08f3bf3000b, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.76781034
+      value: 0.85
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8e61c14b2229115408dce08f3bf3000b, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.76781034
+      value: 0.85
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8e61c14b2229115408dce08f3bf3000b, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.76781034
+      value: 0.85
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8e61c14b2229115408dce08f3bf3000b, type: 3}
       propertyPath: m_LocalPosition.x
