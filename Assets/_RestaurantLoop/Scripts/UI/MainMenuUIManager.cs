@@ -60,7 +60,7 @@ namespace RestaurantLoop.UI
         private void StartGame()
         {
             // Load the main gameplay scene
-            SceneManager.LoadScene("Hazar-Gameplay"); 
+            SceneManager.LoadScene("Onur-2"); 
         }
 
         private void OpenSettings() => settingsPanel.SetActive(true);
