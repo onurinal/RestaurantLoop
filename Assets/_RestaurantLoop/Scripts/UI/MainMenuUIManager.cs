@@ -44,8 +44,9 @@ namespace RestaurantLoop.UI
             musicSlider.onValueChanged.AddListener(UpdateMusicVolume);
             sfxSlider.onValueChanged.AddListener(UpdateSfxVolume);
             
-            // Level text setup
-            int currentLevel = 1; 
+            // Level text setup (Updated for dynamic level saving)
+            // Retrieve "CurrentLevel" from device storage. Defaults to 1 if no save exists.
+            int currentLevel = PlayerPrefs.GetInt("CurrentLevel", 1); 
             levelText.text = $"Level {currentLevel}";
         }
 

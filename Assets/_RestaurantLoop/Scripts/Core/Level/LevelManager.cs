@@ -29,8 +29,18 @@ namespace RestaurantLoop.Core
 
         private void Awake()
         {
-            if (Instance == null) Instance = this;
-            else Destroy(gameObject);
+            if (Instance == null)
+            {
+                Instance = this;
+                
+                // Read the saved level from device storage (defaults to 1).
+                // Subtract 1 to map the human-readable level to the 0-based list index.
+                currentLevelIndex = PlayerPrefs.GetInt("CurrentLevel", 1) - 1;
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
         }
 
         private void Start()
@@ -65,7 +75,7 @@ namespace RestaurantLoop.Core
                 QueueManager.Instance.SetupQueue(data);
             }
 
-            Debug.Log($"<color=cyan>[LEVEL START]</color> Loaded Level Index: {currentLevelIndex}");
+            Debug.Log($"<color=cyan>[LEVEL START]</color> Loaded Level Index: {currentLevelIndex} (UI Level: {currentLevelIndex + 1})");
         }
 
         /// <summary>
@@ -102,6 +112,11 @@ namespace RestaurantLoop.Core
         public void CompleteLevel()
         {
             currentLevelIndex++;
+            
+            // Save the new level to PlayerPrefs, adding 1 for the human-readable UI format.
+            PlayerPrefs.SetInt("CurrentLevel", currentLevelIndex + 1);
+            PlayerPrefs.Save();
+            
             LoadCurrentLevel();
         }
     }
