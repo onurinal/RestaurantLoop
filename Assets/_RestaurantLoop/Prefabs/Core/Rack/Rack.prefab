@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5386274432563184189}
   - component: {fileID: 3716873231072192262}
   - component: {fileID: 1244953484590377093}
+  - component: {fileID: 9148712337701232990}
   m_Layer: 0
   m_Name: Rack
   m_TagString: Untagged
@@ -67,6 +68,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c93e470b06534d299a564bf3b1465b16, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.RackSlot
+  cellVisual: {fileID: 0}
+--- !u!114 &9148712337701232990
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 654363922013046188}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bcfe2747208350742a02bdf4501c91b0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.FoodCell
+  targetRenderers: []
+  neutralMaterial: {fileID: 2100000, guid: 9ded1e3679f472740bf047bf48f95907, type: 2}
 --- !u!1001 &412270296751939615
 PrefabInstance:
   m_ObjectHideFlags: 0

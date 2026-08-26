@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: SO_Drink
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.ItemDataSO
   itemName: Green Item
-  uiColor: {r: 0.058107615, g: 1, b: 0, a: 1}
+  uiColor: {r: 0, g: 0.2901961, b: 1, a: 1}
   balloonIcon: {fileID: 21300000, guid: 3e02eca1ffe9b344c85b58ff37edb7bc, type: 3}
   stackPrefab: {fileID: 3873658242560358701, guid: 656a6f7ff357a70498085d64b109c774, type: 3}
+  cellMaterial: {fileID: 2100000, guid: e1e6bf116ebcc5b45809d02342895567, type: 2}
   customerPrefab: {fileID: 746159430835400799, guid: 2cae29f062d832f41868b9c9927ed2e0, type: 3}
