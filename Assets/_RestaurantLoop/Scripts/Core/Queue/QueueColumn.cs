@@ -78,10 +78,12 @@ namespace RestaurantLoop.Core
                 {
                     StackItem itemToMove = currentSlot.CurrentStack;
 
-                    previousSlot.PlaceStack(itemToMove);
                     currentSlot.ClearSlot();
 
-                    itemToMove.transform.DOLocalMove(Vector3.zero, shiftDuration);
+                    itemToMove.transform.SetParent(previousSlot.transform);
+
+                    itemToMove.transform.DOLocalMove(Vector3.zero, shiftDuration)
+                        .OnComplete(() => { previousSlot.PlaceStack(itemToMove); });
                 }
             }
         }
