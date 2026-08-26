@@ -35,7 +35,7 @@ namespace RestaurantLoop.UI
         {
             if (countText != null)
             {
-                countText.text = $"{occupied} / {maximum}";
+                countText.text = $"{occupied}/{maximum}";
             }
         }
     }

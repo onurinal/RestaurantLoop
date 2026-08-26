@@ -10,61 +10,53 @@ using UnityEditor;
 
 namespace RestaurantLoop.Core
 {
+    [RequireComponent(typeof(DiningBoardGrid))]
     public class CrowdManager : MonoBehaviour
     {
         public static CrowdManager Instance { get; private set; }
 
         [Header("Active Edge Setup")]
-        [SerializeField] private int activeEdgeSlotCount = 6;
+        [Min(1)] [SerializeField] private int activeEdgeSlotCount = 6;
         [SerializeField] private float alignmentTolerance = 1.2f;
-        [Tooltip("How far inside the conveyor the playable board begins.")]
         [SerializeField] private float edgeInwardOffset = 2.5f;
 
-        [Header("Dining Board Grid")]
-        [SerializeField] private FoodCell gridCellPrefab;
-        [Min(1)] [SerializeField] private int boardColumns = 7;
-        [Min(1)] [SerializeField] private int boardRows = 8;
-        [SerializeField] private Vector2 boardInset = new Vector2(2.5f, 2.5f);
-        [Range(0.5f, 1f)] [SerializeField] private float cellFill = 0.82f;
-        [Tooltip("Keeps the floor cells just below customer feet while remaining above the restaurant floor.")]
-        [SerializeField] private float gridCellYOffset = -0.005f;
-
-        [Header("Inner Crowd Footprint")]
+        [Header("Inner Crowd Layout")]
         [SerializeField] private Vector3 crowdCenterOffset = Vector3.zero;
-        [Min(1)] [SerializeField] private int innerFootprintColumns = 3;
-        [Min(1)] [SerializeField] private int innerFootprintRows = 4;
+        [Tooltip("Inner crowd area width (X) and length (Y) in world units.")]
+        [SerializeField] private Vector2 innerCrowdArea = new Vector2(4f, 5f);
         [SerializeField] private float minCustomerDistance = 0.7f;
         [Range(10, 100)] [SerializeField] private int maxVisibleCrowdCount = 100;
 
-        [Header("Entrance Sequence Setup")]
+        [Header("Entrance Setup")]
         [SerializeField] private float spawnInterval = 0.15f;
         [SerializeField] private float moveDuration = 1.2f;
         [SerializeField] private float pathJitterAmount = 0.5f;
         [SerializeField] private Vector3 outerSpawnOffset = new Vector3(0f, 0f, -3.0f);
 
-        [Header("Customer Prefabs")]
-        [SerializeField] private Customer customerPrefab;
+        [Header("Gizmo Settings")]
+        [SerializeField] private bool showCrowdGizmos = true;
+        [SerializeField] private Color crowdAreaGizmoColor = new Color(1f, 0f, 1f, 0.8f);
+
         [Header("References")]
+        [SerializeField] private Customer customerPrefab;
         [SerializeField] private ConveyorBuilder conveyorBuilder;
 
+        private DiningBoardGrid boardGrid;
         private EdgeSlotService edgeSlots;
         private CentralCrowdService centralCrowd;
         private CustomerEntranceSequencer entranceSequencer;
         private Coroutine entranceSequenceCoroutine;
-        private Transform gridVisualRoot;
-#if UNITY_EDITOR
-        private Transform editorPreviewRoot;
-        private bool editorPreviewQueued;
-#endif
-        private readonly List<FoodCell> boardCells = new List<FoodCell>();
-        private readonly List<Vector3> boardCellPositions = new List<Vector3>();
-        private readonly List<int> edgeSlotCellIndices = new List<int>();
+
         private readonly List<ItemDataSO> unspawnedDemandPool = new List<ItemDataSO>();
         private readonly Dictionary<ItemDataSO, int> remainingDemandPerType = new Dictionary<ItemDataSO, int>();
 
-        public int ActiveEdgeSlotCount => edgeSlots != null ? edgeSlots.SlotCount : activeEdgeSlotCount;
+        public int ActiveEdgeSlotCount => activeEdgeSlotCount;
+        public float AlignmentTolerance => alignmentTolerance;
+        public float EdgeInwardOffset => edgeInwardOffset;
+
         public bool IsSpawningCustomers => entranceSequencer != null && entranceSequencer.IsRunning;
         public int TotalRemainingDemand { get; private set; }
+
         public event Action<Customer, int> EdgeCustomerReplacementStarted;
         public event Action<Customer, int> CustomerExitCompleted;
         public event Action<int, Dictionary<ItemDataSO, int>> OnDemandChanged;
@@ -73,46 +65,54 @@ namespace RestaurantLoop.Core
         {
             if (Instance == null) Instance = this;
             else Destroy(gameObject);
+
+            EnsureBuilderReference();
+            boardGrid = GetComponent<DiningBoardGrid>();
             edgeSlots = new EdgeSlotService(activeEdgeSlotCount, alignmentTolerance, edgeInwardOffset);
             centralCrowd = new CentralCrowdService();
             entranceSequencer = new CustomerEntranceSequencer(spawnInterval, moveDuration, pathJitterAmount, outerSpawnOffset);
         }
 
-        private void Start() => InitializeGridSplineMapping();
-
         private void OnValidate()
         {
+            EnsureBuilderReference();
+            activeEdgeSlotCount = Mathf.Max(1, activeEdgeSlotCount);
+
 #if UNITY_EDITOR
-            if (!Application.isPlaying) QueueEditorPreviewRefresh();
             SceneView.RepaintAll();
 #endif
         }
 
-        private void OnDisable()
+        private void EnsureBuilderReference()
         {
-#if UNITY_EDITOR
-            if (!Application.isPlaying) ClearEditorPreview();
-#endif
+            if (conveyorBuilder == null) conveyorBuilder = FindFirstObjectByType<ConveyorBuilder>();
         }
+
+        private void Start() => InitializeGridSplineMapping();
 
         public void InitializeGridSplineMapping()
         {
-            if (!Application.isPlaying || edgeSlots == null || edgeSlots.SlotCount != activeEdgeSlotCount)
-                edgeSlots = new EdgeSlotService(activeEdgeSlotCount, alignmentTolerance, edgeInwardOffset);
+            EnsureBuilderReference();
+            if (boardGrid == null) boardGrid = GetComponent<DiningBoardGrid>();
 
-            edgeSlots.RecalculateSplineMapping(GetConveyor());
-            RecalculateBoardGrid();
-            PositionBoardCells();
+            edgeSlots = new EdgeSlotService(activeEdgeSlotCount, alignmentTolerance, edgeInwardOffset);
+
+            ConveyorManager conveyor = GetConveyor();
+            edgeSlots.RecalculateSplineMapping(conveyor, conveyorBuilder);
+
+            Vector2 bounds = conveyorBuilder != null ? new Vector2(conveyorBuilder.Width, conveyorBuilder.Height) : new Vector2(10f, 15f);
+            boardGrid.InitializeGrid(GetRoomCenter(), bounds, activeEdgeSlotCount, GetSplineEdgeSlotWorldPosition);
         }
 
         public void SetupCrowd(List<CustomerDemandConfig> demands)
         {
             ClearCrowd();
             InitializeGridSplineMapping();
-            BuildBoardVisuals();
 
             TotalRemainingDemand = 0;
             remainingDemandPerType.Clear();
+            unspawnedDemandPool.Clear();
+
             foreach (var cfg in demands)
             {
                 TotalRemainingDemand += cfg.totalCustomerCount;
@@ -127,9 +127,16 @@ namespace RestaurantLoop.Core
             }
 
             int centralCrowdCount = Mathf.Max(0, TotalRemainingDemand - activeEdgeSlotCount);
-            centralCrowd.SetupLayout(CrowdLayoutType.Rectangular, centralCrowdCount, GetRoomCenter(), crowdCenterOffset,
-                GetInnerFootprintSize(), 0f, minCustomerDistance);
-            NotifyDemandChanged();
+
+            centralCrowd.SetupLayout(
+                CrowdLayoutType.Rectangular,
+                centralCrowdCount,
+                GetRoomCenter() + crowdCenterOffset,
+                Vector3.zero,
+                innerCrowdArea,
+                0f,
+                minCustomerDistance
+            );
 
             if (entranceSequenceCoroutine != null) StopCoroutine(entranceSequenceCoroutine);
             entranceSequenceCoroutine = StartCoroutine(RunEntranceSequence());
@@ -141,7 +148,7 @@ namespace RestaurantLoop.Core
                 GetConveyorEntranceWorldPosition(), GetRoomCenter(), edgeSlots, centralCrowd, maxVisibleCrowdCount,
                 GetEdgeSlotWorldPosition, GetEdgeSlotYRotation, (customer, slotIndex) =>
                 {
-                    SetEdgeCellFood(slotIndex, customer.RequiredData);
+                    boardGrid.SetEdgeCellFood(slotIndex, customer.RequiredData);
                     EdgeCustomerReplacementStarted?.Invoke(customer, slotIndex);
                 });
         }
@@ -151,7 +158,7 @@ namespace RestaurantLoop.Core
             if (customer == null || !edgeSlots.TryGetSlotIndex(customer, out int slotIndex)) return;
             DecrementDemandForType(customer.RequiredData);
             edgeSlots.Release(slotIndex);
-            ClearEdgeCell(slotIndex);
+            boardGrid.ClearEdgeCell(slotIndex);
             CustomerExitCompleted?.Invoke(customer, slotIndex);
             PromoteCrowdToEdgeSlot(slotIndex);
         }
@@ -164,17 +171,39 @@ namespace RestaurantLoop.Core
             Customer customer = visibleSlot.OccupyingCustomer;
             visibleSlot.OccupyingCustomer = null;
             edgeSlots.Occupy(edgeSlotIndex, customer);
-            SetEdgeCellFood(edgeSlotIndex, customer.RequiredData);
+            boardGrid.SetEdgeCellFood(edgeSlotIndex, customer.RequiredData);
+
             customer.MoveToEdgeSlot(GetEdgeSlotWorldPosition(edgeSlotIndex), GetEdgeSlotYRotation(edgeSlotIndex), GetRoomCenter());
+
             EdgeCustomerReplacementStarted?.Invoke(customer, edgeSlotIndex);
-            RevealHiddenCrowdCustomer();
         }
 
-        private void RevealHiddenCrowdCustomer()
+        public void ClearCrowd()
         {
-            CentralCrowdSlot slot = centralCrowd.GetFirstHiddenOccupiedSlot();
-            if (slot != null && slot.OccupyingCustomer != null) slot.OccupyingCustomer.gameObject.SetActive(true);
+            boardGrid.ClearAllCellMaterials();
+            for (int i = transform.childCount - 1; i >= 0; i--)
+            {
+                Customer customer = transform.GetChild(i).GetComponent<Customer>();
+                if (customer != null) PoolManager.Instance.Despawn(customer.gameObject);
+            }
+
+            centralCrowd?.Clear();
+            unspawnedDemandPool.Clear();
         }
+
+        public Vector3 GetEdgeSlotWorldPosition(int index) => boardGrid.GetEdgeSlotCellPosition(index, GetSplineEdgeSlotWorldPosition(index));
+
+        public Vector3 GetSplineEdgeSlotWorldPosition(int index) => edgeSlots != null
+            ? edgeSlots.GetSlotWorldPosition(index, GetConveyor(), conveyorBuilder, GetRoomCenter(), transform.position)
+            : transform.position;
+
+        public float GetEdgeSlotYRotation(int index) => Quaternion.LookRotation(GetEdgeSlotWorldPosition(index) - GetRoomCenter()).eulerAngles.y;
+
+        public Vector3 GetOuterSpawnPosition() => EntrancePathUtility.GetOuterSpawnPosition(GetConveyorEntranceWorldPosition(), outerSpawnOffset);
+        public Vector3 GetConveyorEntranceWorldPosition() => EntrancePathUtility.GetConveyorGapCenter(GetConveyor(), transform.position);
+
+        public Customer CheckServiceForBeltItem(float distance, ItemDataSO data) =>
+            edgeSlots != null ? edgeSlots.FindServiceCandidate(distance, data, GetConveyor()) : null;
 
         private ItemDataSO PopUnspawnedDemand()
         {
@@ -185,297 +214,36 @@ namespace RestaurantLoop.Core
         }
 
         private Customer GetCustomerPrefab(ItemDataSO data) => data != null && data.CustomerPrefab != null ? data.CustomerPrefab : customerPrefab;
-
-        private void DecrementDemandForType(ItemDataSO data)
-        {
-            if (data == null) return;
-            TotalRemainingDemand = Mathf.Max(0, TotalRemainingDemand - 1);
-            if (remainingDemandPerType.ContainsKey(data)) remainingDemandPerType[data] = Mathf.Max(0, remainingDemandPerType[data] - 1);
-            NotifyDemandChanged();
-        }
-
-        private void NotifyDemandChanged() => OnDemandChanged?.Invoke(TotalRemainingDemand, remainingDemandPerType);
-
-        public void ClearCrowd()
-        {
-            ClearBoardCellMaterials();
-            for (int i = transform.childCount - 1; i >= 0; i--)
-            {
-                Customer customer = transform.GetChild(i).GetComponent<Customer>();
-                if (customer != null) PoolManager.Instance.Despawn(customer.gameObject);
-            }
-            centralCrowd?.Clear();
-            unspawnedDemandPool.Clear();
-        }
-
-        public float GetEdgeSlotYRotation(int index)
-        {
-            Vector3 direction = GetEdgeSlotWorldPosition(index) - GetRoomCenter();
-            direction.y = 0f;
-            return direction.sqrMagnitude > 0.001f ? Quaternion.LookRotation(direction).eulerAngles.y : 0f;
-        }
-
-        public Vector3 GetOuterSpawnPosition() => EntrancePathUtility.GetOuterSpawnPosition(GetConveyorEntranceWorldPosition(), outerSpawnOffset);
-        public Vector3 GetConveyorEntranceWorldPosition() => EntrancePathUtility.GetConveyorGapCenter(GetConveyor(), transform.position);
-
-        public Vector3 GetEdgeSlotWorldPosition(int index)
-        {
-            if (index >= 0 && index < edgeSlotCellIndices.Count)
-            {
-                int boardIndex = edgeSlotCellIndices[index];
-                if (boardIndex >= 0 && boardIndex < boardCellPositions.Count) return boardCellPositions[boardIndex];
-            }
-            return GetSplineEdgeSlotWorldPosition(index);
-        }
-
-        public Customer CheckServiceForBeltItem(float distance, ItemDataSO data) => edgeSlots.FindServiceCandidate(distance, data, GetConveyor());
         private ConveyorManager GetConveyor() => ConveyorManager.Instance != null ? ConveyorManager.Instance : FindFirstObjectByType<ConveyorManager>();
 
         private Vector3 GetRoomCenter()
         {
+            EnsureBuilderReference();
             Vector3 center = conveyorBuilder != null ? conveyorBuilder.CenterPosition : transform.position;
             center.y = 0f;
             return center;
         }
 
-        private Vector3 GetSplineEdgeSlotWorldPosition(int index)
+        private void DecrementDemandForType(ItemDataSO data)
         {
-            Vector3 position = edgeSlots.GetSlotWorldPosition(index, GetConveyor(), GetRoomCenter(), transform.position);
-            position.y = 0f;
-            return position;
-        }
-
-        private Vector2 GetBoardWorldSize()
-        {
-            float width = conveyorBuilder != null ? conveyorBuilder.Width : 10f;
-            float height = conveyorBuilder != null ? conveyorBuilder.Height : 15f;
-            return new Vector2(Mathf.Max(0.1f, width - boardInset.x * 2f), Mathf.Max(0.1f, height - boardInset.y * 2f));
-        }
-
-        private Vector2 GetBoardCellSize()
-        {
-            Vector2 size = GetBoardWorldSize();
-            return new Vector2(size.x / Mathf.Max(1, boardColumns), size.y / Mathf.Max(1, boardRows));
-        }
-
-        private Vector2 GetInnerFootprintSize()
-        {
-            Vector2 cellSize = GetBoardCellSize();
-            return new Vector2(innerFootprintColumns * cellSize.x, innerFootprintRows * cellSize.y);
-        }
-
-        private void RecalculateBoardGrid()
-        {
-            boardCellPositions.Clear();
-            edgeSlotCellIndices.Clear();
-            Vector2 boardSize = GetBoardWorldSize();
-            Vector2 cellSize = GetBoardCellSize();
-            Vector3 bottomLeft = GetRoomCenter() - new Vector3(boardSize.x * 0.5f, 0f, boardSize.y * 0.5f);
-
-            for (int row = 0; row < boardRows; row++)
-            for (int column = 0; column < boardColumns; column++)
-                boardCellPositions.Add(bottomLeft + new Vector3((column + 0.5f) * cellSize.x, 0f, (row + 0.5f) * cellSize.y));
-
-            List<int> perimeter = new List<int>();
-            for (int row = 0; row < boardRows; row++)
-            for (int column = 0; column < boardColumns; column++)
-                if (row == 0 || row == boardRows - 1 || column == 0 || column == boardColumns - 1)
-                    perimeter.Add(ToBoardIndex(column, row));
-
-            for (int slot = 0; slot < edgeSlots.SlotCount; slot++)
-            {
-                int candidateListIndex = FindNearestCandidate(GetSplineEdgeSlotWorldPosition(slot), perimeter);
-                edgeSlotCellIndices.Add(candidateListIndex >= 0 ? perimeter[candidateListIndex] : -1);
-                if (candidateListIndex >= 0) perimeter.RemoveAt(candidateListIndex);
-            }
-        }
-
-        private int FindNearestCandidate(Vector3 target, List<int> candidates)
-        {
-            int bestListIndex = -1;
-            float bestDistance = float.MaxValue;
-            for (int i = 0; i < candidates.Count; i++)
-            {
-                Vector3 delta = boardCellPositions[candidates[i]] - target;
-                delta.y = 0f;
-                if (delta.sqrMagnitude < bestDistance)
-                {
-                    bestDistance = delta.sqrMagnitude;
-                    bestListIndex = i;
-                }
-            }
-            return bestListIndex;
-        }
-
-        private int ToBoardIndex(int column, int row) => row * boardColumns + column;
-
-        private void BuildBoardVisuals()
-        {
-            DestroyBoardVisuals();
-            if (gridCellPrefab == null) return;
-            gridVisualRoot = new GameObject("Dining Board Grid").transform;
-            gridVisualRoot.SetParent(transform, false);
-            Vector2 cellSize = GetBoardCellSize() * cellFill;
-
-            for (int i = 0; i < boardCellPositions.Count; i++)
-            {
-                FoodCell cell = Instantiate(gridCellPrefab, gridVisualRoot);
-                cell.name = $"Cell {i % boardColumns + 1}-{i / boardColumns + 1}";
-                cell.transform.position = boardCellPositions[i] + Vector3.up * gridCellYOffset;
-                cell.transform.rotation = Quaternion.identity;
-                cell.transform.localScale = Vector3.Scale(cell.transform.localScale, new Vector3(cellSize.x, 1f, cellSize.y));
-                cell.Clear();
-                boardCells.Add(cell);
-            }
-        }
-
-        private void DestroyBoardVisuals()
-        {
-            boardCells.Clear();
-            if (gridVisualRoot != null)
-            {
-                Destroy(gridVisualRoot.gameObject);
-                gridVisualRoot = null;
-            }
-        }
-
-        private void PositionBoardCells()
-        {
-            for (int i = 0; i < boardCells.Count && i < boardCellPositions.Count; i++)
-                if (boardCells[i] != null) boardCells[i].transform.position = boardCellPositions[i] + Vector3.up * gridCellYOffset;
-        }
-
-        private void SetEdgeCellFood(int slotIndex, ItemDataSO itemData)
-        {
-            if (slotIndex < 0 || slotIndex >= edgeSlotCellIndices.Count) return;
-            int boardIndex = edgeSlotCellIndices[slotIndex];
-            if (boardIndex >= 0 && boardIndex < boardCells.Count) boardCells[boardIndex]?.SetFood(itemData);
-        }
-
-        private void ClearEdgeCell(int slotIndex)
-        {
-            if (slotIndex < 0 || slotIndex >= edgeSlotCellIndices.Count) return;
-            int boardIndex = edgeSlotCellIndices[slotIndex];
-            if (boardIndex >= 0 && boardIndex < boardCells.Count) boardCells[boardIndex]?.Clear();
-        }
-
-        private void ClearBoardCellMaterials()
-        {
-            foreach (FoodCell cell in boardCells) cell?.Clear();
+            if (data == null) return;
+            TotalRemainingDemand = Mathf.Max(0, TotalRemainingDemand - 1);
+            OnDemandChanged?.Invoke(TotalRemainingDemand, remainingDemandPerType);
         }
 
 #if UNITY_EDITOR
-        private void QueueEditorPreviewRefresh()
-        {
-            if (editorPreviewQueued) return;
-
-            editorPreviewQueued = true;
-            EditorApplication.delayCall += () =>
-            {
-                editorPreviewQueued = false;
-                if (this != null && !Application.isPlaying) BuildEditorPreview();
-            };
-        }
-
-        public void RefreshEditorPreview()
-        {
-            if (!Application.isPlaying) BuildEditorPreview();
-        }
-
-        private void BuildEditorPreview()
-        {
-            ClearEditorPreview();
-            if (gridCellPrefab == null) return;
-
-            RecalculateBoardGrid();
-            GameObject root = new GameObject("Dining Board Grid Preview (Generated)");
-            root.hideFlags = HideFlags.DontSaveInEditor;
-            root.transform.SetParent(transform, false);
-            editorPreviewRoot = root.transform;
-
-            Vector2 cellSize = GetBoardCellSize() * cellFill;
-            for (int i = 0; i < boardCellPositions.Count; i++)
-            {
-                FoodCell cell = Instantiate(gridCellPrefab, editorPreviewRoot);
-                cell.name = $"Preview Cell {i % boardColumns + 1}-{i / boardColumns + 1}";
-                cell.gameObject.hideFlags = HideFlags.DontSaveInEditor;
-                cell.transform.position = boardCellPositions[i] + Vector3.up * gridCellYOffset;
-                cell.transform.rotation = Quaternion.identity;
-                cell.transform.localScale = Vector3.Scale(cell.transform.localScale, new Vector3(cellSize.x, 1f, cellSize.y));
-                cell.Clear();
-            }
-        }
-
-        private void ClearEditorPreview()
-        {
-            if (editorPreviewRoot == null)
-            {
-                Transform existingPreview = transform.Find("Dining Board Grid Preview (Generated)");
-                if (existingPreview != null) editorPreviewRoot = existingPreview;
-            }
-
-            if (editorPreviewRoot != null)
-            {
-                DestroyImmediate(editorPreviewRoot.gameObject);
-                editorPreviewRoot = null;
-            }
-        }
-#endif
-
         private void OnDrawGizmos()
         {
-            InitializeGridSplineMapping();
-            Vector2 size = GetBoardWorldSize();
-            Gizmos.color = new Color(1f, 0.75f, 0.15f, 0.5f);
-            Gizmos.DrawWireCube(GetRoomCenter(), new Vector3(size.x, 0.05f, size.y));
+            if (!showCrowdGizmos) return;
 
-            Vector2 cellSize = GetBoardCellSize();
-            Gizmos.color = new Color(1f, 1f, 1f, 0.25f);
-            foreach (Vector3 cellPosition in boardCellPositions)
-            {
-                Gizmos.DrawWireCube(cellPosition, new Vector3(cellSize.x, 0.02f, cellSize.y));
-            }
+            Vector3 center = GetRoomCenter() + crowdCenterOffset;
 
-            Gizmos.color = Color.green;
-            foreach (int boardIndex in edgeSlotCellIndices)
-            {
-                if (boardIndex >= 0 && boardIndex < boardCellPositions.Count)
-                {
-                    Gizmos.DrawWireCube(boardCellPositions[boardIndex], new Vector3(cellSize.x * 0.75f, 0.03f, cellSize.y * 0.75f));
-                }
-            }
+            Gizmos.color = crowdAreaGizmoColor;
+            Gizmos.DrawWireCube(center + Vector3.up * 0.05f, new Vector3(innerCrowdArea.x, 0.1f, innerCrowdArea.y));
+
+            Gizmos.color = new Color(crowdAreaGizmoColor.r, crowdAreaGizmoColor.g, crowdAreaGizmoColor.b, 0.2f);
+            Gizmos.DrawCube(center + Vector3.up * 0.05f, new Vector3(innerCrowdArea.x, 0.1f, innerCrowdArea.y));
         }
-    }
-}
-
-#if UNITY_EDITOR
-namespace RestaurantLoop.Core
-{
-    [CustomEditor(typeof(CrowdManager))]
-    public class CrowdManagerEditor : Editor
-    {
-        public override void OnInspectorGUI()
-        {
-            EditorGUI.BeginChangeCheck();
-            DrawDefaultInspector();
-
-            if (EditorGUI.EndChangeCheck())
-            {
-                foreach (UnityEngine.Object selected in targets)
-                {
-                    ((CrowdManager)selected).RefreshEditorPreview();
-                }
-            }
-
-            GUILayout.Space(6f);
-            if (GUILayout.Button("Refresh Dining Board Preview"))
-            {
-                foreach (UnityEngine.Object selected in targets)
-                {
-                    ((CrowdManager)selected).RefreshEditorPreview();
-                }
-            }
-        }
-    }
-}
 #endif
+    }
+}

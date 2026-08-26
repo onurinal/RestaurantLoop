@@ -183,7 +183,7 @@ namespace RestaurantLoop.Core
             Vector3 localScale = balloonObject.transform.localScale;
 
             float absX = Mathf.Abs(localPos.x != 0 ? localPos.x : 1.4f);
-            float absScaleX = Mathf.Abs(localScale.x);
+            float absScaleX = Mathf.Abs(localScale.x != 0 ? localScale.x : 1.0f);
 
             if (isRightSide)
             {
