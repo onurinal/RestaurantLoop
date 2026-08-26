@@ -36,7 +36,10 @@ namespace RestaurantLoop.Core
 
         [Header("UI Setup")]
         [SerializeField] private TMP_Text countText;
-        [SerializeField] private float textHeightOffset = 0.8f;
+        [Tooltip("Text offset in Queue and Rack slots (Single Mode).")]
+        [SerializeField] private Vector3 singleModeTextOffset = new Vector3(0f, 0.25f, -1.1f);
+        [Tooltip("Interpolation speed for smooth text position transitions around conveyor corners.")]
+        [SerializeField] private float textOffsetLerpSpeed = 12f;
 
         private float currentDistance;
         private float traveledDistance;
@@ -67,8 +70,52 @@ namespace RestaurantLoop.Core
         {
             if (countText != null && countText.gameObject.activeSelf && mainCamera != null)
             {
+                // Always face camera
                 countText.transform.rotation = mainCamera.transform.rotation;
+
+                // Dynamically interpolate text local position smoothly on corners
+                UpdateTextOffsetByRotation();
             }
+        }
+
+        private void UpdateTextOffsetByRotation()
+        {
+            if (countText == null) return;
+
+            Vector3 targetOffset;
+
+            if (currentMode == StackVisualMode.SingleWithUI)
+            {
+                targetOffset = singleModeTextOffset;
+            }
+            else
+            {
+                float yAngle = (transform.eulerAngles.y % 360f + 360f) % 360f;
+
+                if (yAngle >= 0f && yAngle < 90f)
+                {
+                    targetOffset = new Vector3(0f, 0.25f, -1.1f);
+                }
+                else if (yAngle >= 90f && yAngle < 180f)
+                {
+                    targetOffset = new Vector3(1.1f, 0.25f, 0f);
+                }
+                else if (yAngle >= 180f && yAngle < 270f)
+                {
+                    targetOffset = new Vector3(0f, 0.25f, 1.1f);
+                }
+                else
+                {
+                    targetOffset = new Vector3(-1.1f, 0.25f, 0f);
+                }
+            }
+
+            // Smoothly interpolate current position toward the target offset position
+            countText.transform.localPosition = Vector3.Lerp(
+                countText.transform.localPosition,
+                targetOffset,
+                Time.deltaTime * textOffsetLerpSpeed
+            );
         }
 
         public void Initialize(ItemDataSO data, int count)
@@ -96,7 +143,7 @@ namespace RestaurantLoop.Core
                     }
                 }
 
-                UpdateCountText(true, (remainingCount * yOffset) + textHeightOffset);
+                UpdateCountText(true);
             }
             else
             {
@@ -121,8 +168,6 @@ namespace RestaurantLoop.Core
                     singleMeshModel.SetActive(true);
                     singleMeshModel.transform.localRotation = Quaternion.Euler(singleModeRotation);
                 }
-
-                UpdateCountText(true, yOffset + textHeightOffset);
             }
             else
             {
@@ -140,9 +185,9 @@ namespace RestaurantLoop.Core
                     item.transform.localScale = singleMeshModel.transform.localScale;
                     spawnedStackedItems.Add(item);
                 }
-
-                UpdateCountText(true, (remainingCount * yOffset) + textHeightOffset);
             }
+
+            UpdateCountText(true);
         }
 
         private void ClearStackedVisuals()
@@ -155,7 +200,7 @@ namespace RestaurantLoop.Core
             spawnedStackedItems.Clear();
         }
 
-        private void UpdateCountText(bool show, float targetYOffset)
+        private void UpdateCountText(bool show)
         {
             if (countText == null) return;
 
@@ -163,7 +208,6 @@ namespace RestaurantLoop.Core
             {
                 countText.gameObject.SetActive(true);
                 countText.text = remainingCount.ToString();
-                countText.transform.localPosition = new Vector3(0f, targetYOffset, 0f);
             }
             else
             {
