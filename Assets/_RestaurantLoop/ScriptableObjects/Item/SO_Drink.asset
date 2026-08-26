@@ -18,3 +18,4 @@ MonoBehaviour:
   stackPrefab: {fileID: 3873658242560358701, guid: 656a6f7ff357a70498085d64b109c774, type: 3}
   cellMaterial: {fileID: 2100000, guid: e1e6bf116ebcc5b45809d02342895567, type: 2}
   customerPrefab: {fileID: 746159430835400799, guid: 2cae29f062d832f41868b9c9927ed2e0, type: 3}
+  uiTextOffsetDistance: 1.2
