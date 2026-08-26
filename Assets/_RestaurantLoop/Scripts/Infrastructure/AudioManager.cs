@@ -8,41 +8,60 @@ namespace RestaurantLoop.Audio
 
         [Header("Audio Sources")]
         [SerializeField] private AudioSource sfxSource;
+        [SerializeField] private AudioSource musicSource; // Added for background music
+
+        [Header("Music Clips")]
+        public AudioClip backgroundMusic; // The looping background music/ambiance
 
         [Header("SFX Clips")]
-        public AudioClip tapSound;         // Screen tap sound
-        public AudioClip boardClickSound;  // "şık" - Plate boarding the conveyor
-        public AudioClip throwSound;       // "fyuu" - Plate thrown in an arc
-        public AudioClip rackDropSound;    // "tık" - Plate dropping to the rack
-        public AudioClip nomNomSound;      // Eating (nom-nom) animation sound
-        public AudioClip happyJumpSound;   // Customer happy jump sound after eating
-        public AudioClip popSound;         // Customer catching the thrown plate
+        public AudioClip tapSound;         
+        public AudioClip boardClickSound;  
+        public AudioClip throwSound;       
+        public AudioClip rackDropSound;    
+        public AudioClip nomNomSound;      
+        public AudioClip happyJumpSound;   
+        public AudioClip popSound;         
 
         private void Awake()
         {
-            // Singleton pattern implementation
             if (Instance == null)
             {
                 Instance = this;
-                // Ensure the audio manager persists across scene transitions
                 DontDestroyOnLoad(gameObject); 
             }
             else
             {
-                // Destroy duplicate instances to prevent audio overlaps
                 Destroy(gameObject);
             }
         }
 
-        // Main method to be called from any script to play a sound effect
+        private void Start()
+        {
+            // Initialize and play background music automatically
+            if (musicSource != null && backgroundMusic != null)
+            {
+                musicSource.clip = backgroundMusic;
+                musicSource.loop = true; // Ensure it loops forever
+                musicSource.volume = PlayerPrefs.GetFloat("MusicVolume", 1f);
+                musicSource.Play();
+            }
+        }
+
+        // Method to update music volume in real-time from the UI slider
+        public void SetMusicVolume(float volume)
+        {
+            if (musicSource != null)
+            {
+                musicSource.volume = volume;
+            }
+        }
+
         public void PlaySFX(AudioClip clip)
         {
             if (clip == null || sfxSource == null) return;
 
-            // Retrieve the volume set by the UI Slider (between 0.0f and 1.0f). Defaults to 1.0f.
             float currentSfxVolume = PlayerPrefs.GetFloat("SfxVolume", 1f);
 
-            // Play the sound scaled by the current volume level
             if (currentSfxVolume > 0f)
             {
                 sfxSource.PlayOneShot(clip, currentSfxVolume);

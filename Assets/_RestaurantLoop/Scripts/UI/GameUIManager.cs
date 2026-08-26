@@ -55,6 +55,12 @@ namespace RestaurantLoop.UI
         {
             // Save the slider value (between 0 and 1) to device
             PlayerPrefs.SetFloat("MusicVolume", value);
+
+            // Update the playing music volume instantly
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.SetMusicVolume(value);
+            }
         }
 
         private void UpdateSfxVolume(float value)
