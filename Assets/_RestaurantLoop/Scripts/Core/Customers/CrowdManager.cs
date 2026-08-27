@@ -40,6 +40,8 @@ namespace RestaurantLoop.Core
         [Header("Gizmo Settings")]
         [SerializeField] private bool showCrowdGizmos = true;
         [SerializeField] private bool showToleranceGizmos = true;
+        [Tooltip("Preview customer count for Scene View")]
+        [SerializeField] private int previewCrowdCount = 25;
         [SerializeField] private Color crowdAreaGizmoColor = new Color(1f, 0f, 1f, 0.8f);
         [SerializeField] private Color activeEdgeCellColor = new Color(0f, 1f, 0.3f, 0.9f);
 
@@ -254,13 +256,28 @@ namespace RestaurantLoop.Core
         {
             if (showCrowdGizmos)
             {
-                Vector3 center = GetRoomCenter() + crowdCenterOffset;
+                CentralCrowdService gizmoService = centralCrowd;
+                if (gizmoService == null || gizmoService.Count == 0)
+                {
+                    gizmoService = new CentralCrowdService();
+                    gizmoService.SetupLayout(
+                        CrowdLayoutType.Rectangular,
+                        previewCrowdCount,
+                        GetRoomCenter(),
+                        crowdCenterOffset,
+                        innerCrowdArea,
+                        0f,
+                        minCustomerDistance
+                    );
+                }
 
-                Gizmos.color = crowdAreaGizmoColor;
-                Gizmos.DrawWireCube(center + Vector3.up * 0.05f, new Vector3(innerCrowdArea.x, 0.1f, innerCrowdArea.y));
-
-                Gizmos.color = new Color(crowdAreaGizmoColor.r, crowdAreaGizmoColor.g, crowdAreaGizmoColor.b, 0.2f);
-                Gizmos.DrawCube(center + Vector3.up * 0.05f, new Vector3(innerCrowdArea.x, 0.1f, innerCrowdArea.y));
+                gizmoService.DrawGizmos(
+                    CrowdLayoutType.Rectangular,
+                    GetRoomCenter(),
+                    crowdCenterOffset,
+                    innerCrowdArea,
+                    0f
+                );
             }
 
             if (showToleranceGizmos)
