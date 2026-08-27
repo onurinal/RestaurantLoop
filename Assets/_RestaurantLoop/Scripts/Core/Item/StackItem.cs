@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using RestaurantLoop.Audio;
 
@@ -16,6 +17,10 @@ namespace RestaurantLoop.Core
     [RequireComponent(typeof(StackItemMovement))]
     public class StackItem : MonoBehaviour, IInteractable
     {
+        // Static registry tracking all active stacks in play with zero GC allocation
+        private static readonly HashSet<StackItem> ActiveStacksInGame = new HashSet<StackItem>();
+        public static int TotalActiveStackCount => ActiveStacksInGame.Count;
+
         [Header("Item Configuration")]
         [SerializeField] private ItemDataSO itemData;
         [SerializeField] private int remainingCount = 10;
@@ -34,6 +39,16 @@ namespace RestaurantLoop.Core
 
         public event Action<StackItem, Customer, ItemDataSO> FoodCommittedToCustomer;
         public event Action<StackItem> StackDepleted;
+
+        private void OnEnable()
+        {
+            ActiveStacksInGame.Add(this);
+        }
+
+        private void OnDisable()
+        {
+            ActiveStacksInGame.Remove(this);
+        }
 
         private void Awake()
         {
@@ -66,9 +81,16 @@ namespace RestaurantLoop.Core
 
         public void Shake() => animator.Shake();
 
+        public void SetWaitingForRack(bool waiting)
+        {
+            if (movement != null)
+            {
+                movement.IsWaitingForRack = waiting;
+            }
+        }
+
         public void OnTap()
         {
-            // Disable interactions when jumping, spawning customers, or when game state is not active
             if (IsJumping ||
                 (CrowdManager.Instance != null && CrowdManager.Instance.IsSpawningCustomers) ||
                 (LevelManager.Instance != null && !LevelManager.Instance.IsGameActive)) return;
@@ -84,8 +106,13 @@ namespace RestaurantLoop.Core
         public void InitializeOnBelt(SplineConveyorPath path, float startDistance, float totalDistanceToExit)
         {
             serviceCooldown = 0f;
-            currentMode = StackVisualMode.Stacked;
-            visuals.TransitionToStacked(remainingCount);
+
+            if (currentMode != StackVisualMode.Stacked)
+            {
+                currentMode = StackVisualMode.Stacked;
+                visuals.TransitionToStacked(remainingCount);
+            }
+
             movement.InitializeOnBelt(path, startDistance, totalDistanceToExit);
         }
 
@@ -152,7 +179,7 @@ namespace RestaurantLoop.Core
 
         private void DepleteAndDestroy()
         {
-            movement.IsWaitingForRack = false;
+            SetWaitingForRack(false);
             ConveyorManager.Instance.RemoveStackFromBelt(this);
             ConveyorManager.Instance.ReleaseCapacity();
             StackDepleted?.Invoke(this);
@@ -167,20 +194,9 @@ namespace RestaurantLoop.Core
                 return;
             }
 
-            RackManager rack = RackManager.Instance;
-            if (rack == null || !rack.HasAvailableSlot)
+            if (ConveyorManager.Instance != null)
             {
-                movement.IsWaitingForRack = true;
-                LevelManager.Instance?.ReportRackOverflow();
-                return;
-            }
-
-            movement.IsWaitingForRack = false;
-
-            if (!rack.TryAddStackToRack(this))
-            {
-                movement.IsWaitingForRack = true;
-                LevelManager.Instance?.ReportRackOverflow();
+                ConveyorManager.Instance.OnStackCompletedBeltLoop(this);
             }
         }
     }

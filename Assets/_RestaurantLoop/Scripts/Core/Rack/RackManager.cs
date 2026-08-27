@@ -80,7 +80,7 @@ namespace RestaurantLoop.Core
             for (int i = 0; i < slotCount; i++)
             {
                 Vector3 slotPosition = new Vector3(startX + (i * slotSpacing), originPosition.y, originPosition.z);
-                
+
                 GameObject slotObj = PoolManager.Instance.Spawn(slotPrefab.gameObject, slotPosition, Quaternion.identity, transform);
                 RackSlot newSlot = slotObj.GetComponent<RackSlot>();
                 newSlot.gameObject.name = $"RackSlot_{i + 1}";
@@ -100,13 +100,13 @@ namespace RestaurantLoop.Core
             }
 
             ConveyorManager.Instance.RemoveStackFromBelt(stack);
-            
+
             // Release conveyor belt capacity immediately upon assignment to the rack workflow
             ConveyorManager.Instance.ReleaseCapacity();
 
             emptySlot.PlaceStack(stack);
             stack.JumpToSlot(emptySlot.transform);
-            
+
             StackAssignedToRack?.Invoke(stack, emptySlot);
 
             return true;
@@ -148,6 +148,23 @@ namespace RestaurantLoop.Core
             return true;
         }
 
+        public int OccupiedSlotCount
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < rackSlots.Count; i++)
+                {
+                    if (rackSlots[i] != null && rackSlots[i].IsOccupied)
+                    {
+                        count++;
+                    }
+                }
+
+                return count;
+            }
+        }
+
         /// <summary>
         /// Scans the rack from left to right. If an empty slot is found, it pulls the nearest 
         /// right-side item into that slot and safely animates its movement or redirects active jumps.
@@ -163,7 +180,7 @@ namespace RestaurantLoop.Core
                         if (rackSlots[j].IsOccupied)
                         {
                             StackItem stackToMove = rackSlots[j].CurrentStack;
-                            
+
                             rackSlots[j].ClearSlot();
                             rackSlots[i].PlaceStack(stackToMove);
 
@@ -181,7 +198,7 @@ namespace RestaurantLoop.Core
                                     .SetEase(Ease.OutQuad);
                             }
 
-                            break; 
+                            break;
                         }
                     }
                 }

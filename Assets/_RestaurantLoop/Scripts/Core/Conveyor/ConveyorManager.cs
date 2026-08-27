@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using DG.Tweening; // Added for DOKill
-using RestaurantLoop.Infrastructure; // Added to access PoolManager
+using DG.Tweening;
+using RestaurantLoop.Infrastructure;
 
 namespace RestaurantLoop.Core
 {
@@ -29,10 +29,7 @@ namespace RestaurantLoop.Core
         public int OccupiedCapacity => occupiedCapacity;
         public int MaxCapacity => maxCapacity;
 
-        /// <summary>Raised after conveyor capacity changes through a successful reservation or release.</summary>
         public event Action<int, int> CapacityChanged;
-
-        /// <summary>Raised after a stack has completed its entry jump and is part of the conveyor state.</summary>
         public event Action<StackItem> StackEnteredBelt;
 
         public float EntranceDistance => entranceRatio * (path != null ? path.Length : 0f);
@@ -98,8 +95,6 @@ namespace RestaurantLoop.Core
                 return false;
             }
 
-            // A stack on the belt must no longer belong to its queue/rack slot.
-            // Keep its world pose while the entry jump begins.
             stack.transform.SetParent(null, true);
 
             Vector3 entrancePosition = path.GetPosition(EntranceDistance);
@@ -107,31 +102,55 @@ namespace RestaurantLoop.Core
             return true;
         }
 
-        // --- NEW FUNCTION: Cleans up the conveyor for new levels ---
         /// <summary>
-        /// Removes and despawns all items currently moving on the conveyor belt. 
-        /// Called during level transitions to ensure a clean state.
+        /// Checks whether total active stacks across Queue, Rack, Belt, and Mid-Air jumps can fit entirely on the belt.
         /// </summary>
+        public bool ShouldKeepLoopingOnBelt()
+        {
+            // High-performance static registry query with 0ms overhead and zero GC allocation
+            return StackItem.TotalActiveStackCount <= maxCapacity;
+        }
+
+        public void OnStackCompletedBeltLoop(StackItem stack)
+        {
+            if (stack == null || stack.RemainingItemCount <= 0) return;
+
+            // Auto-Loop: Initiate DOTween jump from current exit position to entrance position
+            if (ShouldKeepLoopingOnBelt())
+            {
+                Vector3 entrancePosition = path.GetPosition(EntranceDistance);
+
+                stack.JumpToConveyor(entrancePosition, () =>
+                {
+                    // Reset spline tracking distance only after landing at the entrance
+                    stack.InitializeOnBelt(path, EntranceDistance, GetRequiredTravelDistance());
+                });
+                return;
+            }
+
+            // Default Rack Transfer
+            RemoveStackFromBelt(stack);
+            bool addedToRack = RackManager.Instance != null && RackManager.Instance.TryAddStackToRack(stack);
+
+            if (!addedToRack)
+            {
+                LevelManager.Instance?.ReportRackOverflow();
+            }
+        }
+
         public void ClearAllItems()
         {
-            // Iterate backwards since we are removing items
             for (int i = activeStacks.Count - 1; i >= 0; i--)
             {
                 if (activeStacks[i] != null)
                 {
-                    // Kill any active jump or movement tweens to prevent null errors
                     activeStacks[i].transform.DOKill();
-                    
-                    // Return the item back to the pool
                     PoolManager.Instance.Despawn(activeStacks[i].gameObject);
                 }
             }
 
-            // Reset tracking variables
             activeStacks.Clear();
             occupiedCapacity = 0;
-            
-            // Notify UI or other systems that the capacity is now completely empty
             CapacityChanged?.Invoke(occupiedCapacity, maxCapacity);
         }
 

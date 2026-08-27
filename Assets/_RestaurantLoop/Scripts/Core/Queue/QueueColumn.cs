@@ -4,9 +4,6 @@ using DG.Tweening;
 
 namespace RestaurantLoop.Core
 {
-    /// <summary>
-    /// Manages an individual vertical queue column and shifts items upward safely.
-    /// </summary>
     public class QueueColumn : MonoBehaviour
     {
         [SerializeField] private float shiftDuration = 0.3f;
@@ -14,6 +11,26 @@ namespace RestaurantLoop.Core
         private readonly List<QueueSlot> slots = new List<QueueSlot>();
 
         public QueueSlot FrontSlot => slots.Count > 0 ? slots[0] : null;
+
+        /// <summary>
+        /// Returns the number of occupied slots currently inside this column.
+        /// </summary>
+        public int OccupiedSlotCount
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < slots.Count; i++)
+                {
+                    if (slots[i] != null && slots[i].IsOccupied)
+                    {
+                        count++;
+                    }
+                }
+
+                return count;
+            }
+        }
 
         public void InitializeChildSlots()
         {

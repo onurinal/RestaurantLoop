@@ -13,6 +13,26 @@ namespace RestaurantLoop.Core
 
         private List<QueueColumn> columns = new List<QueueColumn>();
 
+        /// <summary>
+        /// Calculates the total number of remaining active stacks waiting across all queue columns.
+        /// </summary>
+        public int RemainingStackCount
+        {
+            get
+            {
+                int count = 0;
+                foreach (var col in columns)
+                {
+                    if (col != null)
+                    {
+                        count += col.OccupiedSlotCount;
+                    }
+                }
+
+                return count;
+            }
+        }
+
         private void Awake()
         {
             if (Instance == null) Instance = this;
@@ -51,9 +71,10 @@ namespace RestaurantLoop.Core
 
                         if (config.itemData != null && config.itemData.StackPrefab != null)
                         {
-                            GameObject stackObj = PoolManager.Instance.Spawn(config.itemData.StackPrefab, slot.transform.position, Quaternion.identity, slot.transform);
-                            stackObj.transform.localPosition = Vector3.zero; 
-                            
+                            GameObject stackObj = PoolManager.Instance.Spawn(config.itemData.StackPrefab, slot.transform.position, Quaternion.identity,
+                                slot.transform);
+                            stackObj.transform.localPosition = Vector3.zero;
+
                             StackItem newStack = stackObj.GetComponent<StackItem>();
 
                             if (newStack != null)
@@ -75,7 +96,6 @@ namespace RestaurantLoop.Core
             {
                 if (col != null)
                 {
-                    // Clean up spawned stack items back to the pool before destroying the column parent
                     StackItem[] childStacks = col.GetComponentsInChildren<StackItem>();
                     foreach (var stack in childStacks)
                     {
