@@ -18,8 +18,10 @@ namespace RestaurantLoop.Core
         [Header("Active Edge Setup")]
         [Tooltip("Total number of active customer slots waiting for service around the conveyor belt.")]
         [Min(1)] [SerializeField] private int activeEdgeSlotCount = 6;
+
         [Tooltip("Maximum detection distance (in meters) between the food item on the belt and the customer slot for serving.")]
         [SerializeField] private float alignmentTolerance = 1.2f;
+
         [Tooltip("Inward distance offset of customer slots and tables from the conveyor belt toward the room center.")]
         [SerializeField] private float edgeInwardOffset = 2.5f;
 
@@ -35,6 +37,8 @@ namespace RestaurantLoop.Core
         [SerializeField] private float moveDuration = 1.2f;
         [SerializeField] private float pathJitterAmount = 0.5f;
         [SerializeField] private Vector3 outerSpawnOffset = new Vector3(0f, 0f, -3.0f);
+        [SerializeField] private EntranceGate entranceGate;
+        [SerializeField] private float gateOpenDelay = 0.4f;
 
         [Header("Gizmo Settings")]
         [SerializeField] private bool showCrowdGizmos = true;
@@ -149,6 +153,13 @@ namespace RestaurantLoop.Core
 
         private IEnumerator RunEntranceSequence()
         {
+            if (entranceGate != null)
+            {
+                entranceGate.ResetGateImmediate();
+                entranceGate.OpenGate();
+                yield return new WaitForSeconds(gateOpenDelay);
+            }
+
             yield return entranceSequencer.Run(PopUnspawnedDemand, GetCustomerPrefab, transform, GetOuterSpawnPosition(),
                 GetConveyorEntranceWorldPosition(), GetRoomCenter(), edgeSlots, centralCrowd, maxVisibleCrowdCount,
                 GetEdgeSlotWorldPosition, GetEdgeSlotYRotation, (customer, slotIndex) =>
@@ -194,13 +205,14 @@ namespace RestaurantLoop.Core
 
             centralCrowd?.Clear();
             unspawnedDemandPool.Clear();
+            entranceGate?.ResetGateImmediate();
         }
 
         public Vector3 GetEdgeSlotWorldPosition(int index)
         {
             if (boardGrid == null) boardGrid = GetComponent<DiningBoardGrid>();
-            return boardGrid != null
-                ? boardGrid.GetEdgeSlotCellPosition(index, GetSplineEdgeSlotWorldPosition(index))
+            return boardGrid != null 
+                ? boardGrid.GetEdgeSlotCellPosition(index, GetSplineEdgeSlotWorldPosition(index)) 
                 : GetSplineEdgeSlotWorldPosition(index);
         }
 
