@@ -1361,6 +1361,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5305617944355841943}
   - component: {fileID: 1420061882347497608}
+  - component: {fileID: 4812645931464886675}
   m_Layer: 0
   m_Name: OrderBalloon
   m_TagString: Untagged
@@ -1432,7 +1433,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 24300de19e5b10849b5cab6c8ea3ad67, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 5f07a4351c446ea4fb6c25d47d09ab60, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -1442,6 +1443,23 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!114 &4812645931464886675
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7899637567665015631}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 299a7bb21468472fa0101f76a4b8f34c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.OrderBalloon
+  bgRenderer: {fileID: 0}
+  foodDisplayPrefab: {fileID: 7331459019056547395, guid: f4eaf5aba4ae4cc47a9a1ba2030cf127, type: 3}
+  foodLocalPosition: {x: 0.3417, y: -0.86557, z: -0.33844}
+  foodScale: 1.04
+  rotationSpeed: 20
 --- !u!1 &8095314584053331212
 GameObject:
   m_ObjectHideFlags: 0
