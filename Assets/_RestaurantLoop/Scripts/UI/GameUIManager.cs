@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using TMPro; // Added to handle TextMeshPro elements
 using UnityEngine.SceneManagement;
 using RestaurantLoop.Audio;
-using RestaurantLoop.Core; 
+using RestaurantLoop.Core;
 
 namespace RestaurantLoop.UI
 {
@@ -20,7 +20,7 @@ namespace RestaurantLoop.UI
         [SerializeField] private Button closeSettingsButton;
         [SerializeField] private Slider musicSlider;
         [SerializeField] private Slider sfxSlider;
-        
+
         [Header("Game State Buttons")]
         [SerializeField] private Button nextLevelButton;
         [SerializeField] private Button winMainMenuButton;
@@ -54,7 +54,7 @@ namespace RestaurantLoop.UI
                 LevelManager.Instance.OnLevelWon += ShowWinPanel;
                 LevelManager.Instance.OnLevelLost += ShowLosePanel;
                 LevelManager.Instance.OnLevelLoaded += UpdateTopLevelText; // Subscribe to level loads
-                
+
                 // Set the initial text when scene starts
                 UpdateTopLevelText(LevelManager.Instance.CurrentLevelNumber);
             }
@@ -78,7 +78,7 @@ namespace RestaurantLoop.UI
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.tapSound);
             }
         }
-        
+
         // --- UI Updates ---
         private void UpdateTopLevelText(int levelNumber)
         {

@@ -19,7 +19,7 @@ namespace RestaurantLoop.Core
         [Header("Layout Settings")]
         [SerializeField] private int initialSlotCount = 5;
         [SerializeField] private float slotSpacing = 1.1f;
-        [SerializeField] private float shiftAnimationDuration = 0.25f; // New variable for sliding animation speed
+        [SerializeField] private float shiftAnimationDuration = 0.25f;
 
         private readonly List<RackSlot> rackSlots = new List<RackSlot>();
 
@@ -100,9 +100,13 @@ namespace RestaurantLoop.Core
             }
 
             ConveyorManager.Instance.RemoveStackFromBelt(stack);
-            emptySlot.PlaceStack(stack);
+            
+            // Release conveyor belt capacity immediately upon assignment to the rack workflow
+            ConveyorManager.Instance.ReleaseCapacity();
 
-            stack.JumpToSlot(emptySlot.transform, () => { ConveyorManager.Instance.ReleaseCapacity(); });
+            emptySlot.PlaceStack(stack);
+            stack.JumpToSlot(emptySlot.transform);
+            
             StackAssignedToRack?.Invoke(stack, emptySlot);
 
             return true;
@@ -138,40 +142,45 @@ namespace RestaurantLoop.Core
             if (accepted)
             {
                 RackStackRedeploymentStarted?.Invoke(stack, targetSlot);
-                
-                // --- NEW LOGIC: Shift remaining items to the left after one is removed ---
                 ShiftItemsLeft();
             }
 
             return true;
         }
 
-        // --- NEW FUNCTION: Shifts all items to the leftmost available empty slots ---
         /// <summary>
         /// Scans the rack from left to right. If an empty slot is found, it pulls the nearest 
-        /// right-side item into that slot and smoothly animates its movement.
+        /// right-side item into that slot and safely animates its movement or redirects active jumps.
         /// </summary>
         private void ShiftItemsLeft()
         {
             for (int i = 0; i < rackSlots.Count; i++)
             {
-                // If we find an empty slot...
                 if (!rackSlots[i].IsOccupied)
                 {
-                    // Look for the next occupied slot to the right of it
                     for (int j = i + 1; j < rackSlots.Count; j++)
                     {
                         if (rackSlots[j].IsOccupied)
                         {
-                            // Move the stack data from the right slot (j) to the left slot (i)
                             StackItem stackToMove = rackSlots[j].CurrentStack;
+                            
                             rackSlots[j].ClearSlot();
                             rackSlots[i].PlaceStack(stackToMove);
-                            
-                            // Smoothly animate the stack to its new slot position
-                            stackToMove.transform.DOMove(rackSlots[i].transform.position, shiftAnimationDuration).SetEase(Ease.OutQuad);
-                            
-                            // Break the inner loop since we filled slot 'i'
+
+                            if (stackToMove.IsJumping)
+                            {
+                                // Redirect the mid-air jump targeting the new slot without breaking the jump state
+                                stackToMove.JumpToSlot(rackSlots[i].transform);
+                            }
+                            else
+                            {
+                                // Smoothly slide resting items to their new slot positions
+                                stackToMove.transform.DOKill();
+                                stackToMove.transform.SetParent(rackSlots[i].transform);
+                                stackToMove.transform.DOMove(rackSlots[i].transform.position, shiftAnimationDuration)
+                                    .SetEase(Ease.OutQuad);
+                            }
+
                             break; 
                         }
                     }

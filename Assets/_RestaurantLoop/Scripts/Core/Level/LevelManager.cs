@@ -23,13 +23,13 @@ namespace RestaurantLoop.Core
 
         public LevelState CurrentState { get; private set; } = LevelState.Playing;
         public bool IsGameActive => CurrentState == LevelState.Playing;
-        
+
         // Expose human-readable level number (1-based index) for UI
         public int CurrentLevelNumber => currentLevelIndex + 1;
 
         public event Action OnLevelWon;
         public event Action OnLevelLost;
-        
+
         // Event to notify UI when a new level loads
         public event Action<int> OnLevelLoaded;
 
@@ -38,9 +38,9 @@ namespace RestaurantLoop.Core
             if (Instance == null)
             {
                 Instance = this;
-                
+
                 // MVP Simplification: No save state. Always start at index 0 (Level 1) on fresh launch.
-                currentLevelIndex = 0;
+                // currentLevelIndex = 0;
             }
             else
             {
@@ -106,10 +106,10 @@ namespace RestaurantLoop.Core
             if (CurrentState != LevelState.Playing) return;
 
             CurrentState = LevelState.Lost;
-            
+
             // Changed from LogError to LogWarning to prevent Error Pause in the editor and Build crashes
             Debug.LogWarning("<color=orange>[LEVEL FAILED]</color> Conveyor stack reached exit while Rack is full!");
-            
+
             OnLevelLost?.Invoke();
         }
 
@@ -135,7 +135,7 @@ namespace RestaurantLoop.Core
         public void CompleteLevel()
         {
             currentLevelIndex++;
-            
+
             // MVP Simplification: Removed PlayerPrefs save logic. Progression is session-only.
             LoadCurrentLevel();
         }

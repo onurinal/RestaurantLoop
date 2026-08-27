@@ -19,12 +19,12 @@ namespace RestaurantLoop.Core
         [Header("Item Configuration")]
         [SerializeField] private ItemDataSO itemData;
         [SerializeField] private int remainingCount = 10;
+        [SerializeField] private float serviceCooldown = 0.08f;
 
         private StackItemVisuals visuals;
         private StackItemAnimator animator;
         private StackItemMovement movement;
 
-        private float serviceCooldown;
         private StackVisualMode currentMode = StackVisualMode.SingleWithUI;
 
         public int RemainingItemCount => remainingCount;
@@ -135,7 +135,7 @@ namespace RestaurantLoop.Core
             Customer targetCustomer = CrowdManager.Instance.CheckServiceForBeltItem(movement.CurrentDistance, itemData);
             if (targetCustomer == null) return;
 
-            serviceCooldown = 0.5f;
+            serviceCooldown = 0.08f;
             remainingCount--;
 
             if (AudioManager.Instance != null && AudioManager.Instance.throwSound != null)

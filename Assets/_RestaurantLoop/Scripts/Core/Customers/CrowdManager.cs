@@ -16,8 +16,11 @@ namespace RestaurantLoop.Core
         public static CrowdManager Instance { get; private set; }
 
         [Header("Active Edge Setup")]
+        [Tooltip("Total number of active customer slots waiting for service around the conveyor belt.")]
         [Min(1)] [SerializeField] private int activeEdgeSlotCount = 6;
+        [Tooltip("Maximum detection distance (in meters) between the food item on the belt and the customer slot for serving.")]
         [SerializeField] private float alignmentTolerance = 1.2f;
+        [Tooltip("Inward distance offset of customer slots and tables from the conveyor belt toward the room center.")]
         [SerializeField] private float edgeInwardOffset = 2.5f;
 
         [Header("Inner Crowd Layout")]
@@ -35,7 +38,9 @@ namespace RestaurantLoop.Core
 
         [Header("Gizmo Settings")]
         [SerializeField] private bool showCrowdGizmos = true;
+        [SerializeField] private bool showToleranceGizmos = true;
         [SerializeField] private Color crowdAreaGizmoColor = new Color(1f, 0f, 1f, 0.8f);
+        [SerializeField] private Color toleranceGizmoColor = new Color(1f, 0.92f, 0.012f, 0.75f);
 
         [Header("References")]
         [SerializeField] private Customer customerPrefab;
@@ -180,7 +185,7 @@ namespace RestaurantLoop.Core
 
         public void ClearCrowd()
         {
-            boardGrid.ClearAllCellMaterials();
+            boardGrid?.ClearAllCellMaterials();
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
                 Customer customer = transform.GetChild(i).GetComponent<Customer>();
@@ -191,7 +196,13 @@ namespace RestaurantLoop.Core
             unspawnedDemandPool.Clear();
         }
 
-        public Vector3 GetEdgeSlotWorldPosition(int index) => boardGrid.GetEdgeSlotCellPosition(index, GetSplineEdgeSlotWorldPosition(index));
+        public Vector3 GetEdgeSlotWorldPosition(int index)
+        {
+            if (boardGrid == null) boardGrid = GetComponent<DiningBoardGrid>();
+            return boardGrid != null
+                ? boardGrid.GetEdgeSlotCellPosition(index, GetSplineEdgeSlotWorldPosition(index))
+                : GetSplineEdgeSlotWorldPosition(index);
+        }
 
         public Vector3 GetSplineEdgeSlotWorldPosition(int index) => edgeSlots != null
             ? edgeSlots.GetSlotWorldPosition(index, GetConveyor(), conveyorBuilder, GetRoomCenter(), transform.position)
@@ -234,15 +245,28 @@ namespace RestaurantLoop.Core
 #if UNITY_EDITOR
         private void OnDrawGizmos()
         {
-            if (!showCrowdGizmos) return;
+            if (showCrowdGizmos)
+            {
+                Vector3 center = GetRoomCenter() + crowdCenterOffset;
 
-            Vector3 center = GetRoomCenter() + crowdCenterOffset;
+                Gizmos.color = crowdAreaGizmoColor;
+                Gizmos.DrawWireCube(center + Vector3.up * 0.05f, new Vector3(innerCrowdArea.x, 0.1f, innerCrowdArea.y));
 
-            Gizmos.color = crowdAreaGizmoColor;
-            Gizmos.DrawWireCube(center + Vector3.up * 0.05f, new Vector3(innerCrowdArea.x, 0.1f, innerCrowdArea.y));
+                Gizmos.color = new Color(crowdAreaGizmoColor.r, crowdAreaGizmoColor.g, crowdAreaGizmoColor.b, 0.2f);
+                Gizmos.DrawCube(center + Vector3.up * 0.05f, new Vector3(innerCrowdArea.x, 0.1f, innerCrowdArea.y));
+            }
 
-            Gizmos.color = new Color(crowdAreaGizmoColor.r, crowdAreaGizmoColor.g, crowdAreaGizmoColor.b, 0.2f);
-            Gizmos.DrawCube(center + Vector3.up * 0.05f, new Vector3(innerCrowdArea.x, 0.1f, innerCrowdArea.y));
+            if (showToleranceGizmos)
+            {
+                if (boardGrid == null) boardGrid = GetComponent<DiningBoardGrid>();
+
+                Gizmos.color = toleranceGizmoColor;
+                for (int i = 0; i < activeEdgeSlotCount; i++)
+                {
+                    Vector3 slotPos = GetEdgeSlotWorldPosition(i);
+                    Gizmos.DrawWireSphere(slotPos, alignmentTolerance);
+                }
+            }
         }
 #endif
     }
