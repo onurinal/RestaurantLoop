@@ -157,6 +157,11 @@ namespace RestaurantLoop.Core
                     boardGrid.SetEdgeCellFood(slotIndex, customer.RequiredData);
                     EdgeCustomerReplacementStarted?.Invoke(customer, slotIndex);
                 });
+
+            if (entranceGate != null)
+            {
+                entranceGate.CloseGate();
+            }
         }
 
         public void OnCustomerServed(Customer customer)
