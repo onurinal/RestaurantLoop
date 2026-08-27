@@ -67,7 +67,36 @@ namespace RestaurantLoop.Core
             for (int i = 0; i < activeStacks.Count; i++)
             {
                 StackItem stack = activeStacks[i];
-                if (stack == null) continue;
+                if (stack == null || stack.IsJumping) continue;
+
+                float dist = stack.CurrentDistance;
+                float delta = Mathf.Abs(dist - entranceDist);
+
+                if (pathLen > 0f)
+                {
+                    delta = Mathf.Min(delta, pathLen - delta);
+                }
+
+                if (delta < entranceSafetyBuffer)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private bool IsEntranceClearForAutoLoop()
+        {
+            if (pendingJumpsCount > 1) return false;
+
+            float entranceDist = EntranceDistance;
+            float pathLen = path != null ? path.Length : 0f;
+
+            for (int i = 0; i < activeStacks.Count; i++)
+            {
+                StackItem stack = activeStacks[i];
+                if (stack == null || stack.IsJumping) continue;
 
                 float dist = stack.CurrentDistance;
                 float delta = Mathf.Abs(dist - entranceDist);
@@ -126,13 +155,11 @@ namespace RestaurantLoop.Core
 
             if (!IsEntranceClear() || !CanAcceptStack)
             {
-                stack.Shake();
                 return false;
             }
 
             if (!TryReserveSlot())
             {
-                stack.Shake();
                 return false;
             }
 
@@ -177,13 +204,19 @@ namespace RestaurantLoop.Core
 
         private IEnumerator Routine_AutoLoopJump(StackItem stack)
         {
-            while (!IsEntranceClear())
+            // Immediately reserve the pending jump state to prevent user taps from overriding this window
+            pendingJumpsCount++;
+
+            while (!IsEntranceClearForAutoLoop())
             {
-                if (stack == null || !stack.gameObject.activeInHierarchy) yield break;
+                if (stack == null || !stack.gameObject.activeInHierarchy)
+                {
+                    pendingJumpsCount = Mathf.Max(0, pendingJumpsCount - 1);
+                    yield break;
+                }
                 yield return null;
             }
 
-            pendingJumpsCount++;
             Vector3 entrancePosition = path.GetPosition(EntranceDistance);
 
             stack.JumpToConveyor(entrancePosition, () =>

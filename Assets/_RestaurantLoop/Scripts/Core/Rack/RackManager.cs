@@ -26,19 +26,26 @@ namespace RestaurantLoop.Core
         public Vector3 CenterPosition => GetCalculatedCenterPosition();
         public bool HasAvailableSlot => GetFirstEmptySlot() != null;
 
+        public int OccupiedSlotCount
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < rackSlots.Count; i++)
+                {
+                    if (rackSlots[i] != null && rackSlots[i].IsOccupied) count++;
+                }
+                return count;
+            }
+        }
+
         public event Action<StackItem, RackSlot> StackAssignedToRack;
         public event Action<StackItem, RackSlot> RackStackRedeploymentStarted;
 
         private void Awake()
         {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Destroy(gameObject);
-            }
+            if (Instance == null) Instance = this;
+            else Destroy(gameObject);
         }
 
         private void Start()
@@ -55,10 +62,7 @@ namespace RestaurantLoop.Core
 
             Vector3 origin = beltAnchor != null ? beltAnchor.position + offsetFromBelt : transform.position;
 
-            if (lockToWorldCenterX)
-            {
-                origin.x = 0f;
-            }
+            if (lockToWorldCenterX) origin.x = 0f;
 
             return origin;
         }
@@ -67,10 +71,7 @@ namespace RestaurantLoop.Core
         {
             ClearExistingSlots();
 
-            if (slotPrefab == null)
-            {
-                return;
-            }
+            if (slotPrefab == null) return;
 
             Vector3 originPosition = GetCalculatedCenterPosition();
             transform.position = originPosition;
@@ -80,7 +81,7 @@ namespace RestaurantLoop.Core
             for (int i = 0; i < slotCount; i++)
             {
                 Vector3 slotPosition = new Vector3(startX + (i * slotSpacing), originPosition.y, originPosition.z);
-
+                
                 GameObject slotObj = PoolManager.Instance.Spawn(slotPrefab.gameObject, slotPosition, Quaternion.identity, transform);
                 RackSlot newSlot = slotObj.GetComponent<RackSlot>();
                 newSlot.gameObject.name = $"RackSlot_{i + 1}";
@@ -100,13 +101,11 @@ namespace RestaurantLoop.Core
             }
 
             ConveyorManager.Instance.RemoveStackFromBelt(stack);
-
-            // Release conveyor belt capacity immediately upon assignment to the rack workflow
             ConveyorManager.Instance.ReleaseCapacity();
 
             emptySlot.PlaceStack(stack);
             stack.JumpToSlot(emptySlot.transform);
-
+            
             StackAssignedToRack?.Invoke(stack, emptySlot);
 
             return true;
@@ -114,61 +113,31 @@ namespace RestaurantLoop.Core
 
         public bool TrySendRackStackToBelt(StackItem stack)
         {
-            if (stack == null || stack.IsJumping)
-            {
-                return false;
-            }
+            if (stack == null || stack.IsJumping) return false;
 
             RackSlot targetSlot = GetSlotContainingStack(stack);
+            if (targetSlot == null) return false;
 
-            if (targetSlot == null)
-            {
-                return false;
-            }
-
-            if (!ConveyorManager.Instance.CanAcceptStack)
+            if (!ConveyorManager.Instance.CanAcceptStack || !ConveyorManager.Instance.IsEntranceClear())
             {
                 stack.Shake();
                 return false;
             }
 
-            stack.transform.DOKill();
-            stack.transform.localPosition = Vector3.zero;
-
-            targetSlot.ClearSlot();
-            stack.transform.SetParent(null);
-
+            // Transfer directly to belt FIRST before clearing the slot
             bool accepted = ConveyorManager.Instance.TrySendStackToBelt(stack);
             if (accepted)
             {
+                targetSlot.ClearSlot();
                 RackStackRedeploymentStarted?.Invoke(stack, targetSlot);
                 ShiftItemsLeft();
+                return true;
             }
 
-            return true;
+            stack.Shake();
+            return false;
         }
 
-        public int OccupiedSlotCount
-        {
-            get
-            {
-                int count = 0;
-                for (int i = 0; i < rackSlots.Count; i++)
-                {
-                    if (rackSlots[i] != null && rackSlots[i].IsOccupied)
-                    {
-                        count++;
-                    }
-                }
-
-                return count;
-            }
-        }
-
-        /// <summary>
-        /// Scans the rack from left to right. If an empty slot is found, it pulls the nearest 
-        /// right-side item into that slot and safely animates its movement or redirects active jumps.
-        /// </summary>
         private void ShiftItemsLeft()
         {
             for (int i = 0; i < rackSlots.Count; i++)
@@ -180,25 +149,23 @@ namespace RestaurantLoop.Core
                         if (rackSlots[j].IsOccupied)
                         {
                             StackItem stackToMove = rackSlots[j].CurrentStack;
-
+                            
                             rackSlots[j].ClearSlot();
                             rackSlots[i].PlaceStack(stackToMove);
 
                             if (stackToMove.IsJumping)
                             {
-                                // Redirect the mid-air jump targeting the new slot without breaking the jump state
                                 stackToMove.JumpToSlot(rackSlots[i].transform);
                             }
                             else
                             {
-                                // Smoothly slide resting items to their new slot positions
                                 stackToMove.transform.DOKill();
                                 stackToMove.transform.SetParent(rackSlots[i].transform);
                                 stackToMove.transform.DOMove(rackSlots[i].transform.position, shiftAnimationDuration)
                                     .SetEase(Ease.OutQuad);
                             }
 
-                            break;
+                            break; 
                         }
                     }
                 }
@@ -221,12 +188,8 @@ namespace RestaurantLoop.Core
         {
             for (int i = 0; i < rackSlots.Count; i++)
             {
-                if (rackSlots[i].CurrentStack == stack)
-                {
-                    return rackSlots[i];
-                }
+                if (rackSlots[i].CurrentStack == stack) return rackSlots[i];
             }
-
             return null;
         }
 
@@ -234,12 +197,8 @@ namespace RestaurantLoop.Core
         {
             for (int i = 0; i < rackSlots.Count; i++)
             {
-                if (!rackSlots[i].IsOccupied)
-                {
-                    return rackSlots[i];
-                }
+                if (!rackSlots[i].IsOccupied) return rackSlots[i];
             }
-
             return null;
         }
 
@@ -249,7 +208,6 @@ namespace RestaurantLoop.Core
             {
                 PoolManager.Instance.Despawn(transform.GetChild(i).gameObject);
             }
-
             rackSlots.Clear();
         }
 
