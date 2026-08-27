@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 using RestaurantLoop.Audio;
 
@@ -35,6 +36,7 @@ namespace RestaurantLoop.Core
         public int RemainingItemCount => remainingCount;
         public bool IsJumping => animator != null && animator.IsJumping;
         public bool IsWaitingForRack => movement != null && movement.IsWaitingForRack;
+        public float CurrentDistance => movement != null ? movement.CurrentDistance : 0f;
         public ItemDataSO Data => itemData;
 
         public event Action<StackItem, Customer, ItemDataSO> FoodCommittedToCustomer;
@@ -132,6 +134,16 @@ namespace RestaurantLoop.Core
 
         public void JumpToConveyor(Vector3 targetPosition, Action onComplete)
         {
+            // 1. Kill any existing tweens (Shake, Queue Shift) to prevent coordinate corruption
+            transform.DOKill();
+
+            // 2. Immediately switch to 3D Stacked visual mode so the item is 100% visible during the jump
+            if (currentMode != StackVisualMode.Stacked)
+            {
+                currentMode = StackVisualMode.Stacked;
+                visuals.TransitionToStacked(remainingCount);
+            }
+
             animator.JumpToConveyor(targetPosition, () =>
             {
                 if (AudioManager.Instance != null && AudioManager.Instance.boardClickSound != null)

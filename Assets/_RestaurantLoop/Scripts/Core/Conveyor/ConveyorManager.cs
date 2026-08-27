@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
@@ -19,8 +20,13 @@ namespace RestaurantLoop.Core
         [Range(0f, 1f)] [SerializeField] private float entranceRatio = 0f;
         [Range(0f, 1f)] [SerializeField] private float exitRatio = 0.8f;
 
+        [Header("Safety Clearance")]
+        [Tooltip("Minimum safe distance (in spline units) required around the entrance before accepting new stacks.")]
+        [SerializeField] private float entranceSafetyBuffer = 1.8f;
+
         private readonly List<StackItem> activeStacks = new List<StackItem>();
         private int occupiedCapacity = 0;
+        private int pendingJumpsCount = 0;
 
         public bool CanAcceptStack => occupiedCapacity < maxCapacity;
         public bool IsClockwise => isClockwise;
@@ -51,6 +57,35 @@ namespace RestaurantLoop.Core
             }
         }
 
+        public bool IsEntranceClear()
+        {
+            if (pendingJumpsCount > 0) return false;
+
+            float entranceDist = EntranceDistance;
+            float pathLen = path != null ? path.Length : 0f;
+
+            for (int i = 0; i < activeStacks.Count; i++)
+            {
+                StackItem stack = activeStacks[i];
+                if (stack == null) continue;
+
+                float dist = stack.CurrentDistance;
+                float delta = Mathf.Abs(dist - entranceDist);
+
+                if (pathLen > 0f)
+                {
+                    delta = Mathf.Min(delta, pathLen - delta);
+                }
+
+                if (delta < entranceSafetyBuffer)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         public bool TryReserveSlot()
         {
             if (!CanAcceptStack) return false;
@@ -70,7 +105,10 @@ namespace RestaurantLoop.Core
 
         public void RemoveStackFromBelt(StackItem stack)
         {
-            activeStacks.Remove(stack);
+            if (activeStacks.Contains(stack))
+            {
+                activeStacks.Remove(stack);
+            }
         }
 
         public void ReleaseCapacity()
@@ -84,8 +122,11 @@ namespace RestaurantLoop.Core
 
         public bool TrySendStackToBelt(StackItem stack)
         {
-            if (stack == null || stack.RemainingItemCount <= 0)
+            if (stack == null || stack.RemainingItemCount <= 0) return false;
+
+            if (!IsEntranceClear() || !CanAcceptStack)
             {
+                stack.Shake();
                 return false;
             }
 
@@ -95,19 +136,22 @@ namespace RestaurantLoop.Core
                 return false;
             }
 
+            stack.transform.DOKill();
             stack.transform.SetParent(null, true);
+            pendingJumpsCount++;
 
             Vector3 entrancePosition = path.GetPosition(EntranceDistance);
-            stack.JumpToConveyor(entrancePosition, () => TryAddStack(stack));
+            stack.JumpToConveyor(entrancePosition, () =>
+            {
+                pendingJumpsCount = Mathf.Max(0, pendingJumpsCount - 1);
+                TryAddStack(stack);
+            });
+
             return true;
         }
 
-        /// <summary>
-        /// Checks whether total active stacks across Queue, Rack, Belt, and Mid-Air jumps can fit entirely on the belt.
-        /// </summary>
         public bool ShouldKeepLoopingOnBelt()
         {
-            // High-performance static registry query with 0ms overhead and zero GC allocation
             return StackItem.TotalActiveStackCount <= maxCapacity;
         }
 
@@ -115,20 +159,13 @@ namespace RestaurantLoop.Core
         {
             if (stack == null || stack.RemainingItemCount <= 0) return;
 
-            // Auto-Loop: Initiate DOTween jump from current exit position to entrance position
             if (ShouldKeepLoopingOnBelt())
             {
-                Vector3 entrancePosition = path.GetPosition(EntranceDistance);
-
-                stack.JumpToConveyor(entrancePosition, () =>
-                {
-                    // Reset spline tracking distance only after landing at the entrance
-                    stack.InitializeOnBelt(path, EntranceDistance, GetRequiredTravelDistance());
-                });
+                RemoveStackFromBelt(stack);
+                StartCoroutine(Routine_AutoLoopJump(stack));
                 return;
             }
 
-            // Default Rack Transfer
             RemoveStackFromBelt(stack);
             bool addedToRack = RackManager.Instance != null && RackManager.Instance.TryAddStackToRack(stack);
 
@@ -138,8 +175,28 @@ namespace RestaurantLoop.Core
             }
         }
 
+        private IEnumerator Routine_AutoLoopJump(StackItem stack)
+        {
+            while (!IsEntranceClear())
+            {
+                if (stack == null || !stack.gameObject.activeInHierarchy) yield break;
+                yield return null;
+            }
+
+            pendingJumpsCount++;
+            Vector3 entrancePosition = path.GetPosition(EntranceDistance);
+
+            stack.JumpToConveyor(entrancePosition, () =>
+            {
+                pendingJumpsCount = Mathf.Max(0, pendingJumpsCount - 1);
+                TryAddStack(stack);
+            });
+        }
+
         public void ClearAllItems()
         {
+            StopAllCoroutines();
+
             for (int i = activeStacks.Count - 1; i >= 0; i--)
             {
                 if (activeStacks[i] != null)
@@ -151,6 +208,7 @@ namespace RestaurantLoop.Core
 
             activeStacks.Clear();
             occupiedCapacity = 0;
+            pendingJumpsCount = 0;
             CapacityChanged?.Invoke(occupiedCapacity, maxCapacity);
         }
 

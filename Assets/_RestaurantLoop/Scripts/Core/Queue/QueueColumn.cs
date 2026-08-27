@@ -12,9 +12,6 @@ namespace RestaurantLoop.Core
 
         public QueueSlot FrontSlot => slots.Count > 0 ? slots[0] : null;
 
-        /// <summary>
-        /// Returns the number of occupied slots currently inside this column.
-        /// </summary>
         public int OccupiedSlotCount
         {
             get
@@ -22,12 +19,8 @@ namespace RestaurantLoop.Core
                 int count = 0;
                 for (int i = 0; i < slots.Count; i++)
                 {
-                    if (slots[i] != null && slots[i].IsOccupied)
-                    {
-                        count++;
-                    }
+                    if (slots[i] != null && slots[i].IsOccupied) count++;
                 }
-
                 return count;
             }
         }
@@ -35,33 +28,20 @@ namespace RestaurantLoop.Core
         public void InitializeChildSlots()
         {
             slots.Clear();
-
             for (int i = 0; i < transform.childCount; i++)
             {
                 QueueSlot slot = transform.GetChild(i).GetComponent<QueueSlot>();
-                if (slot != null)
-                {
-                    slots.Add(slot);
-                }
+                if (slot != null) slots.Add(slot);
             }
         }
 
         public void TrySendFrontStackToBelt()
         {
             QueueSlot front = FrontSlot;
-
-            if (front == null || !front.IsOccupied)
-            {
-                return;
-            }
-
-            if (!ConveyorManager.Instance.CanAcceptStack)
-            {
-                front.CurrentStack.Shake();
-                return;
-            }
+            if (front == null || !front.IsOccupied) return;
 
             StackItem stackToSend = front.CurrentStack;
+            if (stackToSend == null || stackToSend.IsJumping) return;
 
             if (stackToSend.RemainingItemCount <= 0)
             {
@@ -72,6 +52,14 @@ namespace RestaurantLoop.Core
                 return;
             }
 
+            // Check conveyor availability BEFORE clearing the slot
+            if (!ConveyorManager.Instance.CanAcceptStack || !ConveyorManager.Instance.IsEntranceClear())
+            {
+                stackToSend.Shake();
+                return;
+            }
+
+            // Clear slot only after confirming the transfer is valid
             front.ClearSlot();
 
             if (!ConveyorManager.Instance.TrySendStackToBelt(stackToSend))
@@ -96,7 +84,6 @@ namespace RestaurantLoop.Core
                     StackItem itemToMove = currentSlot.CurrentStack;
 
                     currentSlot.ClearSlot();
-
                     itemToMove.transform.SetParent(previousSlot.transform);
 
                     itemToMove.transform.DOLocalMove(Vector3.zero, shiftDuration)
