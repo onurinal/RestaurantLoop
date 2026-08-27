@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using RestaurantLoop.Infrastructure;
 
@@ -31,6 +32,7 @@ namespace RestaurantLoop.Core
             Vector3 gapCenter,
             Vector3 roomCenter,
             EdgeSlotService edgeSlots,
+            List<int> initialEdgeSlotIndices,
             CentralCrowdService centralCrowd,
             int maxVisibleCrowdCount,
             Func<int, Vector3> getEdgeSlotPosFunc,
@@ -39,29 +41,31 @@ namespace RestaurantLoop.Core
         {
             IsRunning = true;
 
-            // 1. Populate active Edge Slots FIRST
-            for (int i = 0; i < edgeSlots.SlotCount; i++)
+            for (int k = 0; k < initialEdgeSlotIndices.Count; k++)
             {
+                int slotIndex = initialEdgeSlotIndices[k];
+
                 ItemDataSO customerData = popDemandFunc?.Invoke();
                 if (customerData == null) break;
 
                 Customer customerPrefab = customerPrefabResolver?.Invoke(customerData);
                 Customer customer = SpawnCustomer(customerPrefab, customerData, spawnPos, parent);
                 if (customer == null) continue;
-                edgeSlots.Occupy(i, customer);
+                edgeSlots.Occupy(slotIndex, customer);
 
-                Vector3 targetPos = getEdgeSlotPosFunc(i);
-                float targetRotation = getEdgeSlotRotFunc != null ? getEdgeSlotRotFunc(i) : 0f;
+                Vector3 targetPos = getEdgeSlotPosFunc(slotIndex);
+                float targetRotation = getEdgeSlotRotFunc != null ? getEdgeSlotRotFunc(slotIndex) : 0f;
 
                 Vector3[] waypoints = EntrancePathUtility.BuildOrganicPath(spawnPos, targetPos, gapCenter, roomCenter, pathJitterAmount);
 
-                customer.MoveAlongPath(waypoints, moveDuration, true, targetYRotation: targetRotation);
-                onEdgeSlotAssigned?.Invoke(customer, i);
+                int assignedIndex = slotIndex;
+                customer.MoveAlongPath(waypoints, moveDuration, true, targetYRotation: targetRotation, roomCenter: roomCenter,
+                    onComplete: () => { onEdgeSlotAssigned?.Invoke(customer, assignedIndex); });
 
                 yield return new WaitForSeconds(spawnInterval);
             }
 
-            // 2. Spawn and walk VISIBLE Central Crowd customers (up to maxVisibleCrowdCount)
+            // 2. Spawn and walk VISIBLE Central Crowd customers
             int visibleCount = Mathf.Min(maxVisibleCrowdCount, centralCrowd.Count);
             for (int i = 0; i < visibleCount; i++)
             {
@@ -80,7 +84,6 @@ namespace RestaurantLoop.Core
                 yield return new WaitForSeconds(spawnInterval);
             }
 
-            // 3. Spawn remaining HIDDEN Central Crowd customers instantly at their assigned positions
             for (int i = visibleCount; i < centralCrowd.Count; i++)
             {
                 ItemDataSO customerData = popDemandFunc?.Invoke();
@@ -92,7 +95,7 @@ namespace RestaurantLoop.Core
                 if (customer == null) continue;
 
                 customer.SetModelRotation(slot.YRotation);
-                customer.gameObject.SetActive(false); // Hide overflow customers
+                customer.gameObject.SetActive(false);
                 slot.OccupyingCustomer = customer;
             }
 

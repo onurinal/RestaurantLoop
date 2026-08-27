@@ -1,14 +1,13 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using Dreamteck.Splines;
 
 namespace RestaurantLoop.Core
 {
-    /// <summary>
-    /// Owns the active edge slot array and its mapping onto the conveyor spline.
-    /// Responsible for slot world positions, occupancy, and belt-item service queries.
-    /// </summary>
     public class EdgeSlotService
     {
+        public const int TOTAL_EDGE_SLOTS = 20;
+
         private readonly int slotCount;
         private readonly float alignmentTolerance;
         private readonly float edgeInwardOffset;
@@ -28,6 +27,19 @@ namespace RestaurantLoop.Core
             slotSplineDistances = new float[this.slotCount];
         }
 
+        public List<int> GetUnoccupiedSlotIndices()
+        {
+            List<int> freeIndices = new List<int>();
+            for (int i = 0; i < slotCount; i++)
+            {
+                if (slots[i] == null)
+                {
+                    freeIndices.Add(i);
+                }
+            }
+            return freeIndices;
+        }
+
         public void RecalculateSplineMapping(ConveyorManager conveyor, ConveyorBuilder builder = null)
         {
             float pathLength = 0f;
@@ -35,7 +47,6 @@ namespace RestaurantLoop.Core
             float validTravelLength = 0f;
             bool isClockwise = true;
 
-            // Runtime evaluation via ConveyorManager
             if (conveyor != null && conveyor.Path != null && conveyor.Path.Length > 0f)
             {
                 pathLength = conveyor.Path.Length;
@@ -43,7 +54,6 @@ namespace RestaurantLoop.Core
                 validTravelLength = conveyor.GetRequiredTravelDistance();
                 isClockwise = conveyor.IsClockwise;
             }
-            // Editor evaluation fallback via ConveyorBuilder SplineComputer
             else if (builder != null && builder.Spline != null)
             {
                 pathLength = (float)builder.Spline.CalculateLength();
@@ -83,13 +93,11 @@ namespace RestaurantLoop.Core
             Vector3 beltPoint = Vector3.zero;
             bool hasPosition = false;
 
-            // 1. Runtime Path Evaluation via SplineConveyorPath
             if (conveyor != null && conveyor.Path != null && conveyor.Path.Length > 0f)
             {
                 beltPoint = conveyor.Path.GetPosition(slotSplineDistances[index]);
                 hasPosition = true;
             }
-            // 2. Editor Mode Evaluation via ConveyorBuilder SplineComputer
             else if (builder != null && builder.Spline != null)
             {
                 float pathLength = (float)builder.Spline.CalculateLength();

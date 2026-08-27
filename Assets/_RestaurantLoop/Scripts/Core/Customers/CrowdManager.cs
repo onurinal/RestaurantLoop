@@ -15,6 +15,8 @@ namespace RestaurantLoop.Core
     {
         public static CrowdManager Instance { get; private set; }
 
+        public const int TOTAL_EDGE_SLOTS = 20;
+
         [Header("Active Edge Setup")]
         [Tooltip("Maximum detection distance (in meters) between the food item on the belt and the customer slot for serving.")]
         [SerializeField] private float alignmentTolerance = 1.2f;
@@ -77,7 +79,7 @@ namespace RestaurantLoop.Core
 
             EnsureBuilderReference();
             boardGrid = GetComponent<DiningBoardGrid>();
-            edgeSlots = new EdgeSlotService(activeEdgeSlotCount, alignmentTolerance, edgeInwardOffset);
+            edgeSlots = new EdgeSlotService(TOTAL_EDGE_SLOTS, alignmentTolerance, edgeInwardOffset);
             centralCrowd = new CentralCrowdService();
             entranceSequencer = new CustomerEntranceSequencer(spawnInterval, moveDuration, pathJitterAmount, outerSpawnOffset);
         }
@@ -92,13 +94,13 @@ namespace RestaurantLoop.Core
             EnsureBuilderReference();
             if (boardGrid == null) boardGrid = GetComponent<DiningBoardGrid>();
 
-            edgeSlots = new EdgeSlotService(activeEdgeSlotCount, alignmentTolerance, edgeInwardOffset);
+            edgeSlots = new EdgeSlotService(TOTAL_EDGE_SLOTS, alignmentTolerance, edgeInwardOffset);
 
             ConveyorManager conveyor = GetConveyor();
             edgeSlots.RecalculateSplineMapping(conveyor, conveyorBuilder);
 
             Vector2 bounds = conveyorBuilder != null ? new Vector2(conveyorBuilder.Width, conveyorBuilder.Height) : new Vector2(10f, 15f);
-            boardGrid.InitializeGrid(GetRoomCenter(), bounds, activeEdgeSlotCount, GetSplineEdgeSlotWorldPosition);
+            boardGrid.InitializeGrid(GetRoomCenter(), bounds, TOTAL_EDGE_SLOTS, GetSplineEdgeSlotWorldPosition);
         }
 
         public void SetupCrowd(LevelDataSO levelData)
@@ -140,10 +142,23 @@ namespace RestaurantLoop.Core
             );
 
             if (entranceSequenceCoroutine != null) StopCoroutine(entranceSequenceCoroutine);
-            entranceSequenceCoroutine = StartCoroutine(RunEntranceSequence());
+
+            // Select random activeEdgeSlotCount indices out of 20 total edge slots for initial crowd
+            List<int> availableIndices = new List<int>();
+            for (int i = 0; i < TOTAL_EDGE_SLOTS; i++) availableIndices.Add(i);
+
+            for (int i = availableIndices.Count - 1; i > 0; i--)
+            {
+                int rand = UnityEngine.Random.Range(0, i + 1);
+                (availableIndices[i], availableIndices[rand]) = (availableIndices[rand], availableIndices[i]);
+            }
+
+            List<int> initialSlotIndices = availableIndices.GetRange(0, Mathf.Min(activeEdgeSlotCount, TOTAL_EDGE_SLOTS));
+
+            entranceSequenceCoroutine = StartCoroutine(RunEntranceSequence(initialSlotIndices));
         }
 
-        private IEnumerator RunEntranceSequence()
+        private IEnumerator RunEntranceSequence(List<int> initialSlotIndices)
         {
             if (entranceGate != null)
             {
@@ -153,7 +168,7 @@ namespace RestaurantLoop.Core
             }
 
             yield return entranceSequencer.Run(PopUnspawnedDemand, GetCustomerPrefab, transform, GetOuterSpawnPosition(),
-                GetConveyorEntranceWorldPosition(), GetRoomCenter(), edgeSlots, centralCrowd, maxVisibleCrowdCount,
+                GetConveyorEntranceWorldPosition(), GetRoomCenter(), edgeSlots, initialSlotIndices, centralCrowd, maxVisibleCrowdCount,
                 GetEdgeSlotWorldPosition, GetEdgeSlotYRotation, (customer, slotIndex) =>
                 {
                     boardGrid.SetEdgeCellFood(slotIndex, customer.RequiredData);
@@ -176,22 +191,31 @@ namespace RestaurantLoop.Core
             PromoteCrowdToEdgeSlot(slotIndex);
         }
 
-        private void PromoteCrowdToEdgeSlot(int edgeSlotIndex)
+        private void PromoteCrowdToEdgeSlot(int freedSlotIndex)
         {
             CentralCrowdSlot visibleSlot = centralCrowd.GetRandomVisibleSlot();
             if (visibleSlot == null || visibleSlot.OccupyingCustomer == null) return;
 
+            // Pick a random unoccupied slot index from ALL available free slots
+            List<int> freeSlotIndices = edgeSlots.GetUnoccupiedSlotIndices();
+            if (freeSlotIndices.Count == 0) return;
+
+            int targetSlotIndex = freeSlotIndices[UnityEngine.Random.Range(0, freeSlotIndices.Count)];
+
             Customer customer = visibleSlot.OccupyingCustomer;
             visibleSlot.OccupyingCustomer = null;
-            edgeSlots.Occupy(edgeSlotIndex, customer);
+            edgeSlots.Occupy(targetSlotIndex, customer);
 
             customer.MoveToEdgeSlot(
-                GetEdgeSlotWorldPosition(edgeSlotIndex),
-                GetEdgeSlotYRotation(edgeSlotIndex),
+                GetEdgeSlotWorldPosition(targetSlotIndex),
+                GetEdgeSlotYRotation(targetSlotIndex),
                 GetRoomCenter(),
-                onComplete: () => { boardGrid.SetEdgeCellFood(edgeSlotIndex, customer.RequiredData); });
+                onComplete: () =>
+                {
+                    boardGrid.SetEdgeCellFood(targetSlotIndex, customer.RequiredData);
+                });
 
-            EdgeCustomerReplacementStarted?.Invoke(customer, edgeSlotIndex);
+            EdgeCustomerReplacementStarted?.Invoke(customer, targetSlotIndex);
         }
 
         public void ClearCrowd()
@@ -285,20 +309,12 @@ namespace RestaurantLoop.Core
 
             if (showToleranceGizmos)
             {
-                LevelManager lm = LevelManager.Instance != null ? LevelManager.Instance : FindFirstObjectByType<LevelManager>();
-                int drawCount = activeEdgeSlotCount;
-
-                if (lm != null && lm.CurrentLevel != null)
-                {
-                    drawCount = lm.CurrentLevel.activeEdgeSlotCount;
-                }
-
                 if (boardGrid == null) boardGrid = GetComponent<DiningBoardGrid>();
 
                 Vector2 cellSize = boardGrid != null ? boardGrid.GetBoardCellSize() : new Vector2(1.2f, 1.2f);
                 Vector3 visualCellSize = new Vector3(cellSize.x * 0.82f, 0.04f, cellSize.y * 0.82f);
 
-                for (int i = 0; i < drawCount; i++)
+                for (int i = 0; i < TOTAL_EDGE_SLOTS; i++)
                 {
                     Vector3 slotPos = GetEdgeSlotWorldPosition(i);
 
