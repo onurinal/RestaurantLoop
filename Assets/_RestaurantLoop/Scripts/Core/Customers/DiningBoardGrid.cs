@@ -20,12 +20,6 @@ namespace RestaurantLoop.Core
         [Range(0.1f, 1f)] [SerializeField] private float cellFill = 0.82f;
         [SerializeField] private float gridCellYOffset = 0f;
 
-        [Header("Gizmo Settings for Game Designer")]
-        [SerializeField] private bool showActiveCellGizmos = true;
-        [SerializeField] private Color conveyorLimitColor = new Color(1f, 0.3f, 0f, 0.9f);
-        [SerializeField] private Color insetGridLimitColor = new Color(1f, 0.8f, 0.2f, 0.6f);
-        [SerializeField] private Color activeEdgeCellColor = new Color(0f, 1f, 0.3f, 0.9f);
-
         private readonly List<FoodCell> activeEdgeCells = new List<FoodCell>();
         private readonly List<Vector3> boardCellPositions = new List<Vector3>();
         private readonly List<int> edgeSlotCellIndices = new List<int>();
@@ -173,54 +167,6 @@ namespace RestaurantLoop.Core
                 cell.transform.localScale = Vector3.Scale(cell.transform.localScale, new Vector3(cellSize.x, 1f, cellSize.y));
                 cell.Clear();
                 activeEdgeCells.Add(cell);
-            }
-        }
-
-        private void OnDrawGizmos()
-        {
-            if (!showActiveCellGizmos) return;
-
-            EnsureConveyorReference();
-            if (conveyorBuilder == null) return;
-
-            Vector3 center = conveyorBuilder.CenterPosition;
-            center.y = 0f;
-
-            Vector2 conveyorBounds = new Vector2(conveyorBuilder.Width, conveyorBuilder.Height);
-            Vector2 boardSize = GetBoardAreaSize();
-            Vector2 cellSize = GetBoardCellSize();
-            Vector3 visualCellSize = new Vector3(cellSize.x * cellFill, 0.04f, cellSize.y * cellFill);
-
-            // 1. Draw outer boundary bounds
-            Gizmos.color = conveyorLimitColor;
-            Gizmos.DrawWireCube(center + Vector3.up * gridCellYOffset, new Vector3(conveyorBounds.x, 0.06f, conveyorBounds.y));
-
-            Gizmos.color = insetGridLimitColor;
-            Gizmos.DrawWireCube(center + Vector3.up * gridCellYOffset, new Vector3(boardSize.x, 0.05f, boardSize.y));
-
-            // 2. Trigger spline recalculation in Editor Mode using ConveyorBuilder's active spline
-            if (!Application.isPlaying)
-            {
-                CrowdManager cm = GetComponent<CrowdManager>();
-                if (cm != null)
-                {
-                    cm.InitializeGridSplineMapping();
-                }
-            }
-
-            // 3. Draw Active Cells
-            foreach (int boardIndex in edgeSlotCellIndices)
-            {
-                if (boardIndex >= 0 && boardIndex < boardCellPositions.Count)
-                {
-                    Vector3 cellPos = boardCellPositions[boardIndex] + Vector3.up * gridCellYOffset;
-
-                    Gizmos.color = activeEdgeCellColor;
-                    Gizmos.DrawWireCube(cellPos, visualCellSize + new Vector3(0.02f, 0.02f, 0.02f));
-
-                    Gizmos.color = new Color(activeEdgeCellColor.r, activeEdgeCellColor.g, activeEdgeCellColor.b, 0.35f);
-                    Gizmos.DrawCube(cellPos, visualCellSize);
-                }
             }
         }
     }

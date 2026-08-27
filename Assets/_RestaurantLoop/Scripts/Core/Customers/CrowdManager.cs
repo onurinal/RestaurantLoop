@@ -16,9 +16,6 @@ namespace RestaurantLoop.Core
         public static CrowdManager Instance { get; private set; }
 
         [Header("Active Edge Setup")]
-        [Tooltip("Total number of active customer slots waiting for service around the conveyor belt.")]
-        [Min(1)] [SerializeField] private int activeEdgeSlotCount = 6;
-
         [Tooltip("Maximum detection distance (in meters) between the food item on the belt and the customer slot for serving.")]
         [SerializeField] private float alignmentTolerance = 1.2f;
 
@@ -42,9 +39,9 @@ namespace RestaurantLoop.Core
 
         [Header("Gizmo Settings")]
         [SerializeField] private bool showCrowdGizmos = true;
-        [SerializeField] private bool showToleranceGizmos = true;
+        [SerializeField] private bool showActiveCustomerGizmos = true;
         [SerializeField] private Color crowdAreaGizmoColor = new Color(1f, 0f, 1f, 0.8f);
-        [SerializeField] private Color toleranceGizmoColor = new Color(1f, 0.92f, 0.012f, 0.75f);
+        [SerializeField] private Color activeEdgeCellColor = new Color(0f, 1f, 0.3f, 0.9f);
 
         [Header("References")]
         [SerializeField] private Customer customerPrefab;
@@ -55,6 +52,7 @@ namespace RestaurantLoop.Core
         private CentralCrowdService centralCrowd;
         private CustomerEntranceSequencer entranceSequencer;
         private Coroutine entranceSequenceCoroutine;
+        private int activeEdgeSlotCount = 6;
 
         private readonly List<ItemDataSO> unspawnedDemandPool = new List<ItemDataSO>();
         private readonly Dictionary<ItemDataSO, int> remainingDemandPerType = new Dictionary<ItemDataSO, int>();
@@ -82,22 +80,10 @@ namespace RestaurantLoop.Core
             entranceSequencer = new CustomerEntranceSequencer(spawnInterval, moveDuration, pathJitterAmount, outerSpawnOffset);
         }
 
-        private void OnValidate()
-        {
-            EnsureBuilderReference();
-            activeEdgeSlotCount = Mathf.Max(1, activeEdgeSlotCount);
-
-#if UNITY_EDITOR
-            SceneView.RepaintAll();
-#endif
-        }
-
         private void EnsureBuilderReference()
         {
             if (conveyorBuilder == null) conveyorBuilder = FindFirstObjectByType<ConveyorBuilder>();
         }
-
-        private void Start() => InitializeGridSplineMapping();
 
         public void InitializeGridSplineMapping()
         {
@@ -113,8 +99,12 @@ namespace RestaurantLoop.Core
             boardGrid.InitializeGrid(GetRoomCenter(), bounds, activeEdgeSlotCount, GetSplineEdgeSlotWorldPosition);
         }
 
-        public void SetupCrowd(List<CustomerDemandConfig> demands)
+        public void SetupCrowd(LevelDataSO levelData)
         {
+            if (levelData == null) return;
+
+            activeEdgeSlotCount = levelData.activeEdgeSlotCount;
+
             ClearCrowd();
             InitializeGridSplineMapping();
 
@@ -122,7 +112,7 @@ namespace RestaurantLoop.Core
             remainingDemandPerType.Clear();
             unspawnedDemandPool.Clear();
 
-            foreach (var cfg in demands)
+            foreach (var cfg in levelData.customerDemands)
             {
                 TotalRemainingDemand += cfg.totalCustomerCount;
                 remainingDemandPerType[cfg.itemData] = cfg.totalCustomerCount;
@@ -211,8 +201,8 @@ namespace RestaurantLoop.Core
         public Vector3 GetEdgeSlotWorldPosition(int index)
         {
             if (boardGrid == null) boardGrid = GetComponent<DiningBoardGrid>();
-            return boardGrid != null 
-                ? boardGrid.GetEdgeSlotCellPosition(index, GetSplineEdgeSlotWorldPosition(index)) 
+            return boardGrid != null
+                ? boardGrid.GetEdgeSlotCellPosition(index, GetSplineEdgeSlotWorldPosition(index))
                 : GetSplineEdgeSlotWorldPosition(index);
         }
 
@@ -268,15 +258,40 @@ namespace RestaurantLoop.Core
                 Gizmos.DrawCube(center + Vector3.up * 0.05f, new Vector3(innerCrowdArea.x, 0.1f, innerCrowdArea.y));
             }
 
-            if (showToleranceGizmos)
+            if (showActiveCustomerGizmos)
             {
+                LevelManager lm = LevelManager.Instance != null ? LevelManager.Instance : FindFirstObjectByType<LevelManager>();
+                int drawCount = activeEdgeSlotCount;
+
+                if (lm != null && lm.CurrentLevel != null)
+                {
+                    drawCount = lm.CurrentLevel.activeEdgeSlotCount;
+                }
+
                 if (boardGrid == null) boardGrid = GetComponent<DiningBoardGrid>();
 
-                Gizmos.color = toleranceGizmoColor;
-                for (int i = 0; i < activeEdgeSlotCount; i++)
+                EdgeSlotService tempEdgeSlots = new EdgeSlotService(drawCount, alignmentTolerance, edgeInwardOffset);
+                ConveyorManager conveyor = GetConveyor();
+                tempEdgeSlots.RecalculateSplineMapping(conveyor, conveyorBuilder);
+
+                Vector2 bounds = conveyorBuilder != null ? new Vector2(conveyorBuilder.Width, conveyorBuilder.Height) : new Vector2(10f, 15f);
+                boardGrid.InitializeGrid(GetRoomCenter(), bounds, drawCount, (idx) =>
+                    tempEdgeSlots.GetSlotWorldPosition(idx, conveyor, conveyorBuilder, GetRoomCenter(), transform.position));
+
+                Vector2 cellSize = boardGrid != null ? boardGrid.GetBoardCellSize() : new Vector2(1.2f, 1.2f);
+                Vector3 visualCellSize = new Vector3(cellSize.x * 0.82f, 0.04f, cellSize.y * 0.82f);
+
+                for (int i = 0; i < drawCount; i++)
                 {
-                    Vector3 slotPos = GetEdgeSlotWorldPosition(i);
-                    Gizmos.DrawWireSphere(slotPos, alignmentTolerance);
+                    Vector3 splinePos = tempEdgeSlots.GetSlotWorldPosition(i, conveyor, conveyorBuilder, GetRoomCenter(), transform.position);
+                    Vector3 slotPos = boardGrid.GetEdgeSlotCellPosition(i, splinePos);
+
+                    // Draw green active edge cell floor gizmo
+                    Gizmos.color = activeEdgeCellColor;
+                    Gizmos.DrawWireCube(slotPos + Vector3.up * 0.02f, visualCellSize + new Vector3(0.02f, 0.02f, 0.02f));
+
+                    Gizmos.color = new Color(activeEdgeCellColor.r, activeEdgeCellColor.g, activeEdgeCellColor.b, 0.35f);
+                    Gizmos.DrawCube(slotPos + Vector3.up * 0.02f, visualCellSize);
                 }
             }
         }

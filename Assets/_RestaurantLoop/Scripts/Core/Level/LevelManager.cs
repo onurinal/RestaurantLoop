@@ -68,10 +68,11 @@ namespace RestaurantLoop.Core
             LevelDataSO data = CurrentLevel;
             if (data == null) return;
 
-            // Clear leftover items in the rack from the previous level to ensure a clean state
+            // Rebuild and clear the rack layout according to current level configuration
             if (RackManager.Instance != null)
             {
                 RackManager.Instance.ClearAllItems();
+                RackManager.Instance.BuildRackLayout(data.rackSlotCount);
             }
 
             // Clear leftover items on the conveyor from the previous level
@@ -84,7 +85,7 @@ namespace RestaurantLoop.Core
             {
                 CrowdManager.Instance.OnDemandChanged -= HandleDemandChanged;
                 CrowdManager.Instance.OnDemandChanged += HandleDemandChanged;
-                CrowdManager.Instance.SetupCrowd(data.customerDemands);
+                CrowdManager.Instance.SetupCrowd(data);
             }
 
             if (QueueManager.Instance != null)
@@ -139,5 +140,17 @@ namespace RestaurantLoop.Core
             // MVP Simplification: Removed PlayerPrefs save logic. Progression is session-only.
             LoadCurrentLevel();
         }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            if (levelSequence != null && levelSequence.Count > 0)
+            {
+                currentLevelIndex = Mathf.Clamp(currentLevelIndex, 0, levelSequence.Count - 1);
+            }
+
+            UnityEditor.SceneView.RepaintAll();
+        }
+#endif
     }
 }

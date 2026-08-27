@@ -11,16 +11,20 @@ namespace RestaurantLoop.EditorTools
         [SerializeField] private int totalLevelsToGenerate = 30;
         [SerializeField] private string outputFolder = "Assets/_RestaurantLoop/Levels";
 
-        [Header("Difficulty & Demand Curve")]
-        [Tooltip("Total customers for Level 1")]
-        [SerializeField] private int minTotalCustomers = 20;
-        [Tooltip("Total customers for the final level")]
+        [Header("Difficulty & Demand Curve (25 to 120)")]
+        [Tooltip("Total customer count for Level 1 (Shallow crowd).")]
+        [SerializeField] private int minTotalCustomers = 25;
+        [Tooltip("Total customer count for Level 30 (Deep crowd).")]
         [SerializeField] private int maxTotalCustomers = 120;
 
+        [Header("Active Edge Setup (Strict Range: 3 to 20)")]
+        [Range(3, 20)] [SerializeField] private int minActiveEdgeSlots = 6;
+        [Range(3, 20)] [SerializeField] private int maxActiveEdgeSlots = 10;
+
         [Header("Layout Constraints")]
-        [SerializeField] private int defaultColumnCount = 3;
-        [SerializeField] private int minRackSlots = 4;
-        [SerializeField] private int maxRackSlots = 6;
+        [SerializeField] private int defaultColumnCount = 4;
+        [SerializeField] private int minRackSlots = 5;
+        [SerializeField] private int maxRackSlots = 7;
 
         [Header("Stack Size Constraints (Step: 5)")]
         [SerializeField] private int minStackSize = 10;
@@ -34,7 +38,7 @@ namespace RestaurantLoop.EditorTools
         public static void ShowWindow()
         {
             LevelGeneratorWindow window = GetWindow<LevelGeneratorWindow>("Level Generator");
-            window.minSize = new Vector2(350, 550);
+            window.minSize = new Vector2(350, 600);
         }
 
         private void OnEnable()
@@ -61,16 +65,23 @@ namespace RestaurantLoop.EditorTools
             outputFolder = EditorGUILayout.TextField("Output Folder", outputFolder);
 
             EditorGUILayout.Space();
-            GUILayout.Label("Difficulty & Demand Curve", EditorStyles.boldLabel);
-            minTotalCustomers = EditorGUILayout.IntField("Min Total Customers (Lvl 1)", minTotalCustomers);
-            maxTotalCustomers = EditorGUILayout.IntField("Max Total Customers (Last Lvl)", maxTotalCustomers);
+            GUILayout.Label("Difficulty Curve (Shallow to Deep Crowd)", EditorStyles.boldLabel);
+            minTotalCustomers = EditorGUILayout.IntField("Min Customers (Lvl 1)", minTotalCustomers);
+            maxTotalCustomers = EditorGUILayout.IntField("Max Customers (Lvl 30)", maxTotalCustomers);
 
-            // Validate multiples of 5
-            minTotalCustomers = Mathf.Max(10, Mathf.RoundToInt((float)minTotalCustomers / 5f) * 5);
+            minTotalCustomers = Mathf.Max(15, Mathf.RoundToInt((float)minTotalCustomers / 5f) * 5);
             maxTotalCustomers = Mathf.Max(minTotalCustomers, Mathf.RoundToInt((float)maxTotalCustomers / 5f) * 5);
 
             EditorGUILayout.Space();
-            GUILayout.Label("Layout Constraints", EditorStyles.boldLabel);
+            GUILayout.Label("Active Edge Slots Scaling (Min: 3, Max: 20)", EditorStyles.boldLabel);
+            minActiveEdgeSlots = EditorGUILayout.IntSlider("Min Edge Slots", minActiveEdgeSlots, 3, 20);
+            maxActiveEdgeSlots = EditorGUILayout.IntSlider("Max Edge Slots", maxActiveEdgeSlots, minActiveEdgeSlots, 20);
+
+            minActiveEdgeSlots = Mathf.Clamp(minActiveEdgeSlots, 3, 20);
+            maxActiveEdgeSlots = Mathf.Clamp(maxActiveEdgeSlots, minActiveEdgeSlots, 20);
+
+            EditorGUILayout.Space();
+            GUILayout.Label("Layout & Rack Constraints", EditorStyles.boldLabel);
             defaultColumnCount = EditorGUILayout.IntSlider("Queue Column Count", defaultColumnCount, 1, 6);
             minRackSlots = EditorGUILayout.IntField("Min Rack Slots", minRackSlots);
             maxRackSlots = EditorGUILayout.IntField("Max Rack Slots", maxRackSlots);
@@ -87,7 +98,7 @@ namespace RestaurantLoop.EditorTools
             if (maxRackSlots < minRackSlots) maxRackSlots = minRackSlots;
 
             EditorGUILayout.Space();
-            GUILayout.Label("Available Colors / Items", EditorStyles.boldLabel);
+            GUILayout.Label("Available Colors / Items (3 to 6 types)", EditorStyles.boldLabel);
 
             if (availableItemsProp != null)
             {
@@ -96,7 +107,7 @@ namespace RestaurantLoop.EditorTools
 
             EditorGUILayout.Space(20);
 
-            if (GUILayout.Button("Generate All Levels", GUILayout.Height(40)))
+            if (GUILayout.Button("Generate & Validate All Levels", GUILayout.Height(40)))
             {
                 GenerateBatchLevels();
             }
@@ -114,27 +125,28 @@ namespace RestaurantLoop.EditorTools
             }
 
             EnsureFolderExists(outputFolder);
+            int invalidLevelCount = 0;
 
             for (int i = 1; i <= totalLevelsToGenerate; i++)
             {
                 LevelDataSO level = CreateInstance<LevelDataSO>();
 
-                int colorCount = Mathf.Clamp(2 + (i / 8), 2, availableItems.Count);
+                int colorCount = Mathf.Clamp(3 + (i / 7), 3, Mathf.Min(6, availableItems.Count));
 
-                // Lerp total demand between min and max based on level progression
                 float progress = (float)(i - 1) / Mathf.Max(1, totalLevelsToGenerate - 1);
                 int targetTotalDemand = Mathf.RoundToInt(Mathf.Lerp(minTotalCustomers, maxTotalCustomers, progress));
                 targetTotalDemand = Mathf.Max(minStackSize * colorCount, Mathf.RoundToInt((float)targetTotalDemand / 5f) * 5);
 
                 int currentLevelMaxStack = Mathf.Clamp(minStackSize + ((i / 3) * 5), minStackSize, maxStackSize);
 
-                level.activeEdgeSlotCount = Mathf.Clamp(5 + (i / 10), 5, 8);
+                int activeEdgeSlots = Mathf.RoundToInt(Mathf.Lerp(minActiveEdgeSlots, maxActiveEdgeSlots, progress));
+                level.activeEdgeSlotCount = Mathf.Clamp(activeEdgeSlots, 3, 20);
+
                 level.rackSlotCount = Mathf.Clamp(minRackSlots + (i / 10), minRackSlots, maxRackSlots);
                 level.columnCount = defaultColumnCount;
                 level.minStackSize = minStackSize;
                 level.maxStackSize = currentLevelMaxStack;
 
-                // Distribute total demand across available colors for this level
                 int baseDemandPerColor = Mathf.RoundToInt((float)(targetTotalDemand / colorCount) / 5f) * 5;
                 baseDemandPerColor = Mathf.Max(minStackSize, baseDemandPerColor);
 
@@ -152,15 +164,26 @@ namespace RestaurantLoop.EditorTools
                     }
                 }
 
-                // Partition the mathematically guaranteed demand into stack chunks
-                level.queueStackConfigs = LevelMathUtility.PartitionDemandToStacks(
-                    level.customerDemands,
-                    minStackSize,
-                    currentLevelMaxStack,
-                    level.columnCount,
-                    out int calculatedRows);
+                // Retry loop to guarantee a 100% solvable stack layout shuffle
+                bool isValid = false;
+                int maxRetries = 100;
 
-                level.calculatedRowCount = calculatedRows;
+                for (int attempt = 0; attempt < maxRetries; attempt++)
+                {
+                    level.queueStackConfigs = LevelMathUtility.PartitionDemandToStacks(
+                        level.customerDemands,
+                        minStackSize,
+                        currentLevelMaxStack,
+                        level.columnCount,
+                        out int calculatedRows);
+
+                    level.calculatedRowCount = calculatedRows;
+
+                    isValid = LevelValidator.ValidateLevel(level);
+                    if (isValid) break;
+                }
+
+                if (!isValid) invalidLevelCount++;
 
                 string assetPath = $"{outputFolder}/Level_{i:D2}.asset";
                 AssetDatabase.CreateAsset(level, assetPath);
@@ -168,7 +191,12 @@ namespace RestaurantLoop.EditorTools
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            EditorUtility.DisplayDialog("Success", $"{totalLevelsToGenerate} levels generated in {outputFolder}", "OK");
+
+            string statusMessage = invalidLevelCount == 0
+                ? $"{totalLevelsToGenerate} levels generated and 100% verified solvable!"
+                : $"{totalLevelsToGenerate} levels generated. Warning: {invalidLevelCount} levels failed greedy validation!";
+
+            EditorUtility.DisplayDialog("Generation Complete", statusMessage, "OK");
         }
 
         private void EnsureFolderExists(string folderPath)

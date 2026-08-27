@@ -22,10 +22,11 @@ namespace RestaurantLoop.Core
     public class LevelDataSO : ScriptableObject
     {
         [Header("Active Edge Setup")]
-        [Range(3, 16)] public int activeEdgeSlotCount = 6;
+        [Tooltip("Active customer slots around the conveyor belt.")]
+        [Range(3, 20)] public int activeEdgeSlotCount = 6;
 
         [Header("Rack Setup")]
-        [Range(1, 10)] public int rackSlotCount = 4;
+        [Range(1, 10)] public int rackSlotCount = 5;
 
         [Header("Queue Layout Setup")]
         [Range(1, 8)] public int columnCount = 3;
