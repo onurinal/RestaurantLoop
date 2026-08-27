@@ -2,6 +2,7 @@
 {
     /// <summary>
     /// Slot implementation for the Rack system.
+    /// Inherits cell visual management and stack placement logic from BaseSlot.
     /// </summary>
     public class RackSlot : BaseSlot
     {

@@ -18,7 +18,6 @@ namespace RestaurantLoop.Core
     [RequireComponent(typeof(StackItemMovement))]
     public class StackItem : MonoBehaviour, IInteractable
     {
-        // Static registry tracking all active stacks in play with zero GC allocation
         private static readonly HashSet<StackItem> ActiveStacksInGame = new HashSet<StackItem>();
         public static int TotalActiveStackCount => ActiveStacksInGame.Count;
 
@@ -180,7 +179,7 @@ namespace RestaurantLoop.Core
                 if (stacks[i] != null && stacks[i].gameObject != null)
                 {
                     KillTweensInHierarchy(stacks[i].gameObject);
-                    Destroy(stacks[i].gameObject);
+                    DestroyImmediate(stacks[i].gameObject);
                 }
             }
 

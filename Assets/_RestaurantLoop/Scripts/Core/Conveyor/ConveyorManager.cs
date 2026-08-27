@@ -51,9 +51,15 @@ namespace RestaurantLoop.Core
 
         private void Update()
         {
+            // Pause conveyor movement if game is inactive or level state is Won/Lost
+            if (LevelManager.Instance != null && !LevelManager.Instance.IsGameActive) return;
+
             for (int i = activeStacks.Count - 1; i >= 0; i--)
             {
-                activeStacks[i].MoveAlongBelt(path, moveSpeed, isClockwise, Time.deltaTime);
+                if (activeStacks[i] != null)
+                {
+                    activeStacks[i].MoveAlongBelt(path, moveSpeed, isClockwise, Time.deltaTime);
+                }
             }
         }
 
@@ -126,6 +132,8 @@ namespace RestaurantLoop.Core
 
         public bool TryAddStack(StackItem stack)
         {
+            if (stack == null || !stack.gameObject.activeInHierarchy) return false;
+
             activeStacks.Add(stack);
             stack.InitializeOnBelt(path, EntranceDistance, GetRequiredTravelDistance());
             StackEnteredBelt?.Invoke(stack);
@@ -171,7 +179,11 @@ namespace RestaurantLoop.Core
             stack.JumpToConveyor(entrancePosition, () =>
             {
                 pendingJumpsCount = Mathf.Max(0, pendingJumpsCount - 1);
-                TryAddStack(stack);
+
+                if (stack != null && stack.gameObject.activeInHierarchy)
+                {
+                    TryAddStack(stack);
+                }
             });
 
             return true;
@@ -198,13 +210,16 @@ namespace RestaurantLoop.Core
 
             if (!addedToRack)
             {
+                // Destroy overflow stack immediately to prevent ghost objects floating in scene
+                StackItem.KillTweensInHierarchy(stack.gameObject);
+                Destroy(stack.gameObject);
+
                 LevelManager.Instance?.ReportRackOverflow();
             }
         }
 
         private IEnumerator Routine_AutoLoopJump(StackItem stack)
         {
-            // Immediately reserve the pending jump state to prevent user taps from overriding this window
             pendingJumpsCount++;
 
             while (!IsEntranceClearForAutoLoop())
@@ -214,7 +229,14 @@ namespace RestaurantLoop.Core
                     pendingJumpsCount = Mathf.Max(0, pendingJumpsCount - 1);
                     yield break;
                 }
+
                 yield return null;
+            }
+
+            if (stack == null || !stack.gameObject.activeInHierarchy)
+            {
+                pendingJumpsCount = Mathf.Max(0, pendingJumpsCount - 1);
+                yield break;
             }
 
             Vector3 entrancePosition = path.GetPosition(EntranceDistance);
@@ -222,7 +244,11 @@ namespace RestaurantLoop.Core
             stack.JumpToConveyor(entrancePosition, () =>
             {
                 pendingJumpsCount = Mathf.Max(0, pendingJumpsCount - 1);
-                TryAddStack(stack);
+
+                if (stack != null && stack.gameObject.activeInHierarchy)
+                {
+                    TryAddStack(stack);
+                }
             });
         }
 
@@ -235,7 +261,7 @@ namespace RestaurantLoop.Core
                 if (activeStacks[i] != null)
                 {
                     StackItem.KillTweensInHierarchy(activeStacks[i].gameObject);
-                    Destroy(activeStacks[i].gameObject);
+                    DestroyImmediate(activeStacks[i].gameObject);
                 }
             }
 
