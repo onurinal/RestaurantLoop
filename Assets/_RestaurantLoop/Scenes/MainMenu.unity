@@ -2939,6 +2939,10 @@ PrefabInstance:
       propertyPath: boardClickSound
       value: 
       objectReference: {fileID: 8300000, guid: 7e42f7bae9bbd784dad61f9fdf0ab97b, type: 3}
+    - target: {fileID: 6029360811432592935, guid: 7d3076738a2a8b14982d23dd701c72dc, type: 3}
+      propertyPath: customerEntranceSound
+      value: 
+      objectReference: {fileID: 8300000, guid: 1b934124947d2d044811f2a283908af2, type: 3}
     - target: {fileID: 7468001516878862805, guid: 7d3076738a2a8b14982d23dd701c72dc, type: 3}
       propertyPath: m_Name
       value: AudioManager

@@ -8,10 +8,10 @@ namespace RestaurantLoop.Audio
 
         [Header("Audio Sources")]
         [SerializeField] private AudioSource sfxSource;
-        [SerializeField] private AudioSource musicSource; // Added for background music
+        [SerializeField] private AudioSource musicSource; // Handles background music
 
         [Header("Music Clips")]
-        public AudioClip backgroundMusic; // The looping background music/ambiance
+        public AudioClip backgroundMusic; // Looping background music or ambiance
 
         [Header("SFX Clips")]
         public AudioClip tapSound;         
@@ -21,9 +21,11 @@ namespace RestaurantLoop.Audio
         public AudioClip nomNomSound;      
         public AudioClip happyJumpSound;   
         public AudioClip popSound;         
+        public AudioClip customerEntranceSound; // Played when the gate opens and the crowd enters
 
         private void Awake()
         {
+            // Singleton pattern to ensure only one AudioManager exists
             if (Instance == null)
             {
                 Instance = this;
@@ -37,17 +39,17 @@ namespace RestaurantLoop.Audio
 
         private void Start()
         {
-            // Initialize and play background music automatically
+            // Initialize and play background music automatically based on saved volume
             if (musicSource != null && backgroundMusic != null)
             {
                 musicSource.clip = backgroundMusic;
-                musicSource.loop = true; // Ensure it loops forever
+                musicSource.loop = true; // Ensure the music loops continuously
                 musicSource.volume = PlayerPrefs.GetFloat("MusicVolume", 1f);
                 musicSource.Play();
             }
         }
 
-        // Method to update music volume in real-time from the UI slider
+        // Updates music volume in real-time when toggled or adjusted via UI
         public void SetMusicVolume(float volume)
         {
             if (musicSource != null)
@@ -56,6 +58,7 @@ namespace RestaurantLoop.Audio
             }
         }
 
+        // Plays a single sound effect respecting the current SFX volume settings
         public void PlaySFX(AudioClip clip)
         {
             if (clip == null || sfxSource == null) return;

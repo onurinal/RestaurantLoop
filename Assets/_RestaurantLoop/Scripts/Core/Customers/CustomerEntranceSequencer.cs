@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using RestaurantLoop.Infrastructure;
+using RestaurantLoop.Audio; // Added to access the audio system
 
 namespace RestaurantLoop.Core
 {
@@ -40,6 +41,14 @@ namespace RestaurantLoop.Core
             Action<Customer, int> onEdgeSlotAssigned)
         {
             IsRunning = true;
+
+            // --- PLAY CUSTOMER ENTRANCE SOUND ---
+            // Triggered exactly when the first customer starts moving into the restaurant
+            if (AudioManager.Instance != null && AudioManager.Instance.customerEntranceSound != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.customerEntranceSound);
+            }
+            // ------------------------------------
 
             for (int k = 0; k < initialEdgeSlotIndices.Count; k++)
             {
