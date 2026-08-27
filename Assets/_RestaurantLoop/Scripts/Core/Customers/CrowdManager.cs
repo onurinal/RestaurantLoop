@@ -39,7 +39,7 @@ namespace RestaurantLoop.Core
 
         [Header("Gizmo Settings")]
         [SerializeField] private bool showCrowdGizmos = true;
-        [SerializeField] private bool showActiveCustomerGizmos = true;
+        [SerializeField] private bool showToleranceGizmos = true;
         [SerializeField] private Color crowdAreaGizmoColor = new Color(1f, 0f, 1f, 0.8f);
         [SerializeField] private Color activeEdgeCellColor = new Color(0f, 1f, 0.3f, 0.9f);
 
@@ -258,7 +258,7 @@ namespace RestaurantLoop.Core
                 Gizmos.DrawCube(center + Vector3.up * 0.05f, new Vector3(innerCrowdArea.x, 0.1f, innerCrowdArea.y));
             }
 
-            if (showActiveCustomerGizmos)
+            if (showToleranceGizmos)
             {
                 LevelManager lm = LevelManager.Instance != null ? LevelManager.Instance : FindFirstObjectByType<LevelManager>();
                 int drawCount = activeEdgeSlotCount;
@@ -270,23 +270,13 @@ namespace RestaurantLoop.Core
 
                 if (boardGrid == null) boardGrid = GetComponent<DiningBoardGrid>();
 
-                EdgeSlotService tempEdgeSlots = new EdgeSlotService(drawCount, alignmentTolerance, edgeInwardOffset);
-                ConveyorManager conveyor = GetConveyor();
-                tempEdgeSlots.RecalculateSplineMapping(conveyor, conveyorBuilder);
-
-                Vector2 bounds = conveyorBuilder != null ? new Vector2(conveyorBuilder.Width, conveyorBuilder.Height) : new Vector2(10f, 15f);
-                boardGrid.InitializeGrid(GetRoomCenter(), bounds, drawCount, (idx) =>
-                    tempEdgeSlots.GetSlotWorldPosition(idx, conveyor, conveyorBuilder, GetRoomCenter(), transform.position));
-
                 Vector2 cellSize = boardGrid != null ? boardGrid.GetBoardCellSize() : new Vector2(1.2f, 1.2f);
                 Vector3 visualCellSize = new Vector3(cellSize.x * 0.82f, 0.04f, cellSize.y * 0.82f);
 
                 for (int i = 0; i < drawCount; i++)
                 {
-                    Vector3 splinePos = tempEdgeSlots.GetSlotWorldPosition(i, conveyor, conveyorBuilder, GetRoomCenter(), transform.position);
-                    Vector3 slotPos = boardGrid.GetEdgeSlotCellPosition(i, splinePos);
+                    Vector3 slotPos = GetEdgeSlotWorldPosition(i);
 
-                    // Draw green active edge cell floor gizmo
                     Gizmos.color = activeEdgeCellColor;
                     Gizmos.DrawWireCube(slotPos + Vector3.up * 0.02f, visualCellSize + new Vector3(0.02f, 0.02f, 0.02f));
 

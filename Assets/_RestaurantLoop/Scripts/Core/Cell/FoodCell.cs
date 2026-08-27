@@ -2,10 +2,6 @@ using UnityEngine;
 
 namespace RestaurantLoop.Core
 {
-    /// <summary>
-    /// Presentation-only floor cell shared by customer positions, the food queue, and the rack.
-    /// Assign a neutral material plus the renderers supplied by the final art prefab.
-    /// </summary>
     public class FoodCell : MonoBehaviour
     {
         [SerializeField] private Renderer[] targetRenderers;
@@ -37,13 +33,13 @@ namespace RestaurantLoop.Core
             {
                 if (targetRenderer == null) continue;
 
-                Material[] materials = targetRenderer.sharedMaterials;
-                for (int i = 0; i < materials.Length; i++)
+                Material[] newMaterials = new Material[targetRenderer.sharedMaterials.Length];
+                for (int i = 0; i < newMaterials.Length; i++)
                 {
-                    materials[i] = material;
+                    newMaterials[i] = material;
                 }
 
-                targetRenderer.sharedMaterials = materials;
+                targetRenderer.materials = newMaterials;
             }
         }
 
@@ -58,17 +54,17 @@ namespace RestaurantLoop.Core
 
                 if (neutralMaterial != null)
                 {
-                    Material[] materials = targetRenderer.sharedMaterials;
-                    for (int materialIndex = 0; materialIndex < materials.Length; materialIndex++)
+                    Material[] newMaterials = new Material[targetRenderer.sharedMaterials.Length];
+                    for (int materialIndex = 0; materialIndex < newMaterials.Length; materialIndex++)
                     {
-                        materials[materialIndex] = neutralMaterial;
+                        newMaterials[materialIndex] = neutralMaterial;
                     }
 
-                    targetRenderer.sharedMaterials = materials;
+                    targetRenderer.materials = newMaterials;
                 }
                 else if (authoredMaterials != null && i < authoredMaterials.Length)
                 {
-                    targetRenderer.sharedMaterials = authoredMaterials[i];
+                    targetRenderer.materials = authoredMaterials[i];
                 }
             }
         }

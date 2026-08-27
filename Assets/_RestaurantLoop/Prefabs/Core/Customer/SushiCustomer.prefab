@@ -1322,7 +1322,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 299a7bb21468472fa0101f76a4b8f34c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.OrderBalloon
-  bgRenderer: {fileID: 0}
+  bgRenderer: {fileID: 8751571655478622447}
   foodDisplayPrefab: {fileID: 1876043912033156067, guid: ab1c6f3470ddbea45a209935540c8427, type: 3}
   foodLocalPosition: {x: 0.266, y: 0.06, z: -0.39}
   foodScale: 1.3
