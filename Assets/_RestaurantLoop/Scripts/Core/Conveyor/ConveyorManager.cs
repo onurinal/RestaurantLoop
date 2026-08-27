@@ -234,8 +234,8 @@ namespace RestaurantLoop.Core
             {
                 if (activeStacks[i] != null)
                 {
-                    activeStacks[i].transform.DOKill();
-                    PoolManager.Instance.Despawn(activeStacks[i].gameObject);
+                    StackItem.KillTweensInHierarchy(activeStacks[i].gameObject);
+                    Destroy(activeStacks[i].gameObject);
                 }
             }
 

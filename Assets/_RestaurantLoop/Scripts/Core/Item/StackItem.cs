@@ -65,7 +65,14 @@ namespace RestaurantLoop.Core
             remainingCount = Mathf.Max(0, count);
             currentMode = StackVisualMode.SingleWithUI;
 
+            KillTweensInHierarchy(gameObject);
+
+            transform.localPosition = Vector3.zero;
+            transform.localRotation = Quaternion.identity;
+            transform.localScale = Vector3.one;
+
             visuals.SetItemData(itemData);
+            visuals.CollapseToSingle();
             visuals.RefreshVisuals(currentMode, remainingCount);
         }
 
@@ -134,10 +141,8 @@ namespace RestaurantLoop.Core
 
         public void JumpToConveyor(Vector3 targetPosition, Action onComplete)
         {
-            // 1. Kill any existing tweens (Shake, Queue Shift) to prevent coordinate corruption
-            transform.DOKill();
+            KillTweensInHierarchy(gameObject);
 
-            // 2. Immediately switch to 3D Stacked visual mode so the item is 100% visible during the jump
             if (currentMode != StackVisualMode.Stacked)
             {
                 currentMode = StackVisualMode.Stacked;
@@ -165,6 +170,36 @@ namespace RestaurantLoop.Core
 
                 onComplete?.Invoke();
             });
+        }
+
+        public static void ClearAllActiveStacks()
+        {
+            List<StackItem> stacks = new List<StackItem>(ActiveStacksInGame);
+            for (int i = stacks.Count - 1; i >= 0; i--)
+            {
+                if (stacks[i] != null && stacks[i].gameObject != null)
+                {
+                    KillTweensInHierarchy(stacks[i].gameObject);
+                    Destroy(stacks[i].gameObject);
+                }
+            }
+
+            ActiveStacksInGame.Clear();
+        }
+
+        public static void KillTweensInHierarchy(GameObject target)
+        {
+            if (target == null) return;
+
+            DOTween.Kill(target);
+            Transform[] allTransforms = target.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < allTransforms.Length; i++)
+            {
+                if (allTransforms[i] != null)
+                {
+                    allTransforms[i].DOKill();
+                }
+            }
         }
 
         private void CheckForNearbyCustomer()
@@ -195,6 +230,8 @@ namespace RestaurantLoop.Core
             ConveyorManager.Instance.RemoveStackFromBelt(this);
             ConveyorManager.Instance.ReleaseCapacity();
             StackDepleted?.Invoke(this);
+
+            KillTweensInHierarchy(gameObject);
             Destroy(gameObject);
         }
 

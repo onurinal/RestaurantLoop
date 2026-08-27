@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-using RestaurantLoop.Infrastructure;
+using DG.Tweening;
 
 namespace RestaurantLoop.Core
 {
@@ -60,6 +60,10 @@ namespace RestaurantLoop.Core
 
             foreach (var col in columns)
             {
+                if (col == null) continue;
+
+                col.InitializeChildSlots();
+
                 for (int r = 0; r < rows; r++)
                 {
                     if (currentStackIndex >= stackConfigs.Count) break;
@@ -71,9 +75,19 @@ namespace RestaurantLoop.Core
 
                         if (config.itemData != null && config.itemData.StackPrefab != null)
                         {
-                            GameObject stackObj = PoolManager.Instance.Spawn(config.itemData.StackPrefab, slot.transform.position, Quaternion.identity,
-                                slot.transform);
+                            // Instantiate fresh GameObject directly from prefab asset to prevent pooled object pollution
+                            GameObject stackObj = Instantiate(
+                                config.itemData.StackPrefab,
+                                slot.transform.position,
+                                Quaternion.identity,
+                                slot.transform
+                            );
+
+                            StackItem.KillTweensInHierarchy(stackObj);
+
                             stackObj.transform.localPosition = Vector3.zero;
+                            stackObj.transform.localRotation = Quaternion.identity;
+                            stackObj.transform.localScale = Vector3.one;
 
                             StackItem newStack = stackObj.GetComponent<StackItem>();
 
@@ -92,19 +106,32 @@ namespace RestaurantLoop.Core
 
         public void ClearQueue()
         {
+            if (columns == null) return;
+
             foreach (var col in columns)
             {
                 if (col != null)
                 {
-                    StackItem[] childStacks = col.GetComponentsInChildren<StackItem>();
+                    QueueSlot[] childSlots = col.GetComponentsInChildren<QueueSlot>(true);
+                    foreach (var slot in childSlots)
+                    {
+                        if (slot != null)
+                        {
+                            slot.ClearSlot();
+                        }
+                    }
+
+                    StackItem[] childStacks = col.GetComponentsInChildren<StackItem>(true);
                     foreach (var stack in childStacks)
                     {
                         if (stack != null)
                         {
-                            PoolManager.Instance.Despawn(stack.gameObject);
+                            StackItem.KillTweensInHierarchy(stack.gameObject);
+                            Destroy(stack.gameObject);
                         }
                     }
 
+                    StackItem.KillTweensInHierarchy(col.gameObject);
                     Destroy(col.gameObject);
                 }
             }

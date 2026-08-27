@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 
 namespace RestaurantLoop.Core
@@ -24,13 +25,10 @@ namespace RestaurantLoop.Core
         public LevelState CurrentState { get; private set; } = LevelState.Playing;
         public bool IsGameActive => CurrentState == LevelState.Playing;
 
-        // Expose human-readable level number (1-based index) for UI
         public int CurrentLevelNumber => currentLevelIndex + 1;
 
         public event Action OnLevelWon;
         public event Action OnLevelLost;
-
-        // Event to notify UI when a new level loads
         public event Action<int> OnLevelLoaded;
 
         private void Awake()
@@ -38,9 +36,6 @@ namespace RestaurantLoop.Core
             if (Instance == null)
             {
                 Instance = this;
-
-                // MVP Simplification: No save state. Always start at index 0 (Level 1) on fresh launch.
-                // currentLevelIndex = 0;
             }
             else
             {
@@ -68,19 +63,30 @@ namespace RestaurantLoop.Core
             LevelDataSO data = CurrentLevel;
             if (data == null) return;
 
-            // Rebuild and clear the rack layout according to current level configuration
+            // 1. Stop all active conveyor coroutines and kill all running DOTween animations in the scene
+            if (ConveyorManager.Instance != null)
+            {
+                ConveyorManager.Instance.StopAllCoroutines();
+            }
+
+            DOTween.KillAll();
+
+            // 2. Clear all active stacks across belt, rack, queue, and mid-air jumps
+            StackItem.ClearAllActiveStacks();
+
+            // 3. Reset internal capacity counters for conveyor and rack
+            if (ConveyorManager.Instance != null)
+            {
+                ConveyorManager.Instance.ClearAllItems();
+            }
+
             if (RackManager.Instance != null)
             {
                 RackManager.Instance.ClearAllItems();
                 RackManager.Instance.BuildRackLayout(data.rackSlotCount);
             }
 
-            // Clear leftover items on the conveyor from the previous level
-            if (ConveyorManager.Instance != null)
-            {
-                ConveyorManager.Instance.ClearAllItems();
-            }
-
+            // 4. Rebuild customer crowd and queue layouts
             if (CrowdManager.Instance != null)
             {
                 CrowdManager.Instance.OnDemandChanged -= HandleDemandChanged;
@@ -93,24 +99,17 @@ namespace RestaurantLoop.Core
                 QueueManager.Instance.SetupQueue(data);
             }
 
-            // Notify UI to update the top level text
             OnLevelLoaded?.Invoke(CurrentLevelNumber);
 
             Debug.Log($"<color=cyan>[LEVEL START]</color> Loaded Level Index: {currentLevelIndex} (UI Level: {CurrentLevelNumber})");
         }
 
-        /// <summary>
-        /// Triggered when a stack on the conveyor reaches the exit while the Rack is completely full.
-        /// </summary>
         public void ReportRackOverflow()
         {
             if (CurrentState != LevelState.Playing) return;
 
             CurrentState = LevelState.Lost;
-
-            // Changed from LogError to LogWarning to prevent Error Pause in the editor and Build crashes
             Debug.LogWarning("<color=orange>[LEVEL FAILED]</color> Conveyor stack reached exit while Rack is full!");
-
             OnLevelLost?.Invoke();
         }
 
@@ -136,8 +135,6 @@ namespace RestaurantLoop.Core
         public void CompleteLevel()
         {
             currentLevelIndex++;
-
-            // MVP Simplification: Removed PlayerPrefs save logic. Progression is session-only.
             LoadCurrentLevel();
         }
 
