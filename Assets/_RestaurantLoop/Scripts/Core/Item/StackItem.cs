@@ -29,6 +29,7 @@ namespace RestaurantLoop.Core
         private StackItemVisuals visuals;
         private StackItemAnimator animator;
         private StackItemMovement movement;
+        private Tween handSelectionTween;
 
         private StackVisualMode currentMode = StackVisualMode.SingleWithUI;
 
@@ -88,6 +89,23 @@ namespace RestaurantLoop.Core
         }
 
         public void Shake() => animator.Shake();
+
+        public void SetHandSelectionHighlight(bool highlighted)
+        {
+            handSelectionTween?.Kill();
+            handSelectionTween = null;
+
+            if (!highlighted)
+            {
+                transform.localScale = Vector3.one;
+                return;
+            }
+
+            handSelectionTween = transform.DOScale(Vector3.one * 1.08f, 0.35f)
+                .SetLoops(-1, LoopType.Yoyo)
+                .SetEase(Ease.InOutSine)
+                .SetUpdate(true);
+        }
 
         public void SetWaitingForRack(bool waiting)
         {

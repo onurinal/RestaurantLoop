@@ -8,6 +8,7 @@
     {
         public override void OnStackTapped(StackItem stack)
         {
+            if (PowerUpManager.Instance != null && PowerUpManager.Instance.IsHandSelectionActive) return;
             RackManager.Instance?.TrySendRackStackToBelt(stack);
         }
     }

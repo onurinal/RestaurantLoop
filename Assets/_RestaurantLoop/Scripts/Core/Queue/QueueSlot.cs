@@ -7,6 +7,12 @@
     {
         public override void OnStackTapped(StackItem stack)
         {
+            if (PowerUpManager.Instance != null && PowerUpManager.Instance.IsHandSelectionActive)
+            {
+                PowerUpManager.Instance.TrySelectHandStack(stack);
+                return;
+            }
+
             QueueColumn column = GetComponentInParent<QueueColumn>();
 
             if (column != null && column.FrontSlot == this)

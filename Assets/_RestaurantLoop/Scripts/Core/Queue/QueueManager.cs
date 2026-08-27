@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
+using System;
 
 namespace RestaurantLoop.Core
 {
@@ -12,6 +13,8 @@ namespace RestaurantLoop.Core
         [SerializeField] private QueueSpawner queueSpawner;
 
         private List<QueueColumn> columns = new List<QueueColumn>();
+
+        public event Action QueueChanged;
 
         /// <summary>
         /// Calculates the total number of remaining active stacks waiting across all queue columns.
@@ -137,6 +140,213 @@ namespace RestaurantLoop.Core
             }
 
             columns.Clear();
+            NotifyQueueChanged();
+        }
+
+        public bool HasSelectableDeeperStack
+        {
+            get
+            {
+                if (IsTransitioning) return false;
+
+                foreach (QueueColumn column in columns)
+                {
+                    if (column == null) continue;
+
+                    QueueSlot[] childSlots = column.GetComponentsInChildren<QueueSlot>(true);
+                    for (int i = 0; i < childSlots.Length; i++)
+                    {
+                        QueueSlot slot = childSlots[i];
+                        if (slot != null && column.IsDeeperSlot(slot) && slot.IsOccupied &&
+                            slot.CurrentStack != null && !slot.CurrentStack.IsJumping)
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            }
+        }
+
+        public bool CanShuffleQueuedStacks
+        {
+            get
+            {
+                if (IsTransitioning) return false;
+
+                List<StackItem> stacks = GetOccupiedStacksInSlotOrder(null);
+                if (stacks.Count < 2) return false;
+
+                for (int i = 0; i < stacks.Count; i++)
+                {
+                    for (int j = i + 1; j < stacks.Count; j++)
+                    {
+                        if (!AreVisuallyEquivalent(stacks[i], stacks[j])) return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
+        public bool TryShuffleQueuedStacks()
+        {
+            if (!CanShuffleQueuedStacks) return false;
+
+            List<QueueSlot> slots = new List<QueueSlot>();
+            List<StackItem> originalStacks = GetOccupiedStacksInSlotOrder(slots);
+            List<StackItem> shuffledStacks = new List<StackItem>(originalStacks);
+
+            // Re-roll until the player can actually see a new order. This also
+            // handles duplicate food types/counts without spending a fake Shuffle.
+            const int maxShuffleAttempts = 12;
+            bool changed = false;
+            for (int attempt = 0; attempt < maxShuffleAttempts && !changed; attempt++)
+            {
+                FisherYatesShuffle(shuffledStacks);
+                changed = HasVisibleOrderChanged(originalStacks, shuffledStacks);
+            }
+
+            if (!changed)
+            {
+                ForceDistinctSwap(shuffledStacks);
+                changed = HasVisibleOrderChanged(originalStacks, shuffledStacks);
+            }
+
+            if (!changed) return false;
+
+            for (int i = 0; i < slots.Count; i++)
+            {
+                slots[i].ClearSlot();
+            }
+
+            for (int i = 0; i < slots.Count; i++)
+            {
+                QueueSlot destination = slots[i];
+                StackItem stack = shuffledStacks[i];
+                stack.transform.DOKill();
+                destination.PlaceStack(stack);
+                stack.transform.DOLocalMove(Vector3.zero, 0.25f).SetEase(Ease.OutQuad);
+            }
+
+            NotifyQueueChanged();
+            return true;
+        }
+
+        public bool TrySendHandSelectedStack(StackItem stack)
+        {
+            if (stack == null || IsTransitioning) return false;
+
+            foreach (QueueColumn column in columns)
+            {
+                if (column == null) continue;
+
+                QueueSlot[] childSlots = column.GetComponentsInChildren<QueueSlot>(true);
+                for (int i = 0; i < childSlots.Length; i++)
+                {
+                    QueueSlot slot = childSlots[i];
+                    if (slot != null && slot.CurrentStack == stack)
+                    {
+                        return column.TrySendStackToBelt(slot, requireDeeperStack: true);
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        public void SetHandSelectionVisuals(bool active)
+        {
+            foreach (QueueColumn column in columns)
+            {
+                if (column == null) continue;
+
+                QueueSlot[] childSlots = column.GetComponentsInChildren<QueueSlot>(true);
+                for (int i = 0; i < childSlots.Length; i++)
+                {
+                    QueueSlot slot = childSlots[i];
+                    StackItem stack = slot != null ? slot.CurrentStack : null;
+                    if (stack == null) continue;
+
+                    bool eligible = active && column.IsDeeperSlot(slot) && !stack.IsJumping;
+                    stack.SetHandSelectionHighlight(eligible);
+                }
+            }
+        }
+
+        public void NotifyQueueChanged() => QueueChanged?.Invoke();
+
+        private bool IsTransitioning
+        {
+            get
+            {
+                foreach (QueueColumn column in columns)
+                {
+                    if (column != null && column.IsTransitioning) return true;
+                }
+
+                return false;
+            }
+        }
+
+        private List<StackItem> GetOccupiedStacksInSlotOrder(List<QueueSlot> slots)
+        {
+            List<StackItem> stacks = new List<StackItem>();
+            foreach (QueueColumn column in columns)
+            {
+                if (column == null) continue;
+
+                QueueSlot[] childSlots = column.GetComponentsInChildren<QueueSlot>(true);
+                for (int i = 0; i < childSlots.Length; i++)
+                {
+                    QueueSlot slot = childSlots[i];
+                    if (slot == null || !slot.IsOccupied || slot.CurrentStack == null) continue;
+
+                    slots?.Add(slot);
+                    stacks.Add(slot.CurrentStack);
+                }
+            }
+
+            return stacks;
+        }
+
+        private static bool AreVisuallyEquivalent(StackItem first, StackItem second)
+        {
+            return first != null && second != null && first.Data == second.Data &&
+                first.RemainingItemCount == second.RemainingItemCount;
+        }
+
+        private static bool HasVisibleOrderChanged(List<StackItem> original, List<StackItem> shuffled)
+        {
+            for (int i = 0; i < original.Count; i++)
+            {
+                if (!AreVisuallyEquivalent(original[i], shuffled[i])) return true;
+            }
+
+            return false;
+        }
+
+        private static void FisherYatesShuffle(List<StackItem> stacks)
+        {
+            for (int i = stacks.Count - 1; i > 0; i--)
+            {
+                int selectedIndex = UnityEngine.Random.Range(0, i + 1);
+                (stacks[i], stacks[selectedIndex]) = (stacks[selectedIndex], stacks[i]);
+            }
+        }
+
+        private static void ForceDistinctSwap(List<StackItem> stacks)
+        {
+            for (int i = 0; i < stacks.Count; i++)
+            {
+                for (int j = i + 1; j < stacks.Count; j++)
+                {
+                    if (AreVisuallyEquivalent(stacks[i], stacks[j])) continue;
+                    (stacks[i], stacks[j]) = (stacks[j], stacks[i]);
+                    return;
+                }
+            }
         }
     }
 }

@@ -27,13 +27,15 @@ namespace RestaurantLoop.Core
         private readonly List<StackItem> activeStacks = new List<StackItem>();
         private int occupiedCapacity = 0;
         private int pendingJumpsCount = 0;
+        private int attemptCapacityBonus;
 
-        public bool CanAcceptStack => occupiedCapacity < maxCapacity;
+        public bool CanAcceptStack => occupiedCapacity < MaxCapacity;
         public bool IsClockwise => isClockwise;
         public float MoveSpeed => moveSpeed;
         public SplineConveyorPath Path => path;
         public int OccupiedCapacity => occupiedCapacity;
-        public int MaxCapacity => maxCapacity;
+        public int AuthoredMaxCapacity => maxCapacity;
+        public int MaxCapacity => maxCapacity + attemptCapacityBonus;
 
         public event Action<int, int> CapacityChanged;
         public event Action<StackItem> StackEnteredBelt;
@@ -126,7 +128,20 @@ namespace RestaurantLoop.Core
             if (!CanAcceptStack) return false;
 
             occupiedCapacity++;
-            CapacityChanged?.Invoke(occupiedCapacity, maxCapacity);
+            CapacityChanged?.Invoke(occupiedCapacity, MaxCapacity);
+            return true;
+        }
+
+        /// <summary>
+        /// Raises only this attempt's simultaneous conveyor-stack limit. It never
+        /// creates a stack or changes queue/rack state.
+        /// </summary>
+        public bool TryAddAttemptCapacity(int amount = 1)
+        {
+            if (amount <= 0) return false;
+
+            attemptCapacityBonus += amount;
+            CapacityChanged?.Invoke(occupiedCapacity, MaxCapacity);
             return true;
         }
 
@@ -153,7 +168,7 @@ namespace RestaurantLoop.Core
             if (occupiedCapacity > 0)
             {
                 occupiedCapacity--;
-                CapacityChanged?.Invoke(occupiedCapacity, maxCapacity);
+                CapacityChanged?.Invoke(occupiedCapacity, MaxCapacity);
             }
         }
 
@@ -191,7 +206,7 @@ namespace RestaurantLoop.Core
 
         public bool ShouldKeepLoopingOnBelt()
         {
-            return StackItem.TotalActiveStackCount <= maxCapacity;
+            return StackItem.TotalActiveStackCount <= MaxCapacity;
         }
 
         public void OnStackCompletedBeltLoop(StackItem stack)
@@ -268,7 +283,8 @@ namespace RestaurantLoop.Core
             activeStacks.Clear();
             occupiedCapacity = 0;
             pendingJumpsCount = 0;
-            CapacityChanged?.Invoke(occupiedCapacity, maxCapacity);
+            attemptCapacityBonus = 0;
+            CapacityChanged?.Invoke(occupiedCapacity, MaxCapacity);
         }
 
         public float GetRequiredTravelDistance()

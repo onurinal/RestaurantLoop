@@ -9,8 +9,10 @@ namespace RestaurantLoop.Core
         [SerializeField] private float shiftDuration = 0.3f;
 
         private readonly List<QueueSlot> slots = new List<QueueSlot>();
+        private bool isShifting;
 
         public QueueSlot FrontSlot => slots.Count > 0 ? slots[0] : null;
+        public bool IsTransitioning => isShifting;
 
         public int OccupiedSlotCount
         {
@@ -38,43 +40,61 @@ namespace RestaurantLoop.Core
         public void TrySendFrontStackToBelt()
         {
             QueueSlot front = FrontSlot;
-            if (front == null || !front.IsOccupied) return;
+            TrySendStackToBelt(front, requireDeeperStack: false);
+        }
 
-            StackItem stackToSend = front.CurrentStack;
-            if (stackToSend == null || stackToSend.IsJumping) return;
+        public bool ContainsSlot(QueueSlot slot) => slot != null && slots.Contains(slot);
+
+        public bool IsDeeperSlot(QueueSlot slot) => slots.IndexOf(slot) > 0;
+
+        public bool TrySendStackToBelt(QueueSlot slot, bool requireDeeperStack)
+        {
+            if (isShifting || slot == null || !slot.IsOccupied) return false;
+
+            int slotIndex = slots.IndexOf(slot);
+            if (slotIndex < 0 || (requireDeeperStack && slotIndex == 0)) return false;
+
+            StackItem stackToSend = slot.CurrentStack;
+            if (stackToSend == null || stackToSend.IsJumping) return false;
 
             if (stackToSend.RemainingItemCount <= 0)
             {
-                front.ClearSlot();
+                slot.ClearSlot();
                 stackToSend.transform.SetParent(null, true);
                 Destroy(stackToSend.gameObject);
-                ShiftColumnItemsUp();
-                return;
+                ShiftColumnItemsUp(slotIndex);
+                QueueManager.Instance?.NotifyQueueChanged();
+                return true;
             }
 
             // Check conveyor availability BEFORE clearing the slot
             if (!ConveyorManager.Instance.CanAcceptStack || !ConveyorManager.Instance.IsEntranceClear())
             {
                 stackToSend.Shake();
-                return;
+                return false;
             }
 
             // Clear slot only after confirming the transfer is valid
-            front.ClearSlot();
+            slot.ClearSlot();
 
             if (!ConveyorManager.Instance.TrySendStackToBelt(stackToSend))
             {
-                front.PlaceStack(stackToSend);
+                slot.PlaceStack(stackToSend);
                 stackToSend.transform.localPosition = Vector3.zero;
-                return;
+                return false;
             }
 
-            ShiftColumnItemsUp();
+            ShiftColumnItemsUp(slotIndex);
+            QueueManager.Instance?.NotifyQueueChanged();
+            return true;
         }
 
-        private void ShiftColumnItemsUp()
+        private void ShiftColumnItemsUp(int emptySlotIndex)
         {
-            for (int i = 1; i < slots.Count; i++)
+            isShifting = true;
+            int pendingMoves = 0;
+
+            for (int i = emptySlotIndex + 1; i < slots.Count; i++)
             {
                 QueueSlot currentSlot = slots[i];
                 QueueSlot previousSlot = slots[i - 1];
@@ -85,10 +105,26 @@ namespace RestaurantLoop.Core
 
                     currentSlot.ClearSlot();
                     itemToMove.transform.SetParent(previousSlot.transform);
+                    pendingMoves++;
 
                     itemToMove.transform.DOLocalMove(Vector3.zero, shiftDuration)
-                        .OnComplete(() => { previousSlot.PlaceStack(itemToMove); });
+                        .OnComplete(() =>
+                        {
+                            previousSlot.PlaceStack(itemToMove);
+                            pendingMoves--;
+                            if (pendingMoves == 0)
+                            {
+                                isShifting = false;
+                                QueueManager.Instance?.NotifyQueueChanged();
+                            }
+                        });
                 }
+            }
+
+            if (pendingMoves == 0)
+            {
+                isShifting = false;
+                QueueManager.Instance?.NotifyQueueChanged();
             }
         }
     }
