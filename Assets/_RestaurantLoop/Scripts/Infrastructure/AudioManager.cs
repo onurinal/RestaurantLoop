@@ -22,6 +22,12 @@ namespace RestaurantLoop.Audio
         public AudioClip happyJumpSound;   
         public AudioClip popSound;         
         public AudioClip customerEntranceSound; // Played when the gate opens and the crowd enters
+        
+        [Tooltip("Played when the level is successfully completed")]
+        public AudioClip levelWinSound; 
+        
+        [Tooltip("Played when the rack overflows and the level is lost")]
+        public AudioClip levelLoseSound;
 
         private void Awake()
         {

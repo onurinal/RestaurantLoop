@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
+using RestaurantLoop.Audio; // Required for audio playback
 
 namespace RestaurantLoop.Core
 {
@@ -109,6 +110,14 @@ namespace RestaurantLoop.Core
             if (CurrentState != LevelState.Playing) return;
 
             CurrentState = LevelState.Lost;
+            
+            // --- PLAY LOSE SOUND ---
+            if (AudioManager.Instance != null && AudioManager.Instance.levelLoseSound != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.levelLoseSound);
+            }
+            // -----------------------
+            
             Debug.LogWarning("<color=orange>[LEVEL FAILED]</color> Conveyor stack reached exit while Rack is full!");
             OnLevelLost?.Invoke();
         }
@@ -128,6 +137,14 @@ namespace RestaurantLoop.Core
             if (CurrentState != LevelState.Playing) return;
 
             CurrentState = LevelState.Won;
+            
+            // --- PLAY WIN SOUND ---
+            if (AudioManager.Instance != null && AudioManager.Instance.levelWinSound != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.levelWinSound);
+            }
+            // ----------------------
+            
             Debug.Log("<color=green>[LEVEL COMPLETED]</color> All customer demands fulfilled!");
             OnLevelWon?.Invoke();
         }

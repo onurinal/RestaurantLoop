@@ -57,6 +57,8 @@ MonoBehaviour:
   happyJumpSound: {fileID: 8300000, guid: 5791c0e0a6066274bb9de1196ffe4eb9, type: 3}
   popSound: {fileID: 8300000, guid: 8ff5486e5ce3bdb4088cab4ece2c4864, type: 3}
   customerEntranceSound: {fileID: 8300000, guid: 7d44f2e5ddba6014bb2f90ddee5f4cfc, type: 3}
+  levelWinSound: {fileID: 8300000, guid: 6f7f7e0fd8f764f4a9a6bda8688b4bd2, type: 3}
+  levelLoseSound: {fileID: 8300000, guid: fcbc6e96d9fa5344a9b2d27061987730, type: 3}
 --- !u!82 &3898750725045401640
 AudioSource:
   m_ObjectHideFlags: 0
