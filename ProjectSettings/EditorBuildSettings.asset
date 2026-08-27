@@ -11,7 +11,7 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/_RestaurantLoop/Scenes/Enes-Gameplay.unity
     guid: ea868e0923459f74c9629c3536b04a49
-  - enabled: 1
+  - enabled: 0
     path: Assets/_RestaurantLoop/Scenes/Hazar-Gameplay.unity
     guid: 8167938de0b03704c8ee6bd89aaef74e
   - enabled: 0
