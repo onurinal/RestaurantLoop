@@ -51,36 +51,52 @@ namespace RestaurantLoop.Core
 
         private void GenerateRectangular(int totalCount, Vector3 targetCenter, Vector2 areaSize, float minDistance)
         {
-            int maxAttemptsPerPoint = 50;
+            if (totalCount <= 0 || areaSize.x <= 0f || areaSize.y <= 0f) return;
 
-            for (int i = 0; i < totalCount; i++)
+            float width = areaSize.x;
+            float length = areaSize.y;
+
+            // Dynamically calculate grid dimension bounds based on aspect ratio
+            float aspectRatio = width / length;
+            int cols = Mathf.Max(1, Mathf.RoundToInt(Mathf.Sqrt(totalCount * aspectRatio)));
+            int rows = Mathf.Max(1, Mathf.CeilToInt((float)totalCount / cols));
+
+            float cellWidth = width / cols;
+            float cellLength = length / rows;
+
+            List<Vector3> candidatePositions = new List<Vector3>();
+
+            for (int r = 0; r < rows; r++)
             {
-                Vector3 candidatePos = Vector3.zero;
-                bool validPositionFound = false;
-
-                for (int attempt = 0; attempt < maxAttemptsPerPoint; attempt++)
+                for (int c = 0; c < cols; c++)
                 {
-                    float rx = Random.Range(-areaSize.x * 0.5f, areaSize.x * 0.5f);
-                    float rz = Random.Range(-areaSize.y * 0.5f, areaSize.y * 0.5f);
-                    candidatePos = targetCenter + new Vector3(rx, 0f, rz);
+                    if (candidatePositions.Count >= totalCount) break;
 
-                    if (IsPositionValid(candidatePos, minDistance))
-                    {
-                        validPositionFound = true;
-                        break;
-                    }
+                    // Distribute positions across the entire bounds uniformly
+                    float localX = -width * 0.5f + (c + 0.5f) * cellWidth;
+                    float localZ = length * 0.5f - (r + 0.5f) * cellLength;
+
+                    // Apply controlled jitter within cell bounds for organic placement
+                    float jitterX = Random.Range(-cellWidth * 0.25f, cellWidth * 0.25f);
+                    float jitterZ = Random.Range(-cellLength * 0.25f, cellLength * 0.25f);
+
+                    Vector3 candidatePos = targetCenter + new Vector3(localX + jitterX, 0f, localZ + jitterZ);
+                    candidatePositions.Add(candidatePos);
                 }
+            }
 
-                if (!validPositionFound)
-                {
-                    float rx = Random.Range(-areaSize.x * 0.5f, areaSize.x * 0.5f);
-                    float rz = Random.Range(-areaSize.y * 0.5f, areaSize.y * 0.5f);
-                    candidatePos = targetCenter + new Vector3(rx, 0f, rz);
-                }
+            // Shuffle placement order deterministically to balance top, middle, and bottom filling
+            for (int i = candidatePositions.Count - 1; i > 0; i--)
+            {
+                int randIndex = Random.Range(0, i + 1);
+                (candidatePositions[i], candidatePositions[randIndex]) = (candidatePositions[randIndex], candidatePositions[i]);
+            }
 
+            foreach (var pos in candidatePositions)
+            {
                 slots.Add(new CentralCrowdSlot
                 {
-                    Position = candidatePos,
+                    Position = pos,
                     YRotation = Random.Range(0f, 360f),
                     OccupyingCustomer = null
                 });
