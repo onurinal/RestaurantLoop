@@ -184,9 +184,12 @@ namespace RestaurantLoop.Core
             Customer customer = visibleSlot.OccupyingCustomer;
             visibleSlot.OccupyingCustomer = null;
             edgeSlots.Occupy(edgeSlotIndex, customer);
-            boardGrid.SetEdgeCellFood(edgeSlotIndex, customer.RequiredData);
 
-            customer.MoveToEdgeSlot(GetEdgeSlotWorldPosition(edgeSlotIndex), GetEdgeSlotYRotation(edgeSlotIndex), GetRoomCenter());
+            customer.MoveToEdgeSlot(
+                GetEdgeSlotWorldPosition(edgeSlotIndex),
+                GetEdgeSlotYRotation(edgeSlotIndex),
+                GetRoomCenter(),
+                onComplete: () => { boardGrid.SetEdgeCellFood(edgeSlotIndex, customer.RequiredData); });
 
             EdgeCustomerReplacementStarted?.Invoke(customer, edgeSlotIndex);
         }

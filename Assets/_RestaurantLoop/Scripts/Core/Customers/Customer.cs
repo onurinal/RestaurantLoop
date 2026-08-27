@@ -105,7 +105,7 @@ namespace RestaurantLoop.Core
         public void MoveAlongPath(Vector3[] waypoints, float duration, bool setAsEdge, float targetYRotation = 0f, Vector3 roomCenter = default,
             Action onComplete = null)
         {
-            SetEdgeStatus(setAsEdge);
+            SetEdgeStatus(false);
             SetBalloonActive(false);
 
             if (setAsEdge)
@@ -127,8 +127,9 @@ namespace RestaurantLoop.Core
                     ModelTransform.DOLocalRotate(new Vector3(0f, targetYRotation, 0f), 0.2f).OnComplete(() =>
                     {
                         if (animator != null) animator.SetBool(IsWalkingHash, false);
-                        if (IsEdgeCustomer)
+                        if (setAsEdge)
                         {
+                            SetEdgeStatus(true);
                             AlignBalloonToCenter(roomCenter);
                             SetBalloonActive(true);
                         }
@@ -140,7 +141,7 @@ namespace RestaurantLoop.Core
 
         public void MoveToEdgeSlot(Vector3 targetPosition, float targetYRotation = 0f, Vector3 roomCenter = default, Action onComplete = null)
         {
-            SetEdgeStatus(true);
+            SetEdgeStatus(false);
             SetBalloonActive(false);
 
             SetDesaturation(0f, 0.4f);
@@ -166,6 +167,7 @@ namespace RestaurantLoop.Core
                     ModelTransform.DOLocalRotate(new Vector3(0f, targetYRotation, 0f), 0.2f).OnComplete(() =>
                     {
                         if (animator != null) animator.SetBool(IsWalkingHash, false);
+                        SetEdgeStatus(true);
                         AlignBalloonToCenter(roomCenter);
                         SetBalloonActive(true);
                         onComplete?.Invoke();
