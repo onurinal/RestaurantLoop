@@ -18,39 +18,60 @@ namespace RestaurantLoop.UI
 
         [Header("Settings Elements")]
         [SerializeField] private Button closeSettingsButton;
+        
+        [Header("Legacy Audio Sliders (Kept for future use)")]
         [SerializeField] private Slider musicSlider; 
         [SerializeField] private Slider sfxSlider;   
 
+        [Header("Audio Toggle Buttons")]
+        [SerializeField] private Button musicToggleButton;
+        [SerializeField] private Button sfxToggleButton;
+        [SerializeField] private Image musicToggleImage;
+        [SerializeField] private Image sfxToggleImage;
+        
+        [Header("Audio Toggle Sprites")]
+        [SerializeField] private Sprite musicOnSprite;
+        [SerializeField] private Sprite musicOffSprite;
+        [SerializeField] private Sprite sfxOnSprite;
+        [SerializeField] private Sprite sfxOffSprite;
+
+        private bool isMusicOn = true;
+        private bool isSfxOn = true;
+
         private void Start()
         {
-            // Initial panel state
             settingsPanel.SetActive(false);
 
-            // Add button listeners for core logic
             playButton.onClick.AddListener(StartGame);
             settingsButton.onClick.AddListener(OpenSettings);
             closeSettingsButton.onClick.AddListener(CloseSettings);
 
-            // Add button listeners for tap sound
             playButton.onClick.AddListener(PlayTapSound);
             settingsButton.onClick.AddListener(PlayTapSound);
             closeSettingsButton.onClick.AddListener(PlayTapSound);
 
-            // Load saved audio levels from device (defaults to 1f, max volume)
-            musicSlider.value = PlayerPrefs.GetFloat("MusicVolume", 1f);
-            sfxSlider.value = PlayerPrefs.GetFloat("SfxVolume", 1f);
+            float savedMusicVol = PlayerPrefs.GetFloat("MusicVolume", 1f);
+            float savedSfxVol = PlayerPrefs.GetFloat("SfxVolume", 1f);
+            isMusicOn = savedMusicVol > 0f;
+            isSfxOn = savedSfxVol > 0f;
 
-            // Bind functions to slider value changes
-            musicSlider.onValueChanged.AddListener(UpdateMusicVolume);
-            sfxSlider.onValueChanged.AddListener(UpdateSfxVolume);
+            if (musicSlider != null) musicSlider.value = savedMusicVol;
+            if (sfxSlider != null) sfxSlider.value = savedSfxVol;
+
+            UpdateMusicButtonVisual();
+            UpdateSfxButtonVisual();
+
+            if (musicSlider != null) musicSlider.onValueChanged.AddListener(UpdateMusicVolume);
+            if (sfxSlider != null) sfxSlider.onValueChanged.AddListener(UpdateSfxVolume);
             
-            // MVP Simplification: Always start from Level 1 on fresh boot
+            if (musicToggleButton != null) musicToggleButton.onClick.AddListener(ToggleMusic);
+            if (sfxToggleButton != null) sfxToggleButton.onClick.AddListener(ToggleSFX);
+            
             levelText.text = "Level 1";
         }
 
         private void PlayTapSound()
         {
-            // If AudioManager exists, play the tap sound
             if (AudioManager.Instance != null && AudioManager.Instance.tapSound != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.tapSound);
@@ -59,39 +80,68 @@ namespace RestaurantLoop.UI
 
         private void StartGame()
         {
-            // Load the main gameplay scene
             SceneManager.LoadScene("Onur-2"); 
         }
 
         private void OpenSettings() => settingsPanel.SetActive(true);
         private void CloseSettings() => settingsPanel.SetActive(false);
 
+        // --- New Toggle Logic ---
+        private void ToggleMusic()
+        {
+            isMusicOn = !isMusicOn;
+            float targetVolume = isMusicOn ? 1f : 0f;
+            UpdateMusicVolume(targetVolume);
+            
+            if (musicSlider != null) musicSlider.value = targetVolume;
+            UpdateMusicButtonVisual();
+            PlayTapSound();
+        }
+
+        private void ToggleSFX()
+        {
+            isSfxOn = !isSfxOn;
+            float targetVolume = isSfxOn ? 1f : 0f;
+            UpdateSfxVolume(targetVolume);
+            
+            if (sfxSlider != null) sfxSlider.value = targetVolume;
+            UpdateSfxButtonVisual();
+            PlayTapSound();
+        }
+
+        private void UpdateMusicButtonVisual()
+        {
+            if (musicToggleImage != null)
+                musicToggleImage.sprite = isMusicOn ? musicOnSprite : musicOffSprite;
+        }
+
+        private void UpdateSfxButtonVisual()
+        {
+            if (sfxToggleImage != null)
+                sfxToggleImage.sprite = isSfxOn ? sfxOnSprite : sfxOffSprite;
+        }
+
+        // --- Legacy Slider Logic ---
         private void UpdateMusicVolume(float value)
         {
-            // Save the slider value (between 0 and 1) to device
             PlayerPrefs.SetFloat("MusicVolume", value);
-
-            // Update the playing music volume instantly
-            if (AudioManager.Instance != null)
-            {
-                AudioManager.Instance.SetMusicVolume(value);
-            }
+            if (AudioManager.Instance != null) AudioManager.Instance.SetMusicVolume(value);
         }
 
         private void UpdateSfxVolume(float value)
         {
-            // Save the slider value (between 0 and 1) to device
             PlayerPrefs.SetFloat("SfxVolume", value);
         }
 
         private void OnDestroy()
         {
-            // Clean up listeners to prevent memory leaks
             playButton.onClick.RemoveAllListeners();
             settingsButton.onClick.RemoveAllListeners();
             closeSettingsButton.onClick.RemoveAllListeners();
-            musicSlider.onValueChanged.RemoveAllListeners();
-            sfxSlider.onValueChanged.RemoveAllListeners();
+            if (musicSlider != null) musicSlider.onValueChanged.RemoveAllListeners();
+            if (sfxSlider != null) sfxSlider.onValueChanged.RemoveAllListeners();
+            if (musicToggleButton != null) musicToggleButton.onClick.RemoveAllListeners();
+            if (sfxToggleButton != null) sfxToggleButton.onClick.RemoveAllListeners();
         }
     }
 }
