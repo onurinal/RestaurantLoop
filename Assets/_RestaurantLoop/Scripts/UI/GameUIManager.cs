@@ -89,8 +89,10 @@ namespace RestaurantLoop.UI
 
             nextLevelButton.onClick.AddListener(OnNextLevelClicked);
             nextLevelButton.onClick.AddListener(PlayTapSound);
+            
             retryButton.onClick.AddListener(OnRetryClicked);
             retryButton.onClick.AddListener(PlayTapSound);
+            
             winMainMenuButton.onClick.AddListener(OnMainMenuClicked);
             winMainMenuButton.onClick.AddListener(PlayTapSound);
             loseMainMenuButton.onClick.AddListener(OnMainMenuClicked);
@@ -169,7 +171,18 @@ namespace RestaurantLoop.UI
             if (LevelManager.Instance != null) LevelManager.Instance.CompleteLevel();
         }
 
-        private void OnRetryClicked() => SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        // --- YENİ EKLENEN RESTART MANTIĞI ---
+        private void OnRetryClicked()
+        {
+            losePanel.SetActive(false); // Kaybetme panelini kapat
+            
+            // Sahneyi baştan yüklemek yerine mevcut level verilerini sıfırla
+            if (LevelManager.Instance != null)
+            {
+                LevelManager.Instance.LoadCurrentLevel();
+            }
+        }
+
         private void OnMainMenuClicked() => SceneManager.LoadScene("MainMenu");
 
         private void OnDestroy()
