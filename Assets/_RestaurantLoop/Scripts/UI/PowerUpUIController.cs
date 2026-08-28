@@ -1,4 +1,5 @@
 using TMPro;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using RestaurantLoop.Core;
@@ -11,10 +12,11 @@ namespace RestaurantLoop.UI
     /// </summary>
     public sealed class PowerUpUIController : MonoBehaviour
     {
-        private Button addStackButton;
-        private Button shuffleButton;
-        private Button handButton;
-        private Button clearColorButton;
+        [Header("Power-Up Buttons")]
+        [SerializeField] private Button addStackButton;
+        [SerializeField] private Button shuffleButton;
+        [SerializeField] private Button handButton;
+        [SerializeField] private Button clearColorButton;
         private TMP_Text addStackLabel;
         private TMP_Text shuffleLabel;
         private TMP_Text handLabel;
@@ -44,17 +46,7 @@ namespace RestaurantLoop.UI
                 ? PowerUpManager.Instance
                 : gameObject.AddComponent<PowerUpManager>();
 
-            addStackButton = FindButton("PowerUP1");
-            shuffleButton = FindButton("PowerUP2");
-            handButton = FindButton("PowerUP3");
-            clearColorButton = FindButton("PowerUP4");
-            if (addStackButton != null && addStackButton.transform.parent != null)
-            {
-                // The authored placeholder container was previously hidden. Keep
-                // the scene usable even if a later scene copy retains that flag.
-                addStackButton.transform.parent.gameObject.SetActive(true);
-            }
-
+            WarnAboutMissingPowerUpButtons();
             addStackLabel = GetLabel(addStackButton);
             shuffleLabel = GetLabel(shuffleButton);
             handLabel = GetLabel(handButton);
@@ -116,15 +108,23 @@ namespace RestaurantLoop.UI
         public void CancelHandSelection() => powerUps?.CancelHandSelection();
         public void CancelClearColorSelection() => powerUps?.CancelClearColorSelection();
 
-        private Button FindButton(string name)
-        {
-            GameObject buttonObject = GameObject.Find(name);
-            return buttonObject != null ? buttonObject.GetComponent<Button>() : null;
-        }
-
         private static TMP_Text GetLabel(Button button)
         {
             return button != null ? button.GetComponentInChildren<TMP_Text>(true) : null;
+        }
+
+        private void WarnAboutMissingPowerUpButtons()
+        {
+            List<string> missingButtons = new List<string>();
+            if (addStackButton == null) missingButtons.Add("Add Stack Button");
+            if (shuffleButton == null) missingButtons.Add("Shuffle Button");
+            if (handButton == null) missingButtons.Add("Hand Button");
+            if (clearColorButton == null) missingButtons.Add("Clear Color Button");
+
+            if (missingButtons.Count > 0)
+            {
+                Debug.LogWarning($"[PowerUpUIController] Missing inspector button assignments: {string.Join(", ", missingButtons)}.", this);
+            }
         }
 
         private static void SetButton(Button button, TMP_Text label, string title, int uses, bool interactable)
