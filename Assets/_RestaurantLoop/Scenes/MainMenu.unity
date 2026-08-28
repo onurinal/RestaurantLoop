@@ -290,8 +290,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 18, y: -443}
-  m_SizeDelta: {x: 500, y: 160}
+  m_AnchoredPosition: {x: 18, y: -295}
+  m_SizeDelta: {x: 480, y: 180}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &532749119
 MonoBehaviour:
@@ -1350,7 +1350,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Level 1
+  m_text: LEVEL 1
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: cbac58d5fafbc144584a1474b30b7573, type: 2}
   m_sharedMaterial: {fileID: 8257358361544306033, guid: cbac58d5fafbc144584a1474b30b7573, type: 2}
@@ -1377,8 +1377,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 100
-  m_fontSizeBase: 100
+  m_fontSize: 96
+  m_fontSizeBase: 96
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -1387,7 +1387,7 @@ MonoBehaviour:
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
-  m_characterSpacing: -10
+  m_characterSpacing: -8
   m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
@@ -1626,7 +1626,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1524211537609115488, guid: 392f8fd9a12eb88468a55cabb6d966ac, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 155
+      value: 212
       objectReference: {fileID: 0}
     - target: {fileID: 1524211537609115488, guid: 392f8fd9a12eb88468a55cabb6d966ac, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
