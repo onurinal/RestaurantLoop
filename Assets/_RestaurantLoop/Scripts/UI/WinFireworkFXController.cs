@@ -6,10 +6,11 @@ namespace RestaurantLoop.UI
 {
     /// <summary>
     /// Plays a bounded fireworks sequence whenever the owning win panel becomes active.
+    /// Manages active particle instance lifecycles and cleans them up immediately on panel disable or scene reload.
     /// </summary>
     public sealed class WinFireworkFXController : MonoBehaviour
     {
-        [SerializeField] private int explosionCount = 8;
+        private const int ExplosionCount = 4;
 
         [Header("References")]
         [SerializeField] private GameObject fireworkPrefab;
@@ -33,6 +34,7 @@ namespace RestaurantLoop.UI
 
         private readonly List<ParticleSystem> particleSystems = new();
         private readonly List<ParticleSystemRenderer> particleRenderers = new();
+        private readonly List<GameObject> activeSpawnedFireworks = new();
 
         private Coroutine sequence;
         private int sortingLayerId;
@@ -42,7 +44,36 @@ namespace RestaurantLoop.UI
         private void Awake()
         {
             winCanvas ??= GetComponentInParent<Canvas>();
-            targetCamera ??= Camera.main;
+            RefreshReferences();
+            instanceLifetime = CalculatePrefabLifetime();
+        }
+
+        private void OnEnable()
+        {
+            RefreshReferences();
+            ClearSpawnedFireworks();
+            sequence = StartCoroutine(PlaySequence());
+        }
+
+        private void OnDisable()
+        {
+            if (sequence != null)
+            {
+                StopCoroutine(sequence);
+                sequence = null;
+            }
+
+            ClearSpawnedFireworks();
+        }
+
+        private void RefreshReferences()
+        {
+            if (winCanvas == null) winCanvas = GetComponentInParent<Canvas>();
+
+            if (targetCamera == null)
+            {
+                targetCamera = Camera.main;
+            }
 
             if (winCanvas != null)
             {
@@ -53,39 +84,23 @@ namespace RestaurantLoop.UI
             {
                 particleSortingOrder = sortingOrderOffset;
             }
-
-            instanceLifetime = CalculatePrefabLifetime();
-        }
-
-        private void OnEnable()
-        {
-            sequence = StartCoroutine(PlaySequence());
-        }
-
-        private void OnDisable()
-        {
-            if (sequence == null)
-            {
-                return;
-            }
-
-            StopCoroutine(sequence);
-            sequence = null;
         }
 
         private IEnumerator PlaySequence()
         {
+            RefreshReferences();
+
             if (fireworkPrefab == null || targetCamera == null)
             {
-                Debug.LogWarning($"{nameof(WinFireworkFXController)} on '{name}' requires a firework prefab and camera.", this);
+                Debug.LogWarning($"{nameof(WinFireworkFXController)} on '{name}' requires a firework prefab and active target camera.", this);
                 yield break;
             }
 
-            for (int i = 0; i < explosionCount; i++)
+            for (int i = 0; i < ExplosionCount; i++)
             {
                 SpawnFirework();
 
-                if (i < explosionCount - 1)
+                if (i < ExplosionCount - 1)
                 {
                     yield return new WaitForSeconds(Random.Range(
                         Mathf.Min(minimumDelay, maximumDelay),
@@ -103,8 +118,22 @@ namespace RestaurantLoop.UI
                 targetCamera.ViewportToWorldPoint(GetEdgeViewportPosition()),
                 Quaternion.identity);
 
+            activeSpawnedFireworks.Add(instance);
             ApplyParticleSorting(instance);
             Destroy(instance, instanceLifetime);
+        }
+
+        private void ClearSpawnedFireworks()
+        {
+            for (int i = activeSpawnedFireworks.Count - 1; i >= 0; i--)
+            {
+                if (activeSpawnedFireworks[i] != null)
+                {
+                    Destroy(activeSpawnedFireworks[i]);
+                }
+            }
+
+            activeSpawnedFireworks.Clear();
         }
 
         private Vector3 GetEdgeViewportPosition()
@@ -116,13 +145,13 @@ namespace RestaurantLoop.UI
 
             switch (Random.Range(0, 4))
             {
-                case 0:
+                case 0: // Left edge
                     return new Vector3(Random.Range(minX, Mathf.Lerp(minX, maxX, 0.25f)), Random.Range(minY, maxY), spawnDistance);
-                case 1:
+                case 1: // Right edge
                     return new Vector3(Random.Range(Mathf.Lerp(minX, maxX, 0.75f), maxX), Random.Range(minY, maxY), spawnDistance);
-                case 2:
+                case 2: // Upper area
                     return new Vector3(Random.Range(minX, maxX), Random.Range(Mathf.Lerp(minY, maxY, 0.65f), maxY), spawnDistance);
-                default:
+                default: // Lower area
                     return new Vector3(Random.Range(minX, maxX), Random.Range(minY, Mathf.Lerp(minY, maxY, 0.35f)), spawnDistance);
             }
         }
@@ -142,10 +171,7 @@ namespace RestaurantLoop.UI
 
         private float CalculatePrefabLifetime()
         {
-            if (fireworkPrefab == null)
-            {
-                return fallbackLifetime;
-            }
+            if (fireworkPrefab == null) return fallbackLifetime;
 
             particleSystems.Clear();
             fireworkPrefab.GetComponentsInChildren(true, particleSystems);
