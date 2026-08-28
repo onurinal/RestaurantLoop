@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using DG.Tweening;
 
 namespace RestaurantLoop.Core
 {
@@ -33,6 +34,17 @@ namespace RestaurantLoop.Core
 
         [SerializeField, Min(0f)] private float clearColorResolutionDuration = 1.3f;
 
+        [Header("Selection Camera")]
+        [Tooltip("Signed distance applied along Camera.main's local Y axis during selection. Use a negative value to lower the camera.")]
+        [SerializeField] private float selectionCameraLocalYOffset = -3f;
+        [SerializeField, Min(0f)] private float selectionCameraMoveDuration = 0.3f;
+
+        private Transform selectionCameraTransform;
+        private Vector3 selectionCameraBaseWorldPosition;
+        private Tween selectionCameraTween;
+        private bool hasSelectionCameraBasePosition;
+        private bool warnedMissingSelectionCamera;
+
         public bool IsHandSelectionActive { get; private set; }
         public bool IsClearColorSelectionActive { get; private set; }
         public bool IsClearColorResolving { get; private set; }
@@ -50,6 +62,7 @@ namespace RestaurantLoop.Core
                 return;
             }
 
+            CaptureSelectionCameraBasePosition();
             ResetForNewAttempt();
         }
 
@@ -66,6 +79,7 @@ namespace RestaurantLoop.Core
             UnsubscribeFromLevelEvents();
             EndHandSelection();
             EndClearColorResolution();
+            RestoreSelectionCameraImmediate();
         }
 
         public int GetRemainingUses(PowerUpType powerUp)
@@ -80,18 +94,17 @@ namespace RestaurantLoop.Core
             }
         }
 
-        public bool CanUseAddStack => IsAttemptPlaying && !IsInteractionLocked && addStackUses > 0 && ConveyorManager.Instance != null;
+        public bool CanUseAddStack => IsAttemptPlaying && IsCrowdReady && !IsInteractionLocked && addStackUses > 0 && ConveyorManager.Instance != null;
 
-        public bool CanUseShuffle => IsAttemptPlaying && !IsInteractionLocked && shuffleUses > 0 &&
+        public bool CanUseShuffle => IsAttemptPlaying && IsCrowdReady && !IsInteractionLocked && shuffleUses > 0 &&
             QueueManager.Instance != null && QueueManager.Instance.CanShuffleQueuedStacks;
 
-        public bool CanBeginHandSelection => IsAttemptPlaying && !IsInteractionLocked && handUses > 0 &&
+        public bool CanBeginHandSelection => IsAttemptPlaying && IsCrowdReady && !IsInteractionLocked && handUses > 0 &&
             ConveyorManager.Instance != null && ConveyorManager.Instance.CanAcceptStack &&
             ConveyorManager.Instance.IsEntranceClear() && QueueManager.Instance != null &&
             QueueManager.Instance.HasSelectableDeeperStack;
 
-        public bool CanBeginClearColorSelection => IsAttemptPlaying && !IsInteractionLocked && clearColorUses > 0 &&
-            CrowdManager.Instance != null && !CrowdManager.Instance.IsSpawningCustomers &&
+        public bool CanBeginClearColorSelection => IsAttemptPlaying && IsCrowdReady && !IsInteractionLocked && clearColorUses > 0 &&
             ((QueueManager.Instance != null && QueueManager.Instance.HasClearColorSelectableStack) ||
              (RackManager.Instance != null && RackManager.Instance.HasClearColorSelectableStack));
 
@@ -121,6 +134,7 @@ namespace RestaurantLoop.Core
             timeScaleBeforeHandSelection = Time.timeScale;
             Time.timeScale = 0f;
             QueueManager.Instance.SetHandSelectionVisuals(true);
+            MoveSelectionCamera(isSelecting: true);
             HandSelectionChanged?.Invoke(true);
             StateChanged?.Invoke();
             return true;
@@ -154,6 +168,7 @@ namespace RestaurantLoop.Core
             Time.timeScale = 0f;
             QueueManager.Instance?.SetClearColorSelectionVisuals(true);
             RackManager.Instance?.SetClearColorSelectionVisuals(true);
+            MoveSelectionCamera(isSelecting: true);
             ClearColorSelectionChanged?.Invoke(true);
             StateChanged?.Invoke();
             return true;
@@ -194,6 +209,7 @@ namespace RestaurantLoop.Core
         }
 
         private bool IsAttemptPlaying => LevelManager.Instance == null || LevelManager.Instance.IsGameActive;
+        private bool IsCrowdReady => CrowdManager.Instance != null && !CrowdManager.Instance.IsSpawningCustomers;
         private bool IsInteractionLocked => IsHandSelectionActive || IsClearColorSelectionActive || IsClearColorResolving;
 
         private void EndHandSelection()
@@ -202,6 +218,7 @@ namespace RestaurantLoop.Core
 
             QueueManager.Instance?.SetHandSelectionVisuals(false);
             Time.timeScale = timeScaleBeforeHandSelection;
+            MoveSelectionCamera(isSelecting: false);
             IsHandSelectionActive = false;
             HandSelectionChanged?.Invoke(false);
         }
@@ -236,6 +253,7 @@ namespace RestaurantLoop.Core
             RackManager.Instance?.SetClearColorSelectionVisuals(false);
             IsClearColorSelectionActive = false;
             if (restoreTimeScale) Time.timeScale = timeScaleBeforeClearColor;
+            MoveSelectionCamera(isSelecting: false);
             ClearColorSelectionChanged?.Invoke(false);
         }
 
@@ -262,6 +280,61 @@ namespace RestaurantLoop.Core
             {
                 IsClearColorResolving = false;
                 Time.timeScale = timeScaleBeforeClearColor;
+                MoveSelectionCamera(isSelecting: false);
+            }
+        }
+
+        private void CaptureSelectionCameraBasePosition()
+        {
+            Camera mainCamera = Camera.main;
+            if (mainCamera != null)
+            {
+                selectionCameraTransform = mainCamera.transform;
+                selectionCameraBaseWorldPosition = selectionCameraTransform.position;
+                hasSelectionCameraBasePosition = true;
+            }
+        }
+
+        private void MoveSelectionCamera(bool isSelecting)
+        {
+            if (selectionCameraTransform == null)
+            {
+                CaptureSelectionCameraBasePosition();
+            }
+
+            if (selectionCameraTransform == null)
+            {
+                if (!warnedMissingSelectionCamera)
+                {
+                    Debug.LogWarning("[PowerUpManager] Camera.main was not found; selection will not move the camera.", this);
+                    warnedMissingSelectionCamera = true;
+                }
+
+                return;
+            }
+
+            if (!hasSelectionCameraBasePosition)
+            {
+                selectionCameraBaseWorldPosition = selectionCameraTransform.position;
+                hasSelectionCameraBasePosition = true;
+            }
+
+            selectionCameraTween?.Kill();
+            Vector3 targetPosition = selectionCameraBaseWorldPosition +
+                (isSelecting ? selectionCameraTransform.up * selectionCameraLocalYOffset : Vector3.zero);
+            selectionCameraTween = selectionCameraTransform.DOMove(targetPosition, selectionCameraMoveDuration)
+                .SetEase(Ease.OutQuad)
+                .SetUpdate(true);
+        }
+
+        private void RestoreSelectionCameraImmediate()
+        {
+            selectionCameraTween?.Kill();
+            selectionCameraTween = null;
+
+            if (selectionCameraTransform != null)
+            {
+                selectionCameraTransform.position = selectionCameraBaseWorldPosition;
             }
         }
 

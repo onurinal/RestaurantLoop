@@ -40,6 +40,7 @@ namespace RestaurantLoop.UI
 
         private PowerUpManager powerUps;
         private bool lastHandAvailability;
+        private bool lastCrowdReady;
 
         private void Start()
         {
@@ -68,6 +69,7 @@ namespace RestaurantLoop.UI
 
             Refresh();
             lastHandAvailability = powerUps.CanBeginHandSelection;
+            lastCrowdReady = IsCrowdReady;
             SetHandSelectionOverlayVisible(powerUps.IsHandSelectionActive);
             SetClearColorSelectionOverlayVisible(powerUps.IsClearColorSelectionActive);
         }
@@ -77,9 +79,11 @@ namespace RestaurantLoop.UI
             if (powerUps == null) return;
 
             bool handAvailability = powerUps.CanBeginHandSelection;
-            if (handAvailability == lastHandAvailability) return;
+            bool crowdReady = IsCrowdReady;
+            if (handAvailability == lastHandAvailability && crowdReady == lastCrowdReady) return;
 
             lastHandAvailability = handAvailability;
+            lastCrowdReady = crowdReady;
             Refresh();
         }
 
@@ -111,9 +115,12 @@ namespace RestaurantLoop.UI
             SetButton(handButton, handLabel, "Hand", powerUps.GetRemainingUses(PowerUpType.Hand), powerUps.CanBeginHandSelection);
             SetButton(clearColorButton, clearColorLabel, "Clear\nColor", powerUps.GetRemainingUses(PowerUpType.ClearColor), powerUps.CanBeginClearColorSelection);
             lastHandAvailability = powerUps.CanBeginHandSelection;
+            lastCrowdReady = IsCrowdReady;
         }
 
         private void HandleCapacityChanged(int _, int __) => Refresh();
+
+        private static bool IsCrowdReady => CrowdManager.Instance != null && !CrowdManager.Instance.IsSpawningCustomers;
 
         private void UseAddStack() => powerUps?.TryUseAddStack();
         private void UseShuffle() => powerUps?.TryUseShuffle();
