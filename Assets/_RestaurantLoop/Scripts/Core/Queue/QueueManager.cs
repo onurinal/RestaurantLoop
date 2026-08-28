@@ -143,6 +143,28 @@ namespace RestaurantLoop.Core
             NotifyQueueChanged();
         }
 
+        /// <summary>
+        /// Finds and returns the first available front-row stack item, completely avoiding deeper/back stacks for the tutorial.
+        /// </summary>
+        public StackItem GetFirstFrontRowStack()
+        {
+            foreach (var column in columns)
+            {
+                if (column == null) continue;
+
+                QueueSlot[] childSlots = column.GetComponentsInChildren<QueueSlot>(true);
+                foreach (var slot in childSlots)
+                {
+                    // Ensure the slot is occupied and is strictly NOT a deeper/back slot
+                    if (slot != null && slot.IsOccupied && slot.CurrentStack != null && !column.IsDeeperSlot(slot))
+                    {
+                        return slot.CurrentStack;
+                    }
+                }
+            }
+            return null;
+        }
+
         public bool HasSelectableDeeperStack
         {
             get
@@ -198,8 +220,6 @@ namespace RestaurantLoop.Core
             List<StackItem> originalStacks = GetOccupiedStacksInSlotOrder(slots);
             List<StackItem> shuffledStacks = new List<StackItem>(originalStacks);
 
-            // Re-roll until the player can actually see a new order. This also
-            // handles duplicate food types/counts without spending a fake Shuffle.
             const int maxShuffleAttempts = 12;
             bool changed = false;
             for (int attempt = 0; attempt < maxShuffleAttempts && !changed; attempt++)

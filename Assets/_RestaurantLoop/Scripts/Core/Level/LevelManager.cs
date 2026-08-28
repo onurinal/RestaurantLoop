@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
-using RestaurantLoop.Audio; // Required for audio playback
+using RestaurantLoop.Audio; 
+using RestaurantLoop.UI; 
 
 namespace RestaurantLoop.Core
 {
@@ -64,6 +66,12 @@ namespace RestaurantLoop.Core
             LevelDataSO data = CurrentLevel;
             if (data == null) return;
 
+            // Hide any active tutorial when loading a new level or restarting
+            if (TutorialManager.Instance != null)
+            {
+                TutorialManager.Instance.HideTutorial();
+            }
+
             // 1. Stop all active conveyor coroutines and kill all running DOTween animations in the scene
             if (ConveyorManager.Instance != null)
             {
@@ -103,6 +111,56 @@ namespace RestaurantLoop.Core
             OnLevelLoaded?.Invoke(CurrentLevelNumber);
 
             Debug.Log($"<color=cyan>[LEVEL START]</color> Loaded Level Index: {currentLevelIndex} (UI Level: {CurrentLevelNumber})");
+
+            // --- TUTORIAL SEQUENCE 1: TRIGGER ON LEVEL 1 ---
+            if (CurrentLevelNumber == 1)
+            {
+                StartCoroutine(ShowStartTutorialRoutine());
+            }
+        }
+
+        private IEnumerator ShowStartTutorialRoutine()
+        {
+            // Wait briefly to ensure the queue and grid are fully instantiated before finding an item
+            yield return new WaitForSeconds(0.6f);
+
+            if (TutorialManager.Instance != null && CurrentState == LevelState.Playing)
+            {
+                StackItem targetFood = null;
+
+                // Safely fetch strictly the front-row stack from QueueManager
+                if (QueueManager.Instance != null)
+                {
+                    targetFood = QueueManager.Instance.GetFirstFrontRowStack();
+                }
+
+                // Fallback mechanism if queue is empty
+                if (targetFood == null)
+                {
+                    StackItem[] allFoods = FindObjectsByType<StackItem>(FindObjectsSortMode.None);
+                    foreach (var food in allFoods)
+                    {
+                        if (food != null && food.gameObject.activeInHierarchy)
+                        {
+                            targetFood = food;
+                            break;
+                        }
+                    }
+                }
+
+                if (targetFood != null)
+                {
+                    // NOTE: Was ShowTutorialAtWorldPosition(...) before — that call never updates
+                    // TutorialManager.CurrentStep, so ConveyorManager's step-1->step-2 check
+                    // (CurrentStep == TapFoodToConveyor) never passed. StartLevel1Tutorial sends
+                    // the exact same message but also correctly sets CurrentStep.
+                    TutorialManager.Instance.StartLevel1Tutorial(targetFood.transform);
+                }
+                else
+                {
+                    Debug.LogWarning("Tutorial: No valid front-row StackItem found to point at!");
+                }
+            }
         }
 
         public void ReportRackOverflow()
@@ -137,6 +195,12 @@ namespace RestaurantLoop.Core
             if (CurrentState != LevelState.Playing) return;
 
             CurrentState = LevelState.Won;
+            
+            // Hide tutorial just in case it's still active when winning
+            if (TutorialManager.Instance != null)
+            {
+                TutorialManager.Instance.HideTutorial();
+            }
             
             // --- PLAY WIN SOUND ---
             if (AudioManager.Instance != null && AudioManager.Instance.levelWinSound != null)

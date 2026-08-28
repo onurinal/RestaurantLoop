@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
+using RestaurantLoop.UI; 
 
 namespace RestaurantLoop.Core
 {
@@ -81,7 +82,6 @@ namespace RestaurantLoop.Core
             {
                 Vector3 slotPosition = new Vector3(startX + (i * slotSpacing), originPosition.y, originPosition.z);
 
-                // Replaced PoolManager with clean Instantiate to prevent stale pooled slot state
                 GameObject slotObj = Instantiate(slotPrefab.gameObject, slotPosition, Quaternion.identity, transform);
                 RackSlot newSlot = slotObj.GetComponent<RackSlot>();
                 newSlot.gameObject.name = $"RackSlot_{i + 1}";
@@ -109,6 +109,15 @@ namespace RestaurantLoop.Core
 
             StackAssignedToRack?.Invoke(stack, emptySlot);
 
+            // --- TUTORIAL STEP 3 TRIGGER: ITEM ARRIVED IN RACK (LEVEL 1) ---
+            if (LevelManager.Instance != null && LevelManager.Instance.CurrentLevelNumber == 1
+                && TutorialManager.Instance != null
+                && TutorialManager.Instance.CurrentStep == TutorialManager.TutorialStep.WaitUntilInRack)
+            {
+                TutorialManager.Instance.StartStepTapRack(emptySlot.transform);
+            }
+            // -----------------------------------------------------------------
+
             return true;
         }
 
@@ -131,6 +140,15 @@ namespace RestaurantLoop.Core
                 targetSlot.ClearSlot();
                 RackStackRedeploymentStarted?.Invoke(stack, targetSlot);
                 ShiftItemsLeft();
+
+                // --- TUTORIAL STEP 3 COMPLETE: PLAYER TAPPED RACK ITEM BACK TO BELT ---
+                if (TutorialManager.Instance != null
+                    && TutorialManager.Instance.CurrentStep == TutorialManager.TutorialStep.TapRackToConveyor)
+                {
+                    TutorialManager.Instance.HideTutorial();
+                }
+                // ------------------------------------------------------------------------
+
                 return true;
             }
 
@@ -184,7 +202,6 @@ namespace RestaurantLoop.Core
                         Destroy(rackSlots[i].CurrentStack.gameObject);
                     }
 
-                    // Clears stack references and resets FoodCell floor materials back to neutral via BaseSlot
                     rackSlots[i].ClearSlot();
                 }
             }
@@ -204,6 +221,21 @@ namespace RestaurantLoop.Core
             for (int i = 0; i < rackSlots.Count; i++)
             {
                 if (rackSlots[i] != null && !rackSlots[i].IsOccupied) return rackSlots[i];
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Returns the first occupied rack slot's RectTransform or Transform for tutorial pointing.
+        /// </summary>
+        public Transform GetFirstOccupiedRackSlotTransform()
+        {
+            for (int i = 0; i < rackSlots.Count; i++)
+            {
+                if (rackSlots[i] != null && rackSlots[i].IsOccupied)
+                {
+                    return rackSlots[i].transform;
+                }
             }
             return null;
         }

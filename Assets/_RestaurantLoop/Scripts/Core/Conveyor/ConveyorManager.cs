@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using RestaurantLoop.Infrastructure;
+using RestaurantLoop.UI; 
 
 namespace RestaurantLoop.Core
 {
@@ -199,6 +200,16 @@ namespace RestaurantLoop.Core
                 {
                     TryAddStack(stack);
                 }
+
+                // --- TUTORIAL STEP 2 TRIGGER: ITEM SUCCESSFULLY LANDED ON CONVEYOR IN LEVEL 1 ---
+                if (LevelManager.Instance != null && LevelManager.Instance.CurrentLevelNumber == 1)
+                {
+                    if (TutorialManager.Instance != null && TutorialManager.Instance.CurrentStep == TutorialManager.TutorialStep.TapFoodToConveyor)
+                    {
+                        TutorialManager.Instance.EnterStepWaitInRack();
+                    }
+                }
+                // --------------------------------------------------------------------------------
             });
 
             return true;
