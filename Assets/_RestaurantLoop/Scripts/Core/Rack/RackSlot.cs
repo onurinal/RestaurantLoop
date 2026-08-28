@@ -8,6 +8,12 @@
     {
         public override void OnStackTapped(StackItem stack)
         {
+            if (PowerUpManager.Instance != null && PowerUpManager.Instance.IsClearColorSelectionActive)
+            {
+                PowerUpManager.Instance.TrySelectClearColorStack(stack);
+                return;
+            }
+
             if (PowerUpManager.Instance != null && PowerUpManager.Instance.IsHandSelectionActive) return;
             RackManager.Instance?.TrySendRackStackToBelt(stack);
         }

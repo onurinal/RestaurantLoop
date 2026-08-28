@@ -107,6 +107,15 @@ namespace RestaurantLoop.Core
                 .SetUpdate(true);
         }
 
+        /// <summary>
+        /// Uses this stack as the visual source for Clear Color's fan-out serving effect.
+        /// </summary>
+        public void PlayClearColorThrow(Vector3 targetCustomerPosition)
+        {
+            if (visuals == null || animator == null) return;
+            animator.AnimateItemThrowToCustomer(visuals.SingleMeshModel, targetCustomerPosition, ignoreTimeScale: true);
+        }
+
         public void SetWaitingForRack(bool waiting)
         {
             if (movement != null)
@@ -119,6 +128,7 @@ namespace RestaurantLoop.Core
         {
             if (IsJumping ||
                 (CrowdManager.Instance != null && CrowdManager.Instance.IsSpawningCustomers) ||
+                (PowerUpManager.Instance != null && PowerUpManager.Instance.IsClearColorResolving) ||
                 (LevelManager.Instance != null && !LevelManager.Instance.IsGameActive)) return;
 
             if (AudioManager.Instance != null && AudioManager.Instance.tapSound != null)

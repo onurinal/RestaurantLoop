@@ -26,6 +26,7 @@ namespace RestaurantLoop.Core
         [SerializeField] private float entranceSafetyBuffer = 1.8f;
 
         private readonly List<StackItem> activeStacks = new List<StackItem>();
+        private readonly List<StackItem> pendingJumpStacks = new List<StackItem>();
         private int occupiedCapacity = 0;
         private int pendingJumpsCount = 0;
         private int attemptCapacityBonus;
@@ -189,12 +190,12 @@ namespace RestaurantLoop.Core
 
             stack.transform.DOKill();
             stack.transform.SetParent(null, true);
-            pendingJumpsCount++;
+            RegisterPendingJump(stack);
 
             Vector3 entrancePosition = path.GetPosition(EntranceDistance);
             stack.JumpToConveyor(entrancePosition, () =>
             {
-                pendingJumpsCount = Mathf.Max(0, pendingJumpsCount - 1);
+                CompletePendingJump(stack);
 
                 if (stack != null && stack.gameObject.activeInHierarchy)
                 {
@@ -246,13 +247,13 @@ namespace RestaurantLoop.Core
 
         private IEnumerator Routine_AutoLoopJump(StackItem stack)
         {
-            pendingJumpsCount++;
+            RegisterPendingJump(stack);
 
             while (!IsEntranceClearForAutoLoop())
             {
                 if (stack == null || !stack.gameObject.activeInHierarchy)
                 {
-                    pendingJumpsCount = Mathf.Max(0, pendingJumpsCount - 1);
+                    CompletePendingJump(stack);
                     yield break;
                 }
 
@@ -261,7 +262,7 @@ namespace RestaurantLoop.Core
 
             if (stack == null || !stack.gameObject.activeInHierarchy)
             {
-                pendingJumpsCount = Mathf.Max(0, pendingJumpsCount - 1);
+                CompletePendingJump(stack);
                 yield break;
             }
 
@@ -269,7 +270,7 @@ namespace RestaurantLoop.Core
 
             stack.JumpToConveyor(entrancePosition, () =>
             {
-                pendingJumpsCount = Mathf.Max(0, pendingJumpsCount - 1);
+                CompletePendingJump(stack);
 
                 if (stack != null && stack.gameObject.activeInHierarchy)
                 {
@@ -292,10 +293,47 @@ namespace RestaurantLoop.Core
             }
 
             activeStacks.Clear();
+            pendingJumpStacks.Clear();
             occupiedCapacity = 0;
             pendingJumpsCount = 0;
             attemptCapacityBonus = 0;
             CapacityChanged?.Invoke(occupiedCapacity, MaxCapacity);
+        }
+
+        /// <summary>
+        /// Removes a food type from both circulating and jump-in-progress conveyor states.
+        /// Capacity is released for every reservation exactly once.
+        /// </summary>
+        public int RemoveStacksByData(ItemDataSO data)
+        {
+            if (data == null) return 0;
+
+            int removedCount = 0;
+
+            for (int i = activeStacks.Count - 1; i >= 0; i--)
+            {
+                StackItem stack = activeStacks[i];
+                if (stack == null || stack.Data != data) continue;
+
+                activeStacks.RemoveAt(i);
+                ReleaseCapacity();
+                DestroyStackForClearColor(stack);
+                removedCount++;
+            }
+
+            for (int i = pendingJumpStacks.Count - 1; i >= 0; i--)
+            {
+                StackItem stack = pendingJumpStacks[i];
+                if (stack == null || stack.Data != data) continue;
+
+                pendingJumpStacks.RemoveAt(i);
+                pendingJumpsCount = pendingJumpStacks.Count;
+                ReleaseCapacity();
+                DestroyStackForClearColor(stack);
+                removedCount++;
+            }
+
+            return removedCount;
         }
 
         public float GetRequiredTravelDistance()
@@ -310,6 +348,34 @@ namespace RestaurantLoop.Core
                 return exit > entry ? exit - entry : (totalLength - entry) + exit;
 
             return entry > exit ? entry - exit : entry + (totalLength - exit);
+        }
+
+        private void RegisterPendingJump(StackItem stack)
+        {
+            if (stack != null && !pendingJumpStacks.Contains(stack)) pendingJumpStacks.Add(stack);
+            pendingJumpsCount = pendingJumpStacks.Count;
+        }
+
+        private void CompletePendingJump(StackItem stack)
+        {
+            for (int i = pendingJumpStacks.Count - 1; i >= 0; i--)
+            {
+                if (ReferenceEquals(pendingJumpStacks[i], stack))
+                {
+                    pendingJumpStacks.RemoveAt(i);
+                    break;
+                }
+            }
+
+            pendingJumpsCount = pendingJumpStacks.Count;
+        }
+
+        private static void DestroyStackForClearColor(StackItem stack)
+        {
+            if (ReferenceEquals(stack, null)) return;
+
+            StackItem.KillTweensInHierarchy(stack.gameObject);
+            Destroy(stack.gameObject);
         }
 
         private void OnDrawGizmosSelected()

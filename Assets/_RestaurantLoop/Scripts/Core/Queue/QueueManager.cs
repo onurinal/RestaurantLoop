@@ -191,6 +191,27 @@ namespace RestaurantLoop.Core
             }
         }
 
+        public bool HasClearColorSelectableStack
+        {
+            get
+            {
+                if (IsTransitioning || CrowdManager.Instance == null) return false;
+
+                foreach (QueueColumn column in columns)
+                {
+                    if (column == null) continue;
+
+                    QueueSlot[] childSlots = column.GetComponentsInChildren<QueueSlot>(true);
+                    for (int i = 0; i < childSlots.Length; i++)
+                    {
+                        if (IsClearColorSelectableStack(childSlots[i]?.CurrentStack)) return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
         public bool CanShuffleQueuedStacks
         {
             get
@@ -293,6 +314,82 @@ namespace RestaurantLoop.Core
                     stack.SetHandSelectionHighlight(eligible);
                 }
             }
+        }
+
+        public bool IsClearColorSelectableStack(StackItem stack)
+        {
+            if (stack == null || stack.IsJumping || CrowdManager.Instance == null ||
+                !CrowdManager.Instance.HasRemainingDemand(stack.Data)) return false;
+
+            foreach (QueueColumn column in columns)
+            {
+                if (column == null) continue;
+                QueueSlot[] childSlots = column.GetComponentsInChildren<QueueSlot>(true);
+                for (int i = 0; i < childSlots.Length; i++)
+                {
+                    if (childSlots[i] != null && childSlots[i].CurrentStack == stack) return true;
+                }
+            }
+
+            return false;
+        }
+
+        public void SetClearColorSelectionVisuals(bool active)
+        {
+            foreach (QueueColumn column in columns)
+            {
+                if (column == null) continue;
+
+                QueueSlot[] childSlots = column.GetComponentsInChildren<QueueSlot>(true);
+                for (int i = 0; i < childSlots.Length; i++)
+                {
+                    StackItem stack = childSlots[i] != null ? childSlots[i].CurrentStack : null;
+                    if (stack != null) stack.SetHandSelectionHighlight(active && IsClearColorSelectableStack(stack));
+                }
+            }
+        }
+
+        public int RemoveStacksByData(ItemDataSO data)
+        {
+            if (data == null) return 0;
+
+            int removedCount = 0;
+            foreach (QueueColumn column in columns)
+            {
+                if (column == null) continue;
+
+                QueueSlot[] slots = column.GetComponentsInChildren<QueueSlot>(true);
+                List<StackItem> survivors = new List<StackItem>();
+
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    StackItem stack = slots[i] != null ? slots[i].CurrentStack : null;
+                    if (slots[i] != null) slots[i].ClearSlot();
+                    if (stack == null) continue;
+
+                    if (stack.Data == data)
+                    {
+                        removedCount++;
+                        StackItem.KillTweensInHierarchy(stack.gameObject);
+                        Destroy(stack.gameObject);
+                    }
+                    else
+                    {
+                        survivors.Add(stack);
+                    }
+                }
+
+                for (int i = 0; i < survivors.Count && i < slots.Length; i++)
+                {
+                    StackItem stack = survivors[i];
+                    slots[i].PlaceStack(stack);
+                    stack.transform.DOKill();
+                    stack.transform.DOLocalMove(Vector3.zero, 0.25f).SetEase(Ease.OutQuad).SetUpdate(true);
+                }
+            }
+
+            if (removedCount > 0) NotifyQueueChanged();
+            return removedCount;
         }
 
         public void NotifyQueueChanged() => QueueChanged?.Invoke();

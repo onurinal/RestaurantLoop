@@ -39,6 +39,21 @@ namespace RestaurantLoop.Core
             }
         }
 
+        public bool HasClearColorSelectableStack
+        {
+            get
+            {
+                if (CrowdManager.Instance == null) return false;
+
+                for (int i = 0; i < rackSlots.Count; i++)
+                {
+                    if (IsClearColorSelectableStack(rackSlots[i]?.CurrentStack)) return true;
+                }
+
+                return false;
+            }
+        }
+
         public event Action<StackItem, RackSlot> StackAssignedToRack;
         public event Action<StackItem, RackSlot> RackStackRedeploymentStarted;
 
@@ -156,7 +171,7 @@ namespace RestaurantLoop.Core
             return false;
         }
 
-        private void ShiftItemsLeft()
+        private void ShiftItemsLeft(bool ignoreTimeScale = false)
         {
             for (int i = 0; i < rackSlots.Count; i++)
             {
@@ -179,8 +194,9 @@ namespace RestaurantLoop.Core
                             {
                                 StackItem.KillTweensInHierarchy(stackToMove.gameObject);
                                 stackToMove.transform.SetParent(rackSlots[i].transform);
-                                stackToMove.transform.DOMove(rackSlots[i].transform.position, shiftAnimationDuration)
+                                Tween shiftTween = stackToMove.transform.DOMove(rackSlots[i].transform.position, shiftAnimationDuration)
                                     .SetEase(Ease.OutQuad);
+                                if (ignoreTimeScale) shiftTween.SetUpdate(true);
                             }
 
                             break;
@@ -205,6 +221,44 @@ namespace RestaurantLoop.Core
                     rackSlots[i].ClearSlot();
                 }
             }
+        }
+
+        public bool IsClearColorSelectableStack(StackItem stack)
+        {
+            if (stack == null || stack.IsJumping || CrowdManager.Instance == null ||
+                !CrowdManager.Instance.HasRemainingDemand(stack.Data)) return false;
+
+            return GetSlotContainingStack(stack) != null;
+        }
+
+        public void SetClearColorSelectionVisuals(bool active)
+        {
+            for (int i = 0; i < rackSlots.Count; i++)
+            {
+                StackItem stack = rackSlots[i] != null ? rackSlots[i].CurrentStack : null;
+                if (stack != null) stack.SetHandSelectionHighlight(active && IsClearColorSelectableStack(stack));
+            }
+        }
+
+        public int RemoveStacksByData(ItemDataSO data)
+        {
+            if (data == null) return 0;
+
+            int removedCount = 0;
+            for (int i = 0; i < rackSlots.Count; i++)
+            {
+                RackSlot slot = rackSlots[i];
+                StackItem stack = slot != null ? slot.CurrentStack : null;
+                if (stack == null || stack.Data != data) continue;
+
+                slot.ClearSlot();
+                StackItem.KillTweensInHierarchy(stack.gameObject);
+                Destroy(stack.gameObject);
+                removedCount++;
+            }
+
+            if (removedCount > 0) ShiftItemsLeft(ignoreTimeScale: true);
+            return removedCount;
         }
 
         private RackSlot GetSlotContainingStack(StackItem stack)

@@ -197,6 +197,74 @@ namespace RestaurantLoop.Core
             PromoteCrowdToEdgeSlot(slotIndex);
         }
 
+        public bool HasRemainingDemand(ItemDataSO data)
+        {
+            return data != null && remainingDemandPerType.TryGetValue(data, out int count) && count > 0;
+        }
+
+        /// <summary>
+        /// Removes every remaining customer of a food type without broadcasting demand changes yet.
+        /// The caller performs the broadcast after Clear Color's presentation has completed.
+        /// </summary>
+        public bool ResolveFoodTypeForClearColor(ItemDataSO data, StackItem visualSource)
+        {
+            if (!HasRemainingDemand(data)) return false;
+
+            List<Customer> visibleCustomers = new List<Customer>();
+            List<Customer> hiddenCustomers = new List<Customer>();
+            List<int> freedEdgeSlots = new List<int>();
+
+            for (int slotIndex = 0; slotIndex < edgeSlots.SlotCount; slotIndex++)
+            {
+                Customer customer = edgeSlots.GetCustomerInSlot(slotIndex);
+                if (customer == null || customer.RequiredData != data) continue;
+
+                edgeSlots.Release(slotIndex);
+                boardGrid.ClearEdgeCell(slotIndex);
+                freedEdgeSlots.Add(slotIndex);
+                CollectClearColorCustomer(customer, visibleCustomers, hiddenCustomers);
+            }
+
+            foreach (CentralCrowdSlot slot in centralCrowd.Slots)
+            {
+                Customer customer = slot.OccupyingCustomer;
+                if (customer == null || customer.RequiredData != data) continue;
+
+                slot.OccupyingCustomer = null;
+                CollectClearColorCustomer(customer, visibleCustomers, hiddenCustomers);
+            }
+
+            unspawnedDemandPool.RemoveAll(item => item == data);
+
+            for (int i = 0; i < visibleCustomers.Count; i++)
+            {
+                Customer customer = visibleCustomers[i];
+                visualSource?.PlayClearColorThrow(customer.transform.position);
+                customer.ResolveByClearColor();
+            }
+
+            for (int i = 0; i < hiddenCustomers.Count; i++)
+            {
+                PoolManager.Instance.Despawn(hiddenCustomers[i].gameObject);
+            }
+
+            // Matching inner-crowd slots were cleared first, so promotions cannot select the resolved food type.
+            for (int i = 0; i < freedEdgeSlots.Count; i++)
+            {
+                PromoteCrowdToEdgeSlot(freedEdgeSlots[i]);
+            }
+
+            int resolvedDemand = remainingDemandPerType[data];
+            remainingDemandPerType[data] = 0;
+            TotalRemainingDemand = Mathf.Max(0, TotalRemainingDemand - resolvedDemand);
+            return true;
+        }
+
+        public void CompleteClearColorResolution()
+        {
+            OnDemandChanged?.Invoke(TotalRemainingDemand, remainingDemandPerType);
+        }
+
         private void DecrementDemandForType(ItemDataSO data)
         {
             if (data == null) return;
@@ -209,6 +277,14 @@ namespace RestaurantLoop.Core
             }
 
             OnDemandChanged?.Invoke(TotalRemainingDemand, remainingDemandPerType);
+        }
+
+        private static void CollectClearColorCustomer(Customer customer, List<Customer> visibleCustomers, List<Customer> hiddenCustomers)
+        {
+            if (customer == null) return;
+
+            if (customer.gameObject.activeInHierarchy) visibleCustomers.Add(customer);
+            else hiddenCustomers.Add(customer);
         }
 
         private void PromoteCrowdToEdgeSlot(int freedSlotIndex)
