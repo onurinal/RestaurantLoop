@@ -1644,13 +1644,7 @@ PrefabInstance:
       propertyPath: m_Name
       value: Settings_Panel
       objectReference: {fileID: 0}
-    - target: {fileID: 7212007551373185709, guid: 392f8fd9a12eb88468a55cabb6d966ac, type: 3}
-      propertyPath: m_Type
-      value: 1
-      objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 8843835557386845821, guid: 392f8fd9a12eb88468a55cabb6d966ac, type: 3}
-    - {fileID: 8051518284354255309, guid: 392f8fd9a12eb88468a55cabb6d966ac, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
