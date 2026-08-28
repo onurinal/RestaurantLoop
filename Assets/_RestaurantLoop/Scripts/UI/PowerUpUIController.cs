@@ -39,6 +39,7 @@ namespace RestaurantLoop.UI
         [SerializeField] private Button clearColorCancelButton;
 
         private PowerUpManager powerUps;
+        private bool lastHandAvailability;
 
         private void Start()
         {
@@ -66,8 +67,20 @@ namespace RestaurantLoop.UI
             if (ConveyorManager.Instance != null) ConveyorManager.Instance.CapacityChanged += HandleCapacityChanged;
 
             Refresh();
+            lastHandAvailability = powerUps.CanBeginHandSelection;
             SetHandSelectionOverlayVisible(powerUps.IsHandSelectionActive);
             SetClearColorSelectionOverlayVisible(powerUps.IsClearColorSelectionActive);
+        }
+
+        private void Update()
+        {
+            if (powerUps == null) return;
+
+            bool handAvailability = powerUps.CanBeginHandSelection;
+            if (handAvailability == lastHandAvailability) return;
+
+            lastHandAvailability = handAvailability;
+            Refresh();
         }
 
         private void OnDestroy()
@@ -97,6 +110,7 @@ namespace RestaurantLoop.UI
             SetButton(shuffleButton, shuffleLabel, "Shuffle", powerUps.GetRemainingUses(PowerUpType.Shuffle), powerUps.CanUseShuffle);
             SetButton(handButton, handLabel, "Hand", powerUps.GetRemainingUses(PowerUpType.Hand), powerUps.CanBeginHandSelection);
             SetButton(clearColorButton, clearColorLabel, "Clear\nColor", powerUps.GetRemainingUses(PowerUpType.ClearColor), powerUps.CanBeginClearColorSelection);
+            lastHandAvailability = powerUps.CanBeginHandSelection;
         }
 
         private void HandleCapacityChanged(int _, int __) => Refresh();
