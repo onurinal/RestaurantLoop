@@ -406,13 +406,14 @@ GameObject:
   - component: {fileID: 8615600756985898212}
   - component: {fileID: 4885263874709061612}
   - component: {fileID: 3417201019017222965}
+  - component: {fileID: 1523804014962459951}
   m_Layer: 5
   m_Name: WinPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &8615600756985898212
 RectTransform:
   m_ObjectHideFlags: 0
@@ -472,6 +473,31 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &1523804014962459951
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4717114243900554333}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1bf02c9e6ae00348b06066bc21a122c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WinFireworkFXController
+  explosionCount: 5
+  fireworkPrefab: {fileID: 1826795072246435507, guid: 85492a7921a70c749a0db6359a9fb609, type: 3}
+  targetCamera: {fileID: 0}
+  winCanvas: {fileID: 0}
+  sortingOrderOffset: 100
+  minViewportX: 0.15
+  maxViewportX: 0.85
+  minViewportY: 0.15
+  maxViewportY: 0.85
+  spawnDistance: 10
+  minimumDelay: 0.2
+  maximumDelay: 0.4
+  fallbackLifetime: 3
 --- !u!1 &6648603514351577680
 GameObject:
   m_ObjectHideFlags: 0
