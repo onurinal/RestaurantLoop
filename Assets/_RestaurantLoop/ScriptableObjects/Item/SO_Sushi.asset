@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.ItemDataSO
   itemName: White Item
   uiColor: {r: 0.05882353, g: 1, b: 0, a: 1}
-  balloonIcon: {fileID: 21300000, guid: 97f5d2a6109288244892bb2fc46dcac9, type: 3}
+  balloonIcon: {fileID: 15104906, guid: 7d9bc5c86c09f5d428e0ca4bcb723a46, type: 3}
   stackPrefab: {fileID: 3873658242560358701, guid: 989f682506c549147a022fea42783e1b, type: 3}
   cellMaterial: {fileID: 2100000, guid: b2adaf4821b956049a8827b3d8c0ca78, type: 2}
   customerPrefab: {fileID: 6890054401377583542, guid: 848140d34d6091b47881c58657729262, type: 3}

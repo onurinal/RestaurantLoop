@@ -236,6 +236,7 @@ namespace RestaurantLoop.Core
 
             SetItemCount(remainingCount);
             FoodCommittedToCustomer?.Invoke(this, targetCustomer, itemData);
+
             targetCustomer.ReceiveItem(this, () => { CrowdManager.Instance.OnCustomerServed(targetCustomer); });
 
             if (remainingCount <= 0) DepleteAndDestroy();

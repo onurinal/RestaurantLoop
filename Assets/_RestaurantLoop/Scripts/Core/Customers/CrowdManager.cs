@@ -116,6 +116,7 @@ namespace RestaurantLoop.Core
             remainingDemandPerType.Clear();
             unspawnedDemandPool.Clear();
 
+            // Populate total level demands directly from LevelData
             foreach (var cfg in levelData.customerDemands)
             {
                 TotalRemainingDemand += cfg.totalCustomerCount;
@@ -143,7 +144,6 @@ namespace RestaurantLoop.Core
 
             if (entranceSequenceCoroutine != null) StopCoroutine(entranceSequenceCoroutine);
 
-            // Select random activeEdgeSlotCount indices out of 20 total edge slots for initial crowd
             List<int> availableIndices = new List<int>();
             for (int i = 0; i < TOTAL_EDGE_SLOTS; i++) availableIndices.Add(i);
 
@@ -156,6 +156,9 @@ namespace RestaurantLoop.Core
             List<int> initialSlotIndices = availableIndices.GetRange(0, Mathf.Min(activeEdgeSlotCount, TOTAL_EDGE_SLOTS));
 
             entranceSequenceCoroutine = StartCoroutine(RunEntranceSequence(initialSlotIndices));
+
+            // Broadcast initial level demands to UI
+            OnDemandChanged?.Invoke(TotalRemainingDemand, remainingDemandPerType);
         }
 
         private IEnumerator RunEntranceSequence(List<int> initialSlotIndices)
@@ -184,11 +187,28 @@ namespace RestaurantLoop.Core
         public void OnCustomerServed(Customer customer)
         {
             if (customer == null || !edgeSlots.TryGetSlotIndex(customer, out int slotIndex)) return;
+
+            // Decrement remaining level demand strictly by 1 when customer finishes eating
             DecrementDemandForType(customer.RequiredData);
+
             edgeSlots.Release(slotIndex);
             boardGrid.ClearEdgeCell(slotIndex);
             CustomerExitCompleted?.Invoke(customer, slotIndex);
             PromoteCrowdToEdgeSlot(slotIndex);
+        }
+
+        private void DecrementDemandForType(ItemDataSO data)
+        {
+            if (data == null) return;
+
+            TotalRemainingDemand = Mathf.Max(0, TotalRemainingDemand - 1);
+
+            if (remainingDemandPerType.ContainsKey(data))
+            {
+                remainingDemandPerType[data] = Mathf.Max(0, remainingDemandPerType[data] - 1);
+            }
+
+            OnDemandChanged?.Invoke(TotalRemainingDemand, remainingDemandPerType);
         }
 
         private void PromoteCrowdToEdgeSlot(int freedSlotIndex)
@@ -196,7 +216,6 @@ namespace RestaurantLoop.Core
             CentralCrowdSlot visibleSlot = centralCrowd.GetRandomVisibleSlot();
             if (visibleSlot == null || visibleSlot.OccupyingCustomer == null) return;
 
-            // Pick a random unoccupied slot index from ALL available free slots
             List<int> freeSlotIndices = edgeSlots.GetUnoccupiedSlotIndices();
             if (freeSlotIndices.Count == 0) return;
 
@@ -210,12 +229,14 @@ namespace RestaurantLoop.Core
                 GetEdgeSlotWorldPosition(targetSlotIndex),
                 GetEdgeSlotYRotation(targetSlotIndex),
                 GetRoomCenter(),
-                onComplete: () =>
-                {
-                    boardGrid.SetEdgeCellFood(targetSlotIndex, customer.RequiredData);
-                });
+                onComplete: () => { boardGrid.SetEdgeCellFood(targetSlotIndex, customer.RequiredData); });
 
             EdgeCustomerReplacementStarted?.Invoke(customer, targetSlotIndex);
+        }
+
+        public Dictionary<ItemDataSO, int> GetRemainingLevelDemands()
+        {
+            return remainingDemandPerType;
         }
 
         public void ClearCrowd()
@@ -269,13 +290,6 @@ namespace RestaurantLoop.Core
             Vector3 center = conveyorBuilder != null ? conveyorBuilder.CenterPosition : transform.position;
             center.y = 0f;
             return center;
-        }
-
-        private void DecrementDemandForType(ItemDataSO data)
-        {
-            if (data == null) return;
-            TotalRemainingDemand = Mathf.Max(0, TotalRemainingDemand - 1);
-            OnDemandChanged?.Invoke(TotalRemainingDemand, remainingDemandPerType);
         }
 
 #if UNITY_EDITOR

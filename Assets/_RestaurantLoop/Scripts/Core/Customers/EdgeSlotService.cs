@@ -27,6 +27,12 @@ namespace RestaurantLoop.Core
             slotSplineDistances = new float[this.slotCount];
         }
 
+        public Customer GetCustomerInSlot(int index)
+        {
+            if (index >= 0 && index < slotCount) return slots[index];
+            return null;
+        }
+
         public List<int> GetUnoccupiedSlotIndices()
         {
             List<int> freeIndices = new List<int>();
@@ -37,6 +43,7 @@ namespace RestaurantLoop.Core
                     freeIndices.Add(i);
                 }
             }
+
             return freeIndices;
         }
 
