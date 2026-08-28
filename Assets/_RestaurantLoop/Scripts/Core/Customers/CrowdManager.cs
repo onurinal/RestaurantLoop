@@ -399,7 +399,13 @@ namespace RestaurantLoop.Core
 
             if (showToleranceGizmos)
             {
+                EnsureBuilderReference();
                 if (boardGrid == null) boardGrid = GetComponent<DiningBoardGrid>();
+
+                if (!Application.isPlaying || edgeSlots == null)
+                {
+                    InitializeGridSplineMapping();
+                }
 
                 Vector2 cellSize = boardGrid != null ? boardGrid.GetBoardCellSize() : new Vector2(1.2f, 1.2f);
                 Vector3 visualCellSize = new Vector3(cellSize.x * 0.82f, 0.04f, cellSize.y * 0.82f);
@@ -409,9 +415,9 @@ namespace RestaurantLoop.Core
                     Vector3 slotPos = GetEdgeSlotWorldPosition(i);
 
                     Gizmos.color = activeEdgeCellColor;
-                    Gizmos.DrawWireCube(slotPos + Vector3.up * 0.02f, visualCellSize + new Vector3(0.02f, 0.02f, 0.02f));
+                    Gizmos.DrawWireCube(slotPos + Vector3.up * 0.02f, visualCellSize);
 
-                    Gizmos.color = new Color(activeEdgeCellColor.r, activeEdgeCellColor.g, activeEdgeCellColor.b, 0.35f);
+                    Gizmos.color = new Color(activeEdgeCellColor.r, activeEdgeCellColor.g, activeEdgeCellColor.b, 0.25f);
                     Gizmos.DrawCube(slotPos + Vector3.up * 0.02f, visualCellSize);
                 }
             }

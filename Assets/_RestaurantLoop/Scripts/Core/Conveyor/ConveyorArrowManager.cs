@@ -11,7 +11,7 @@ namespace RestaurantLoop.Core
         [SerializeField] private GameObject arrowPrefab;
 
         [Header("Modular Direction & Flow")]
-        [Tooltip("True: Moves backwards (1 -> 0). False: Moves forwards (0 -> 1).")]
+        [Tooltip("True: Moves backwards. False: Moves forwards.")]
         [SerializeField] private bool isReversed = false;
 
         [Header("Arrow Density & Speed")]
@@ -27,7 +27,7 @@ namespace RestaurantLoop.Core
         [SerializeField] private Vector3 rotationOffset = new Vector3(30f, 0f, 0f);
 
         private readonly List<Transform> spawnedArrows = new List<Transform>();
-        private float[] arrowProgresses;
+        private float[] arrowDistances; // Tracks travel distance in physical meters
         private float splineLength;
 
         private void Start()
@@ -42,7 +42,7 @@ namespace RestaurantLoop.Core
         {
             if (splineComputer != null)
             {
-                splineLength = splineComputer.CalculateLength();
+                splineLength = (float)splineComputer.CalculateLength();
             }
         }
 
@@ -62,14 +62,14 @@ namespace RestaurantLoop.Core
 
             spawnedArrows.Clear();
 
-            arrowProgresses = new float[arrowCount];
-            float step = 1f / arrowCount;
+            arrowDistances = new float[arrowCount];
+            float stepDistance = splineLength / Mathf.Max(1, arrowCount);
 
             for (int i = 0; i < arrowCount; i++)
             {
                 GameObject arrow = Instantiate(arrowPrefab, transform);
                 spawnedArrows.Add(arrow.transform);
-                arrowProgresses[i] = i * step;
+                arrowDistances[i] = i * stepDistance;
             }
         }
 
@@ -77,20 +77,25 @@ namespace RestaurantLoop.Core
         {
             if (splineComputer == null || spawnedArrows.Count == 0 || splineLength <= 0f) return;
 
-            float currentSpeed = speed;
-
-            // Direction multiplier
-            float directionMultiplier = isReversed ? -1f : 1f;
-            float deltaProgress = (currentSpeed * directionMultiplier * Time.deltaTime) / splineLength;
+            // Physical distance moved per frame in meters
+            float deltaDistance = speed * Time.deltaTime;
 
             for (int i = 0; i < spawnedArrows.Count; i++)
             {
-                arrowProgresses[i] += deltaProgress;
+                if (isReversed)
+                {
+                    arrowDistances[i] -= deltaDistance;
+                    if (arrowDistances[i] < 0f) arrowDistances[i] += splineLength;
+                }
+                else
+                {
+                    arrowDistances[i] += deltaDistance;
+                    if (arrowDistances[i] >= splineLength) arrowDistances[i] -= splineLength;
+                }
 
-                if (arrowProgresses[i] >= 1f) arrowProgresses[i] -= 1f;
-                if (arrowProgresses[i] < 0f) arrowProgresses[i] += 1f;
-
-                SplineSample sample = splineComputer.Evaluate((double)arrowProgresses[i]);
+                // Convert physical meters to exact spline evaluation percentage
+                double percent = splineComputer.Travel(0, arrowDistances[i]);
+                SplineSample sample = splineComputer.Evaluate(percent);
 
                 Quaternion flowRotation = sample.rotation * Quaternion.Euler(0f, isReversed ? 180f : 0f, 0f);
                 Quaternion finalRotation = flowRotation * Quaternion.Euler(rotationOffset);

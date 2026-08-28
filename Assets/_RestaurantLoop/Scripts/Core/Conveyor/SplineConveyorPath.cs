@@ -24,7 +24,7 @@ namespace RestaurantLoop.Core
 
             if (splineComputer != null)
             {
-                Length = splineComputer.CalculateLength();
+                Length = (float)splineComputer.CalculateLength();
             }
         }
 
@@ -40,8 +40,9 @@ namespace RestaurantLoop.Core
                 return transform.position;
             }
 
-            float t = Mathf.Repeat(distance, Length) / Length;
-            return splineComputer.EvaluatePosition(t);
+            float clampedDistance = Mathf.Repeat(distance, Length);
+            double percent = splineComputer.Travel(0, clampedDistance);
+            return splineComputer.EvaluatePosition(percent);
         }
 
         public Vector3 GetDirection(float distance, bool isClockwise)
@@ -56,8 +57,9 @@ namespace RestaurantLoop.Core
                 return transform.forward;
             }
 
-            float t = Mathf.Repeat(distance, Length) / Length;
-            Vector3 forward = splineComputer.Evaluate(t).forward;
+            float clampedDistance = Mathf.Repeat(distance, Length);
+            double percent = splineComputer.Travel(0, clampedDistance);
+            Vector3 forward = splineComputer.Evaluate(percent).forward;
 
             return isClockwise ? forward : -forward;
         }

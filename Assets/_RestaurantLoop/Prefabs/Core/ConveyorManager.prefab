@@ -33,7 +33,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6414313528846386226}
-  - {fileID: 8338857051228210500}
   - {fileID: 8324250628878736451}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -53,7 +52,7 @@ MonoBehaviour:
   moveSpeed: 15
   maxCapacity: 5
   isClockwise: 1
-  entranceRatio: 0.027
+  entranceRatio: 0.01
   exitRatio: 0.999
   entranceSafetyBuffer: 1.8
 --- !u!114 &945388239391009912
@@ -84,15 +83,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.ConveyorBuilder
   splineComputer: {fileID: 1195197556920776300}
   splineMesh: {fileID: 5211059805482831442}
-  width: 15
-  height: 20
+  width: 13
+  height: 18
   cornerRadius: 2
   isClosedLoop: 0
   bottomEdgeGap: 0
   leftEdgeGap: 2.5
   pointSize: 1.8
-  yOffset: 1
-  zOffset: 0.4
+  yOffset: 1.06
+  zOffset: 0.5
   arcSegments: 3
   lineStep: 2
 --- !u!1 &6713072932984355857
@@ -121,10 +120,11 @@ Transform:
   m_GameObject: {fileID: 6713072932984355857}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -6.32, y: 0, z: -9.62}
+  m_LocalPosition: {x: -5.39, y: 0, z: -8.571}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 8338857051228210500}
   - {fileID: 6867471579943617179}
   m_Father: {fileID: 124697660262780726}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -171,16 +171,16 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8226336357866578733}
-  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 0, z: -9.575}
+  m_LocalRotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
+  m_LocalPosition: {x: 0, y: 0, z: 0.045000076}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 124697660262780726}
+  m_Father: {fileID: 8324250628878736451}
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -6.932, y: 1}
+  m_AnchoredPosition: {x: -0.6119995, y: 1}
   m_SizeDelta: {x: 1.8, y: 1}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!23 &3433938707735023133
@@ -402,259 +402,231 @@ MonoBehaviour:
   _spline:
     points:
     - _type: 0
-      position: {x: -5.5, y: 1, z: -9.6}
+      position: {x: -4.5, y: 1.06, z: -8.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: -3.6666665, y: 1, z: -9.6}
+      position: {x: -2.7, y: 1.06, z: -8.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: -1.8333333, y: 1, z: -9.6}
+      position: {x: -0.9, y: 1.06, z: -8.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 0, y: 1, z: -9.6}
+      position: {x: 0.9000002, y: 1.06, z: -8.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 1.8333335, y: 1, z: -9.6}
+      position: {x: 2.7, y: 1.06, z: -8.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 3.6666665, y: 1, z: -9.6}
+      position: {x: 4.5, y: 1.06, z: -8.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 5.5, y: 1, z: -9.6}
+      position: {x: 5.5, y: 1.06, z: -8.232051}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 6.5, y: 1, z: -9.33205}
+      position: {x: 6.232051, y: 1.06, z: -7.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 7.232051, y: 1, z: -8.599999}
+      position: {x: 6.5, y: 1.06, z: -6.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 7.5, y: 1, z: -7.6}
+      position: {x: 6.5, y: 1.06, z: -4.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 7.5, y: 1, z: -5.6}
+      position: {x: 6.5, y: 1.06, z: -2.4999998}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 7.5, y: 1, z: -3.6}
+      position: {x: 6.5, y: 1.06, z: -0.49999994}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 7.5, y: 1, z: -1.6000001}
+      position: {x: 6.5, y: 1.06, z: 1.5000004}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 7.5, y: 1, z: 0.39999986}
+      position: {x: 6.5, y: 1.06, z: 3.5000002}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 7.5, y: 1, z: 2.3999999}
+      position: {x: 6.5, y: 1.06, z: 5.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 7.5, y: 1, z: 4.3999996}
+      position: {x: 6.5, y: 1.06, z: 7.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 7.5, y: 1, z: 6.3999996}
+      position: {x: 6.232051, y: 1.06, z: 8.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 7.5, y: 1, z: 8.4}
+      position: {x: 5.5, y: 1.06, z: 9.232051}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 7.232051, y: 1, z: 9.4}
+      position: {x: 4.5, y: 1.06, z: 9.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 6.5, y: 1, z: 10.1320505}
+      position: {x: 2.7, y: 1.06, z: 9.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 5.5, y: 1, z: 10.4}
+      position: {x: 0.9, y: 1.06, z: 9.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 3.6666665, y: 1, z: 10.4}
+      position: {x: -0.9000002, y: 1.06, z: 9.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 1.8333333, y: 1, z: 10.4}
+      position: {x: -2.7, y: 1.06, z: 9.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: 0, y: 1, z: 10.4}
+      position: {x: -4.5, y: 1.06, z: 9.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: -1.8333335, y: 1, z: 10.4}
+      position: {x: -5.5, y: 1.06, z: 9.232051}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: -3.6666665, y: 1, z: 10.4}
+      position: {x: -6.232051, y: 1.06, z: 8.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: -5.5, y: 1, z: 10.4}
+      position: {x: -6.5, y: 1.06, z: 7.5}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: -6.5, y: 1, z: 10.1320505}
+      position: {x: -6.5, y: 1.06, z: 5.5833335}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: -7.232051, y: 1, z: 9.4}
+      position: {x: -6.5, y: 1.06, z: 3.6666665}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: -7.5, y: 1, z: 8.4}
+      position: {x: -6.5, y: 1.06, z: 1.75}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: -7.5, y: 1, z: 6.4714284}
+      position: {x: -6.5, y: 1.06, z: -0.1666669}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: -7.5, y: 1, z: 4.5428567}
+      position: {x: -6.5, y: 1.06, z: -2.083333}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
       tangent: {x: 0, y: 0, z: 0}
       tangent2: {x: 0, y: 0, z: 0}
     - _type: 0
-      position: {x: -7.5, y: 1, z: 2.6142855}
-      color: {r: 1, g: 1, b: 1, a: 1}
-      normal: {x: 0, y: 1, z: 0}
-      size: 1.8
-      tangent: {x: 0, y: 0, z: 0}
-      tangent2: {x: 0, y: 0, z: 0}
-    - _type: 0
-      position: {x: -7.5, y: 1, z: 0.6857138}
-      color: {r: 1, g: 1, b: 1, a: 1}
-      normal: {x: 0, y: 1, z: 0}
-      size: 1.8
-      tangent: {x: 0, y: 0, z: 0}
-      tangent2: {x: 0, y: 0, z: 0}
-    - _type: 0
-      position: {x: -7.5, y: 1, z: -1.2428575}
-      color: {r: 1, g: 1, b: 1, a: 1}
-      normal: {x: 0, y: 1, z: 0}
-      size: 1.8
-      tangent: {x: 0, y: 0, z: 0}
-      tangent2: {x: 0, y: 0, z: 0}
-    - _type: 0
-      position: {x: -7.5, y: 1, z: -3.1714287}
-      color: {r: 1, g: 1, b: 1, a: 1}
-      normal: {x: 0, y: 1, z: 0}
-      size: 1.8
-      tangent: {x: 0, y: 0, z: 0}
-      tangent2: {x: 0, y: 0, z: 0}
-    - _type: 0
-      position: {x: -7.5, y: 1, z: -5.1}
+      position: {x: -6.5, y: 1.06, z: -4}
       color: {r: 1, g: 1, b: 1, a: 1}
       normal: {x: 0, y: 1, z: 0}
       size: 1.8
@@ -686,223 +658,199 @@ MonoBehaviour:
   _subscribers:
   - {fileID: 5211059805482831442}
   _rawSamples:
-  - position: {x: -5.5, y: 1, z: -9.6}
+  - position: {x: -4.5, y: 1.06, z: -8.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 1, y: 0, z: 0}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
     percent: 0
-  - position: {x: -3.6666665, y: 1, z: -9.6}
+  - position: {x: -2.7, y: 1.06, z: -8.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 1, y: 0, z: 0}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.027777777777777776
-  - position: {x: -1.8333333, y: 1, z: -9.6}
+    percent: 0.03125
+  - position: {x: -0.9, y: 1.06, z: -8.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 1, y: 0, z: 0}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.05555555555555555
-  - position: {x: 0, y: 1, z: -9.6}
+    percent: 0.0625
+  - position: {x: 0.9000002, y: 1.06, z: -8.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 1, y: 0, z: 0}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.08333333333333333
-  - position: {x: 1.8333335, y: 1, z: -9.6}
+    percent: 0.09375
+  - position: {x: 2.7, y: 1.06, z: -8.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 1, y: 0, z: 0}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.1111111111111111
-  - position: {x: 3.6666665, y: 1, z: -9.6}
+    percent: 0.125
+  - position: {x: 4.5, y: 1.06, z: -8.5}
     up: {x: 0, y: 1, z: 0}
-    forward: {x: 1, y: 0, z: 0}
+    forward: {x: 0.9914448, y: 0, z: 0.13052611}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.1388888888888889
-  - position: {x: 5.5, y: 1, z: -9.6}
+    percent: 0.15625
+  - position: {x: 5.5, y: 1.06, z: -8.232051}
     up: {x: 0, y: 1, z: 0}
-    forward: {x: 0.99144477, y: 0, z: 0.13052656}
+    forward: {x: 0.8660254, y: 0, z: 0.49999994}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.16666666666666666
-  - position: {x: 6.5, y: 1, z: -9.33205}
+    percent: 0.1875
+  - position: {x: 6.232051, y: 1.06, z: -7.5}
     up: {x: 0, y: 1, z: 0}
-    forward: {x: 0.8660252, y: 0, z: 0.5000004}
+    forward: {x: 0.49999994, y: 0, z: 0.8660254}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.19444444444444445
-  - position: {x: 7.232051, y: 1, z: -8.599999}
+    percent: 0.21875
+  - position: {x: 6.5, y: 1.06, z: -6.5}
     up: {x: 0, y: 1, z: 0}
-    forward: {x: 0.5, y: 0, z: 0.86602545}
-    color: {r: 1, g: 1, b: 1, a: 1}
-    size: 1.8
-    percent: 0.2222222222222222
-  - position: {x: 7.5, y: 1, z: -7.6}
-    up: {x: 0, y: 1, z: 0}
-    forward: {x: 0.1305262, y: 0, z: 0.9914449}
+    forward: {x: 0.13052608, y: 0, z: 0.9914449}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
     percent: 0.25
-  - position: {x: 7.5, y: 1, z: -5.6}
+  - position: {x: 6.5, y: 1.06, z: -4.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 0, y: 0, z: 1}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.2777777777777778
-  - position: {x: 7.5, y: 1, z: -3.6}
+    percent: 0.28125
+  - position: {x: 6.5, y: 1.06, z: -2.4999998}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 0, y: 0, z: 1}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.3055555555555556
-  - position: {x: 7.5, y: 1, z: -1.6000001}
+    percent: 0.3125
+  - position: {x: 6.5, y: 1.06, z: -0.49999994}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 0, y: 0, z: 1}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.3333333333333333
-  - position: {x: 7.5, y: 1, z: 0.39999986}
+    percent: 0.34375
+  - position: {x: 6.5, y: 1.06, z: 1.5000004}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 0, y: 0, z: 1}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.3611111111111111
-  - position: {x: 7.5, y: 1, z: 2.3999999}
+    percent: 0.375
+  - position: {x: 6.5, y: 1.06, z: 3.5000002}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 0, y: 0, z: 1}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.3888888888888889
-  - position: {x: 7.5, y: 1, z: 4.3999996}
+    percent: 0.40625
+  - position: {x: 6.5, y: 1.06, z: 5.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 0, y: 0, z: 1}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.4166666666666667
-  - position: {x: 7.5, y: 1, z: 6.3999996}
-    up: {x: 0, y: 1, z: 0}
-    forward: {x: 0, y: 0, z: 1}
-    color: {r: 1, g: 1, b: 1, a: 1}
-    size: 1.8
-    percent: 0.4444444444444444
-  - position: {x: 7.5, y: 1, z: 8.4}
+    percent: 0.4375
+  - position: {x: 6.5, y: 1.06, z: 7.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: -0.13052623, y: 0, z: 0.9914449}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.4722222222222222
-  - position: {x: 7.232051, y: 1, z: 9.4}
+    percent: 0.46875
+  - position: {x: 6.232051, y: 1.06, z: 8.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: -0.49999994, y: 0, z: 0.8660254}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
     percent: 0.5
-  - position: {x: 6.5, y: 1, z: 10.1320505}
+  - position: {x: 5.5, y: 1.06, z: 9.232051}
     up: {x: 0, y: 1, z: 0}
     forward: {x: -0.8660254, y: 0, z: 0.49999994}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.5277777777777778
-  - position: {x: 5.5, y: 1, z: 10.4}
+    percent: 0.53125
+  - position: {x: 4.5, y: 1.06, z: 9.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: -0.9914448, y: 0, z: 0.13052619}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.5555555555555556
-  - position: {x: 3.6666665, y: 1, z: 10.4}
+    percent: 0.5625
+  - position: {x: 2.7, y: 1.06, z: 9.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: -1, y: 0, z: 0}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.5833333333333334
-  - position: {x: 1.8333333, y: 1, z: 10.4}
+    percent: 0.59375
+  - position: {x: 0.9, y: 1.06, z: 9.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: -1, y: 0, z: 0}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.6111111111111112
-  - position: {x: 0, y: 1, z: 10.4}
+    percent: 0.625
+  - position: {x: -0.9000002, y: 1.06, z: 9.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: -1, y: 0, z: 0}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.6388888888888888
-  - position: {x: -1.8333335, y: 1, z: 10.4}
+    percent: 0.65625
+  - position: {x: -2.7, y: 1.06, z: 9.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: -1, y: 0, z: 0}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.6666666666666666
-  - position: {x: -3.6666665, y: 1, z: 10.4}
-    up: {x: 0, y: 1, z: 0}
-    forward: {x: -1, y: 0, z: 0}
-    color: {r: 1, g: 1, b: 1, a: 1}
-    size: 1.8
-    percent: 0.6944444444444444
-  - position: {x: -5.5, y: 1, z: 10.4}
+    percent: 0.6875
+  - position: {x: -4.5, y: 1.06, z: 9.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: -0.9914448, y: 0, z: -0.13052611}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.7222222222222222
-  - position: {x: -6.5, y: 1, z: 10.1320505}
+    percent: 0.71875
+  - position: {x: -5.5, y: 1.06, z: 9.232051}
     up: {x: 0, y: 1, z: 0}
     forward: {x: -0.8660254, y: 0, z: -0.49999994}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
     percent: 0.75
-  - position: {x: -7.232051, y: 1, z: 9.4}
+  - position: {x: -6.232051, y: 1.06, z: 8.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: -0.49999994, y: 0, z: -0.8660254}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.7777777777777778
-  - position: {x: -7.5, y: 1, z: 8.4}
+    percent: 0.78125
+  - position: {x: -6.5, y: 1.06, z: 7.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: -0.13052608, y: 0, z: -0.9914449}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.8055555555555556
-  - position: {x: -7.5, y: 1, z: 6.4714284}
+    percent: 0.8125
+  - position: {x: -6.5, y: 1.06, z: 5.5833335}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 0, y: 0, z: -1}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.8333333333333334
-  - position: {x: -7.5, y: 1, z: 4.5428567}
+    percent: 0.84375
+  - position: {x: -6.5, y: 1.06, z: 3.6666665}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 0, y: 0, z: -1}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.8611111111111112
-  - position: {x: -7.5, y: 1, z: 2.6142855}
+    percent: 0.875
+  - position: {x: -6.5, y: 1.06, z: 1.75}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 0, y: 0, z: -1}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.8888888888888888
-  - position: {x: -7.5, y: 1, z: 0.6857138}
+    percent: 0.90625
+  - position: {x: -6.5, y: 1.06, z: -0.1666669}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 0, y: 0, z: -1}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.9166666666666666
-  - position: {x: -7.5, y: 1, z: -1.2428575}
+    percent: 0.9375
+  - position: {x: -6.5, y: 1.06, z: -2.083333}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 0, y: 0, z: -1}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
-    percent: 0.9444444444444444
-  - position: {x: -7.5, y: 1, z: -3.1714287}
-    up: {x: 0, y: 1, z: 0}
-    forward: {x: 0, y: 0, z: -1}
-    color: {r: 1, g: 1, b: 1, a: 1}
-    size: 1.8
-    percent: 0.9722222222222222
-  - position: {x: -7.5, y: 1, z: -5.1}
+    percent: 0.96875
+  - position: {x: -6.5, y: 1.06, z: -4}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 0, y: 0, z: -1}
     color: {r: 1, g: 1, b: 1, a: 1}
@@ -999,14 +947,14 @@ MonoBehaviour:
     useClippedPercent: 0
     keys: []
   _clipFromSample:
-    position: {x: -5.5, y: 1, z: -9.6}
+    position: {x: -4.5, y: 1.06, z: -8.5}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 1, y: 0, z: 0}
     color: {r: 1, g: 1, b: 1, a: 1}
     size: 1.8
     percent: 0
   _clipToSample:
-    position: {x: -7.5, y: 1, z: -5.1}
+    position: {x: -6.5, y: 1.06, z: -4}
     up: {x: 0, y: 1, z: 0}
     forward: {x: 0, y: 0, z: -1}
     color: {r: 1, g: 1, b: 1, a: 1}

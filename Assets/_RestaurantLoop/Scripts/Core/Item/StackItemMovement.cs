@@ -45,8 +45,12 @@ namespace RestaurantLoop.Core
             float stepDistance = Mathf.Min(Mathf.Abs(speed * deltaTime), remainingTravelDistance);
             float moveDelta = isClockwise ? stepDistance : -stepDistance;
 
-            currentDistance = (currentDistance + moveDelta) % path.Length;
-            if (currentDistance < 0f) currentDistance += path.Length;
+            float pathLength = path != null ? path.Length : 0f;
+            if (pathLength > 0f)
+            {
+                currentDistance = (currentDistance + moveDelta) % pathLength;
+                if (currentDistance < 0f) currentDistance += pathLength;
+            }
 
             traveledDistance += stepDistance;
             UpdateTransform(path, isClockwise);
@@ -59,10 +63,12 @@ namespace RestaurantLoop.Core
 
         public void UpdateTransform(SplineConveyorPath path, bool isClockwise, bool animateRotation = false)
         {
-            if (path == null) return;
+            if (path == null || path.Length <= 0f) return;
 
+            // Fetch exact world position and direction evaluated by physical distance meters
             transform.position = path.GetPosition(currentDistance);
             Vector3 direction = path.GetDirection(currentDistance, isClockwise);
+
             if (direction != Vector3.zero)
             {
                 Quaternion targetRotation = Quaternion.LookRotation(direction);

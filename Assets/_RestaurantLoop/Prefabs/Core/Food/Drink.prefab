@@ -255,6 +255,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.StackItem
   itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   remainingCount: 10
+  serviceCooldown: 0.08
 --- !u!114 &7507831767151467040
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -272,8 +273,10 @@ MonoBehaviour:
   yOffset: 1.65
   singleModeRotation: {x: 300, y: 0, z: 0}
   stackedModeRotation: {x: 270, y: 0, z: 0}
+  itemTransitionStagger: 0.035
+  itemTransitionDuration: 0.12
+  rotationTransitionDuration: 0.14
   countText: {fileID: 9047534107090354303}
-  singleModeTextOffset: {x: 0, y: 0.25, z: -1.1}
   textOffsetLerpSpeed: 10
 --- !u!114 &2551260996675904716
 MonoBehaviour:
@@ -301,6 +304,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2b5e70cbc9a4dedb1346b823602429f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.StackItemMovement
+  conveyorEntryRotationDuration: 0.16
 --- !u!1 &4418145506771092432
 GameObject:
   m_ObjectHideFlags: 0
@@ -342,15 +346,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.6
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.6
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.6
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
       propertyPath: m_LocalPosition.x
