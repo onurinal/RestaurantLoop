@@ -36,8 +36,48 @@ namespace RestaurantLoop.Core
         private float activeTextDistance = 1.1f;
         private Vector3 singleModelBaseLocalPosition;
         private Vector3 singleModelBaseLocalScale;
+        private Tween selectionHighlightTween;
+        private Vector3 selectionBaseLocalScale;
+        private bool hasSelectionBaseScale;
 
         public GameObject SingleMeshModel => singleMeshModel;
+
+        /// <summary>
+        /// Pulses only the food visual while a power-up is choosing a stack.
+        /// This deliberately avoids scaling StackItem itself: a rack stack can
+        /// have a differently-scaled slot parent from a queue stack.
+        /// </summary>
+        public void SetSelectionHighlight(bool highlighted)
+        {
+            Transform target = GetSelectionHighlightTarget();
+            if (target == null) return;
+
+            selectionHighlightTween?.Kill();
+            selectionHighlightTween = null;
+
+            if (!highlighted)
+            {
+                if (hasSelectionBaseScale)
+                {
+                    target.localScale = selectionBaseLocalScale;
+                    hasSelectionBaseScale = false;
+                }
+
+                return;
+            }
+
+            if (!hasSelectionBaseScale)
+            {
+                selectionBaseLocalScale = target.localScale;
+                hasSelectionBaseScale = true;
+            }
+
+            target.localScale = selectionBaseLocalScale;
+            selectionHighlightTween = target.DOScale(selectionBaseLocalScale * 1.08f, 0.35f)
+                .SetLoops(-1, LoopType.Yoyo)
+                .SetEase(Ease.InOutSine)
+                .SetUpdate(true);
+        }
 
         private void Awake()
         {
@@ -65,6 +105,14 @@ namespace RestaurantLoop.Core
         {
             // Dynamically assign text offset distance based on ItemDataSO configuration
             activeTextDistance = itemData != null ? itemData.UITextOffsetDistance : 1.1f;
+        }
+
+        private Transform GetSelectionHighlightTarget()
+        {
+            // Selection applies only to the actual food mesh.  Do not use the
+            // optional VisualContainer here: it is not part of the scale contract
+            // for stack prefabs.
+            return singleMeshModel != null ? singleMeshModel.transform : null;
         }
 
         public void RefreshVisuals(StackVisualMode mode, int remainingCount)

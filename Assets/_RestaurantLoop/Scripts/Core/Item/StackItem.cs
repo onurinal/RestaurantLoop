@@ -97,6 +97,15 @@ namespace RestaurantLoop.Core
 
         public void SetHandSelectionHighlight(bool highlighted)
         {
+            // Queue and rack slots use different parent transforms.  Scaling the
+            // StackItem root therefore makes a rack food model inherit that slot's
+            // scale a second time.  Pulse the authored visual container instead.
+            if (visuals != null)
+            {
+                visuals.SetSelectionHighlight(highlighted);
+                return;
+            }
+
             handSelectionTween?.Kill();
             handSelectionTween = null;
 

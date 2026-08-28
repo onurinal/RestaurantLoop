@@ -36,8 +36,8 @@ namespace RestaurantLoop.Core
 
         [Header("Selection Camera")]
         [Tooltip("Signed distance applied along Camera.main's local Y axis during selection. Use a negative value to lower the camera.")]
-        [SerializeField] private float selectionCameraLocalYOffset = -3f;
-        [SerializeField, Min(0f)] private float selectionCameraMoveDuration = 0.3f;
+        [SerializeField] private float selectionCameraLocalYOffset = -12f;
+        [SerializeField, Min(0f)] private float selectionCameraMoveDuration = 0.45f;
 
         private Transform selectionCameraTransform;
         private Vector3 selectionCameraBaseWorldPosition;
