@@ -3,22 +3,22 @@
 namespace RestaurantLoop.Infrastructure
 {
     /// <summary>
-    /// Dynamically scales the Camera's Orthographic Size based on iPhone 12 Pro Max as the baseline.
-    /// Runs in both Edit Mode and Play Mode to allow instant testing in Unity Simulator.
+    /// Dynamically scales the Camera's Orthographic Size based on Samsung Galaxy S10e as the baseline.
+    /// Locks horizontal viewport width across all aspect ratios in both Edit Mode and Play Mode.
     /// </summary>
     [ExecuteAlways]
     [RequireComponent(typeof(Camera))]
     public class OrthographicCameraScaler : MonoBehaviour
     {
-        [Header("Reference Device Settings (iPhone 12 Pro Max)")]
-        [Tooltip("Reference screen width aspect (1284 for iPhone 12 Pro Max).")]
-        [SerializeField] private float referenceWidth = 1284f;
+        [Header("Reference Device Settings (Samsung Galaxy S10e)")]
+        [Tooltip("Reference screen width aspect (1080 for Samsung Galaxy S10e).")]
+        [SerializeField] private float referenceWidth = 1080f;
 
-        [Tooltip("Reference screen height aspect (2778 for iPhone 12 Pro Max).")]
-        [SerializeField] private float referenceHeight = 2778f;
+        [Tooltip("Reference screen height aspect (2280 for Samsung Galaxy S10e).")]
+        [SerializeField] private float referenceHeight = 2280f;
 
         [Tooltip("Desired Orthographic Size on the reference device.")]
-        [SerializeField] private float referenceOrthoSize = 20f;
+        [SerializeField] private float referenceOrthoSize = 18f;
 
         private Camera targetCamera;
         private int lastScreenWidth;
@@ -51,7 +51,7 @@ namespace RestaurantLoop.Infrastructure
             float referenceAspect = referenceWidth / referenceHeight;
             float currentAspect = (float)lastScreenWidth / lastScreenHeight;
 
-            // Algorithm: Scale Orthographic Size inversely to aspect ratio changes to lock horizontal width
+            // Scale Orthographic Size inversely to aspect ratio changes to lock horizontal width
             float targetOrthoSize = referenceOrthoSize * (referenceAspect / currentAspect);
 
             targetCamera.orthographicSize = targetOrthoSize;
