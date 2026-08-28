@@ -43,6 +43,7 @@ namespace RestaurantLoop.Core
         private Vector3 selectionCameraBaseWorldPosition;
         private Tween selectionCameraTween;
         private bool hasSelectionCameraBasePosition;
+        private bool isSelectionCameraOffsetApplied;
         private bool warnedMissingSelectionCamera;
 
         public bool IsHandSelectionActive { get; private set; }
@@ -297,6 +298,13 @@ namespace RestaurantLoop.Core
 
         private void MoveSelectionCamera(bool isSelecting)
         {
+            if (isSelecting && (QueueManager.Instance == null || !QueueManager.Instance.HasColumnWithAtLeastOccupiedStacks(3)))
+            {
+                return;
+            }
+
+            if (!isSelecting && !isSelectionCameraOffsetApplied) return;
+
             if (selectionCameraTransform == null)
             {
                 CaptureSelectionCameraBasePosition();
@@ -325,12 +333,14 @@ namespace RestaurantLoop.Core
             selectionCameraTween = selectionCameraTransform.DOMove(targetPosition, selectionCameraMoveDuration)
                 .SetEase(Ease.OutQuad)
                 .SetUpdate(true);
+            isSelectionCameraOffsetApplied = isSelecting;
         }
 
         private void RestoreSelectionCameraImmediate()
         {
             selectionCameraTween?.Kill();
             selectionCameraTween = null;
+            isSelectionCameraOffsetApplied = false;
 
             if (selectionCameraTransform != null)
             {

@@ -191,6 +191,18 @@ namespace RestaurantLoop.Core
             }
         }
 
+        public bool HasColumnWithAtLeastOccupiedStacks(int minimumCount)
+        {
+            minimumCount = Mathf.Max(1, minimumCount);
+
+            foreach (QueueColumn column in columns)
+            {
+                if (column != null && column.OccupiedSlotCount >= minimumCount) return true;
+            }
+
+            return false;
+        }
+
         public bool HasClearColorSelectableStack
         {
             get
