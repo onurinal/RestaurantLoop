@@ -53,13 +53,16 @@ namespace RestaurantLoop.Core
                 });
         }
 
-        public void AnimateItemThrowToCustomer(GameObject singleMeshModel, Vector3 targetCustomerPosition)
+        public void AnimateItemThrowToCustomer(GameObject singleMeshModel, Vector3 targetCustomerPosition, bool ignoreTimeScale = false)
         {
             if (singleMeshModel == null) return;
 
             GameObject flyingItem = PoolManager.Instance.Spawn(singleMeshModel, transform.position, Quaternion.identity);
 
-            flyingItem.transform.DOJump(targetCustomerPosition, 2f, 1, 0.35f)
+            Tween throwTween = flyingItem.transform.DOJump(targetCustomerPosition, 2f, 1, 0.35f);
+            if (ignoreTimeScale) throwTween.SetUpdate(true);
+
+            throwTween
                 .OnComplete(() => { PoolManager.Instance.Despawn(flyingItem); });
         }
     }

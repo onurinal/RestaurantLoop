@@ -50,6 +50,7 @@ namespace RestaurantLoop.Core
 
         public void Initialize(ItemDataSO data)
         {
+            StopAllCoroutines();
             transform.DOKill();
             ModelTransform.DOKill();
 
@@ -214,6 +215,22 @@ namespace RestaurantLoop.Core
             StartCoroutine(EatAndLeaveRoutine(onComplete));
         }
 
+        /// <summary>
+        /// Plays the normal happy departure presentation without invoking normal edge-slot service logic.
+        /// Clear Color removes those slots and demands atomically before this visual completes.
+        /// </summary>
+        public void ResolveByClearColor()
+        {
+            StopAllCoroutines();
+            IsServed = true;
+            SetEdgeStatus(false);
+            SetBalloonActive(false);
+
+            transform.DOKill();
+            ModelTransform.DOKill();
+            StartCoroutine(ClearColorExitRoutine());
+        }
+
         private IEnumerator EatAndLeaveRoutine(Action onComplete)
         {
             yield return new WaitForSeconds(0.35f);
@@ -240,6 +257,31 @@ namespace RestaurantLoop.Core
                     onComplete?.Invoke();
                     PoolManager.Instance.Despawn(gameObject);
                 });
+        }
+
+        private IEnumerator ClearColorExitRoutine()
+        {
+            yield return new WaitForSecondsRealtime(0.35f);
+
+            if (AudioManager.Instance != null && AudioManager.Instance.popSound != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.popSound);
+
+            if (animator != null) animator.SetTrigger(EatHash);
+
+            if (AudioManager.Instance != null && AudioManager.Instance.nomNomSound != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.nomNomSound);
+
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            if (animator != null) animator.SetTrigger(JumpHash);
+
+            if (AudioManager.Instance != null && AudioManager.Instance.happyJumpSound != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.happyJumpSound);
+
+            transform.DOScale(Vector3.zero, 0.4f).SetEase(Ease.InBack).SetUpdate(true);
+            transform.DOJump(transform.position, 0.5f, 1, 0.4f)
+                .SetUpdate(true)
+                .OnComplete(() => PoolManager.Instance.Despawn(gameObject));
         }
     }
 }

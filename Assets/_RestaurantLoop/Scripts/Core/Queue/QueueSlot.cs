@@ -7,6 +7,12 @@
     {
         public override void OnStackTapped(StackItem stack)
         {
+            if (PowerUpManager.Instance != null && PowerUpManager.Instance.IsClearColorSelectionActive)
+            {
+                PowerUpManager.Instance.TrySelectClearColorStack(stack);
+                return;
+            }
+
             if (PowerUpManager.Instance != null && PowerUpManager.Instance.IsHandSelectionActive)
             {
                 PowerUpManager.Instance.TrySelectHandStack(stack);

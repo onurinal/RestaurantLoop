@@ -67,7 +67,7 @@ namespace RestaurantLoop.UI
             if (musicToggleButton != null) musicToggleButton.onClick.AddListener(ToggleMusic);
             if (sfxToggleButton != null) sfxToggleButton.onClick.AddListener(ToggleSFX);
             
-            levelText.text = "Level 1";
+            levelText.text = "LEVEL 1";
         }
 
         private void PlayTapSound()
