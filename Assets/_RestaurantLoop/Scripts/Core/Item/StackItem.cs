@@ -30,6 +30,8 @@ namespace RestaurantLoop.Core
         private StackItemAnimator animator;
         private StackItemMovement movement;
         private Tween handSelectionTween;
+        private Vector3 selectionBaseLocalScale;
+        private bool hasSelectionBaseScale;
 
         private StackVisualMode currentMode = StackVisualMode.SingleWithUI;
 
@@ -61,6 +63,9 @@ namespace RestaurantLoop.Core
 
         public void Initialize(ItemDataSO data, int count)
         {
+            handSelectionTween?.Kill();
+            handSelectionTween = null;
+            hasSelectionBaseScale = false;
             itemData = data;
             remainingCount = Mathf.Max(0, count);
             currentMode = StackVisualMode.SingleWithUI;
@@ -97,11 +102,23 @@ namespace RestaurantLoop.Core
 
             if (!highlighted)
             {
-                transform.localScale = Vector3.one;
+                if (hasSelectionBaseScale)
+                {
+                    transform.localScale = selectionBaseLocalScale;
+                    hasSelectionBaseScale = false;
+                }
+
                 return;
             }
 
-            handSelectionTween = transform.DOScale(Vector3.one * 1.08f, 0.35f)
+            if (!hasSelectionBaseScale)
+            {
+                selectionBaseLocalScale = transform.localScale;
+                hasSelectionBaseScale = true;
+            }
+
+            transform.localScale = selectionBaseLocalScale;
+            handSelectionTween = transform.DOScale(selectionBaseLocalScale * 1.08f, 0.35f)
                 .SetLoops(-1, LoopType.Yoyo)
                 .SetEase(Ease.InOutSine)
                 .SetUpdate(true);

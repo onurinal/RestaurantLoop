@@ -57,7 +57,11 @@ namespace RestaurantLoop.Core
         {
             if (singleMeshModel == null) return;
 
+            // Rack stacks inherit a smaller world scale from their slot hierarchy. Preserve the
+            // source mesh's rendered size when its flight visual is spawned at the scene root.
+            Vector3 sourceWorldScale = singleMeshModel.transform.lossyScale;
             GameObject flyingItem = PoolManager.Instance.Spawn(singleMeshModel, transform.position, Quaternion.identity);
+            flyingItem.transform.localScale = sourceWorldScale;
 
             Tween throwTween = flyingItem.transform.DOJump(targetCustomerPosition, 2f, 1, 0.35f);
             if (ignoreTimeScale) throwTween.SetUpdate(true);
