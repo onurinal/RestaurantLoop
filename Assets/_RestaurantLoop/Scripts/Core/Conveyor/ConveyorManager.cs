@@ -49,6 +49,7 @@ namespace RestaurantLoop.Core
         public int MaxCapacity => maxCapacity + attemptCapacityBonus;
 
         public event Action<int, int> CapacityChanged;
+        public event Action CapacityIncreased;
         public event Action CapacityRejected;
         public event Action<StackItem> StackEnteredBelt;
 
@@ -146,6 +147,7 @@ namespace RestaurantLoop.Core
 
             attemptCapacityBonus += amount;
             CapacityChanged?.Invoke(occupiedCapacity, MaxCapacity);
+            CapacityIncreased?.Invoke();
             return true;
         }
 

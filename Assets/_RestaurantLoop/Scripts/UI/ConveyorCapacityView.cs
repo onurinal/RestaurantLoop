@@ -19,9 +19,15 @@ namespace RestaurantLoop.UI
         [SerializeField, Min(0f)] private float rejectionShakeDegrees = 12f;
         [SerializeField, Min(1)] private int rejectionShakeVibrato = 10;
 
+        [Header("Capacity Increase Feedback")]
+        [SerializeField, Min(1f)] private float capacityIncreaseScale = 1.25f;
+        [SerializeField, Min(0.01f)] private float capacityIncreaseDuration = 0.15f;
+
         private Color defaultTextColor;
         private Quaternion defaultTextRotation;
+        private Vector3 defaultTextScale;
         private Tween rejectionFeedbackTween;
+        private Tween capacityIncreaseFeedbackTween;
 
         private void Awake()
         {
@@ -29,6 +35,7 @@ namespace RestaurantLoop.UI
 
             defaultTextColor = countText.color;
             defaultTextRotation = countText.rectTransform.localRotation;
+            defaultTextScale = countText.rectTransform.localScale;
         }
 
         private void OnEnable()
@@ -39,6 +46,7 @@ namespace RestaurantLoop.UI
             }
 
             conveyor.CapacityChanged += Refresh;
+            conveyor.CapacityIncreased += PlayCapacityIncreasedFeedback;
             conveyor.CapacityRejected += PlayCapacityRejectedFeedback;
             Refresh(conveyor.OccupiedCapacity, conveyor.MaxCapacity);
         }
@@ -48,10 +56,12 @@ namespace RestaurantLoop.UI
             if (conveyor != null)
             {
                 conveyor.CapacityChanged -= Refresh;
+                conveyor.CapacityIncreased -= PlayCapacityIncreasedFeedback;
                 conveyor.CapacityRejected -= PlayCapacityRejectedFeedback;
             }
 
             ResetFeedbackVisuals();
+            ResetCapacityIncreaseVisuals();
         }
 
         private void Refresh(int occupied, int maximum)
@@ -84,12 +94,35 @@ namespace RestaurantLoop.UI
                 .OnComplete(ResetFeedbackVisuals);
         }
 
+        private void PlayCapacityIncreasedFeedback()
+        {
+            if (countText == null) return;
+
+            capacityIncreaseFeedbackTween?.Kill();
+            ResetCapacityIncreaseVisuals();
+
+            capacityIncreaseFeedbackTween = DOTween.Sequence()
+                .Append(countText.rectTransform.DOScale(defaultTextScale * capacityIncreaseScale, capacityIncreaseDuration)
+                    .SetEase(Ease.OutBack))
+                .Append(countText.rectTransform.DOScale(defaultTextScale, capacityIncreaseDuration)
+                    .SetEase(Ease.InOutQuad))
+                .OnComplete(ResetCapacityIncreaseVisuals);
+        }
+
         private void ResetFeedbackVisuals()
         {
             if (countText == null) return;
 
             countText.rectTransform.localRotation = defaultTextRotation;
             countText.color = defaultTextColor;
+        }
+
+        private void ResetCapacityIncreaseVisuals()
+        {
+            if (countText != null)
+            {
+                countText.rectTransform.localScale = defaultTextScale;
+            }
         }
     }
 }
