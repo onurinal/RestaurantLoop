@@ -12,6 +12,10 @@ namespace RestaurantLoop.Core
         [Header("References")]
         [SerializeField] private QueueSpawner queueSpawner;
 
+        [Header("Queue Count Labels")]
+        [Tooltip("Count-label opacity for queue stacks behind the front row. Selection power-ups temporarily restore full opacity.")]
+        [SerializeField, Range(0f, 1f)] private float nonFrontRowCountTextOpacity = 0.7f;
+
         private List<QueueColumn> columns = new List<QueueColumn>();
 
         public event Action QueueChanged;
@@ -105,6 +109,8 @@ namespace RestaurantLoop.Core
                     }
                 }
             }
+
+            RefreshQueueCountTextOpacity();
         }
 
         public void ClearQueue()
@@ -326,6 +332,8 @@ namespace RestaurantLoop.Core
                     stack.SetHandSelectionHighlight(eligible);
                 }
             }
+
+            RefreshQueueCountTextOpacity(active);
         }
 
         public bool IsClearColorSelectableStack(StackItem stack)
@@ -359,6 +367,8 @@ namespace RestaurantLoop.Core
                     if (stack != null) stack.SetHandSelectionHighlight(active && IsClearColorSelectableStack(stack));
                 }
             }
+
+            RefreshQueueCountTextOpacity(active);
         }
 
         public int RemoveStacksByData(ItemDataSO data)
@@ -404,7 +414,36 @@ namespace RestaurantLoop.Core
             return removedCount;
         }
 
-        public void NotifyQueueChanged() => QueueChanged?.Invoke();
+        public void NotifyQueueChanged()
+        {
+            RefreshQueueCountTextOpacity();
+            QueueChanged?.Invoke();
+        }
+
+        private void RefreshQueueCountTextOpacity(bool? selectionModeActive = null)
+        {
+            bool useFullOpacity = selectionModeActive ??
+                (PowerUpManager.Instance != null &&
+                 (PowerUpManager.Instance.IsHandSelectionActive || PowerUpManager.Instance.IsClearColorSelectionActive));
+
+            foreach (QueueColumn column in columns)
+            {
+                if (column == null) continue;
+
+                QueueSlot[] childSlots = column.GetComponentsInChildren<QueueSlot>(true);
+                for (int i = 0; i < childSlots.Length; i++)
+                {
+                    QueueSlot slot = childSlots[i];
+                    StackItem stack = slot != null ? slot.CurrentStack : null;
+                    if (stack == null) continue;
+
+                    float opacity = !useFullOpacity && column.IsDeeperSlot(slot)
+                        ? nonFrontRowCountTextOpacity
+                        : 1f;
+                    stack.SetCountTextOpacity(opacity);
+                }
+            }
+        }
 
         private bool IsTransitioning
         {

@@ -134,6 +134,14 @@ namespace RestaurantLoop.Core
         }
 
         /// <summary>
+        /// Sets the opacity of this stack's count label without affecting its food visual.
+        /// </summary>
+        public void SetCountTextOpacity(float opacity)
+        {
+            visuals?.SetCountTextOpacity(opacity);
+        }
+
+        /// <summary>
         /// Uses this stack as the visual source for Clear Color's fan-out serving effect.
         /// </summary>
         public void PlayClearColorThrow(Vector3 targetCustomerPosition)

@@ -39,6 +39,8 @@ namespace RestaurantLoop.Core
         private Tween selectionHighlightTween;
         private Vector3 selectionBaseLocalScale;
         private bool hasSelectionBaseScale;
+        private Color countTextBaseColor;
+        private bool hasCountTextBaseColor;
 
         public GameObject SingleMeshModel => singleMeshModel;
 
@@ -79,11 +81,36 @@ namespace RestaurantLoop.Core
                 .SetUpdate(true);
         }
 
+        /// <summary>
+        /// Applies a multiplier to the authored count-label alpha. The original
+        /// color is retained so returning to full opacity is lossless.
+        /// </summary>
+        public void SetCountTextOpacity(float opacity)
+        {
+            if (countText == null) return;
+
+            if (!hasCountTextBaseColor)
+            {
+                countTextBaseColor = countText.color;
+                hasCountTextBaseColor = true;
+            }
+
+            Color color = countTextBaseColor;
+            color.a *= Mathf.Clamp01(opacity);
+            countText.color = color;
+        }
+
         private void Awake()
         {
             mainCamera = Camera.main;
             if (countText == null) countText = GetComponentInChildren<TMP_Text>(true);
             if (singleMeshModel == null) singleMeshModel = transform.GetComponentInChildren<MeshRenderer>(true)?.gameObject;
+
+            if (countText != null)
+            {
+                countTextBaseColor = countText.color;
+                hasCountTextBaseColor = true;
+            }
 
             if (singleMeshModel != null)
             {
