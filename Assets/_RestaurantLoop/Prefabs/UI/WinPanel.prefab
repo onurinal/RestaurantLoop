@@ -36,8 +36,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 0.000029564, y: 64}
-  m_SizeDelta: {x: 346.1097, y: 140.7412}
+  m_AnchoredPosition: {x: -0.000024319, y: 82}
+  m_SizeDelta: {x: 380.016, y: 172.1643}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!222 &2286058804441770892
 CanvasRenderer:
@@ -413,7 +413,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &8615600756985898212
 RectTransform:
   m_ObjectHideFlags: 0
@@ -432,8 +432,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 6, y: 16}
-  m_SizeDelta: {x: -283.3507, y: -1097.5483}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: -283.3507, y: -1581.5663}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4885263874709061612
 CanvasRenderer:
@@ -485,7 +485,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c1bf02c9e6ae00348b06066bc21a122c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WinFireworkFXController
-  explosionCount: 5
   fireworkPrefab: {fileID: 1826795072246435507, guid: 85492a7921a70c749a0db6359a9fb609, type: 3}
   targetCamera: {fileID: 0}
   winCanvas: {fileID: 0}

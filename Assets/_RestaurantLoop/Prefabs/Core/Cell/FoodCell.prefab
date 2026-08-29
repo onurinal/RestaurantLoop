@@ -89,7 +89,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: e630e9ace5f9b394c9e01f10886ba97c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -126,4 +126,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.FoodCell
   targetRenderers: []
-  neutralMaterial: {fileID: 2100000, guid: 9ded1e3679f472740bf047bf48f95907, type: 2}
+  neutralMaterial: {fileID: 2100000, guid: e630e9ace5f9b394c9e01f10886ba97c, type: 2}
