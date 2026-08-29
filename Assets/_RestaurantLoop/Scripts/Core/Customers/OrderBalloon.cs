@@ -13,11 +13,16 @@ namespace RestaurantLoop.Core
         [SerializeField, Min(0.01f)] private float foodScale = 0.7f;
         [SerializeField, Min(0f)] private float rotationSpeed = 20f;
 
+        [Header("Depth Clearance")]
+        [Tooltip("Pushes the balloon slightly toward the camera line of sight to prevent 3D customer head clipping.")]
+        [SerializeField] private float cameraOffsetDistance = 0.8f;
+
         private Transform foodDisplayTransform;
 
         private void Awake()
         {
             EnsureRenderer();
+            ApplyCameraOffset();
             CreateFoodDisplay();
         }
 
@@ -34,6 +39,16 @@ namespace RestaurantLoop.Core
             }
 
             BalloonFoodOverlayCamera.EnsureConfigured();
+        }
+
+        private void ApplyCameraOffset()
+        {
+            Camera mainCam = Camera.main;
+            if (mainCam != null)
+            {
+                // Offset balloon transform slightly along the camera's backward vector
+                transform.position -= mainCam.transform.forward * cameraOffsetDistance;
+            }
         }
 
         private void EnsureRenderer()
