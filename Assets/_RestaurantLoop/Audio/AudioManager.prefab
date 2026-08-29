@@ -63,7 +63,8 @@ MonoBehaviour:
   powerUp1Sound: {fileID: 8300000, guid: cb3efaeb7cfb5d446a27aa11616c683c, type: 3}
   powerUp2Sound: {fileID: 8300000, guid: a6748185c66b9c74fb2c8a0df79a5f77, type: 3}
   powerUp3Sound: {fileID: 8300000, guid: d1783b6404b446b45ab91ddaba9593cb, type: 3}
-  powerUp4Sound: {fileID: 8300000, guid: 5d60646723cba9c45966fe183d7561a5, type: 3}
+  powerUp4Sound: {fileID: 8300000, guid: 6ff6a3815c55fb7419e541f5fd246356, type: 3}
+  maxSimultaneousSounds: 2
 --- !u!82 &3898750725045401640
 AudioSource:
   m_ObjectHideFlags: 0
