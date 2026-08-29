@@ -18,7 +18,7 @@ namespace RestaurantLoop.UI
         [SerializeField] private TextMeshProUGUI topLevelText;
         [SerializeField] private Button gameSettingsButton;
         [SerializeField] private Button closeSettingsButton;
-        
+
         [Header("Legacy Audio Sliders (Kept for future use)")]
         [SerializeField] private Slider musicSlider;
         [SerializeField] private Slider sfxSlider;
@@ -28,7 +28,7 @@ namespace RestaurantLoop.UI
         [SerializeField] private Button sfxToggleButton;
         [SerializeField] private Image musicToggleImage;
         [SerializeField] private Image sfxToggleImage;
-        
+
         [Header("Audio Toggle Sprites")]
         [SerializeField] private Sprite musicOnSprite;
         [SerializeField] private Sprite musicOffSprite;
@@ -157,7 +157,7 @@ namespace RestaurantLoop.UI
             isMusicOn = !isMusicOn;
             float targetVolume = isMusicOn ? 1f : 0f;
             UpdateMusicVolume(targetVolume);
-            
+
             if (musicSlider != null) musicSlider.value = targetVolume;
             UpdateMusicButtonVisual();
             PlayTapSound();
@@ -168,7 +168,7 @@ namespace RestaurantLoop.UI
             isSfxOn = !isSfxOn;
             float targetVolume = isSfxOn ? 1f : 0f;
             UpdateSfxVolume(targetVolume);
-            
+
             if (sfxSlider != null) sfxSlider.value = targetVolume;
             UpdateSfxButtonVisual();
             PlayTapSound();
@@ -207,7 +207,17 @@ namespace RestaurantLoop.UI
             if (LevelManager.Instance != null) LevelManager.Instance.CompleteLevel();
         }
 
-        private void OnRetryClicked() => SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        private void OnRetryClicked()
+        {
+            losePanel.SetActive(false);
+
+            // Restart current level without reloading the Unity scene
+            if (LevelManager.Instance != null)
+            {
+                LevelManager.Instance.LoadCurrentLevel();
+            }
+        }
+
         private void OnMainMenuClicked() => SceneManager.LoadScene("MainMenu");
 
         private void OnDestroy()
