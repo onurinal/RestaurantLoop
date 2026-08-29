@@ -1,25 +1,36 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using RestaurantLoop.Audio; // Added to access AudioManager
+using RestaurantLoop.Audio;
 
 namespace RestaurantLoop.UI
 {
     /// <summary>
     /// Plays a bounded fireworks sequence whenever the owning win panel becomes active.
-    /// Manages active particle instance lifecycles and cleans them up immediately on panel disable or scene reload.
+    /// Features trailing audio extension to sustain sound effects for 3-4 seconds after explosions finish.
     /// </summary>
+    [RequireComponent(typeof(AudioSource))]
     public sealed class WinFireworkFXController : MonoBehaviour
     {
-        private const int ExplosionCount = 4;
+        [Header("Burst Settings")]
+        [SerializeField, Min(1)] private int explosionCount = 4;
 
         [Header("References")]
         [SerializeField] private GameObject fireworkPrefab;
         [SerializeField] private Camera targetCamera;
         [SerializeField] private Canvas winCanvas;
 
-        [Header("Audio")]
-        [SerializeField] private AudioClip explosionSound; // Assign the firework explosion sound from the Inspector
+        [Header("Audio Settings")]
+        [SerializeField] private AudioClip explosionSound;
+        [SerializeField] private AudioSource audioSource;
+        [SerializeField, Range(0.8f, 1.2f)] private float minPitch = 0.90f;
+        [SerializeField, Range(0.8f, 1.2f)] private float maxPitch = 1.10f;
+
+        [Header("Audio Extension (After Visual Bursts)")]
+        [Tooltip("Number of trailing audio echoes/crackle sounds to play after visual explosions end.")]
+        [SerializeField, Min(0)] private int trailingSoundCount = 3;
+        [Tooltip("Delay in seconds between trailing sound echoes.")]
+        [SerializeField, Min(0.1f)] private float trailingSoundInterval = 1.1f;
 
         [Header("Render Sorting")]
         [SerializeField, Min(1)] private int sortingOrderOffset = 100;
@@ -31,9 +42,9 @@ namespace RestaurantLoop.UI
         [SerializeField, Range(0f, 1f)] private float maxViewportY = 0.85f;
         [SerializeField, Min(0.01f)] private float spawnDistance = 10f;
 
-        [Header("Sequence")]
-        [SerializeField, Min(0f)] private float minimumDelay = 0.2f;
-        [SerializeField, Min(0f)] private float maximumDelay = 0.4f;
+        [Header("Sequence Delays")]
+        [SerializeField, Min(0f)] private float minimumDelay = 0.5f;
+        [SerializeField, Min(0f)] private float maximumDelay = 0.9f;
         [SerializeField, Min(0f)] private float fallbackLifetime = 10f;
 
         private readonly List<ParticleSystem> particleSystems = new();
@@ -48,6 +59,9 @@ namespace RestaurantLoop.UI
         private void Awake()
         {
             winCanvas ??= GetComponentInParent<Canvas>();
+            if (audioSource == null) audioSource = GetComponent<AudioSource>();
+
+            ConfigureAudioSource();
             RefreshReferences();
             instanceLifetime = CalculatePrefabLifetime();
         }
@@ -68,6 +82,15 @@ namespace RestaurantLoop.UI
             }
 
             ClearSpawnedFireworks();
+        }
+
+        private void ConfigureAudioSource()
+        {
+            if (audioSource != null)
+            {
+                audioSource.playOnAwake = false;
+                audioSource.spatialBlend = 0f; // 2D Sound for UI
+            }
         }
 
         private void RefreshReferences()
@@ -100,16 +123,24 @@ namespace RestaurantLoop.UI
                 yield break;
             }
 
-            for (int i = 0; i < ExplosionCount; i++)
+            // 1. Primary Visual + Audio Explosions
+            for (int i = 0; i < explosionCount; i++)
             {
                 SpawnFirework();
 
-                if (i < ExplosionCount - 1)
+                if (i < explosionCount - 1)
                 {
                     yield return new WaitForSeconds(Random.Range(
                         Mathf.Min(minimumDelay, maximumDelay),
                         Mathf.Max(minimumDelay, maximumDelay)));
                 }
+            }
+
+            // 2. Trailing Audio Phase (Extends sound for an additional 3-4 seconds)
+            for (int j = 0; j < trailingSoundCount; j++)
+            {
+                yield return new WaitForSeconds(trailingSoundInterval);
+                PlayExplosionAudio(0.7f); // Slightly softer volume for trailing echoes
             }
 
             sequence = null;
@@ -126,8 +157,19 @@ namespace RestaurantLoop.UI
             ApplyParticleSorting(instance);
             Destroy(instance, instanceLifetime);
 
-            // Play the sound as soon as the firework spawns
-            if (explosionSound != null && AudioManager.Instance != null)
+            PlayExplosionAudio(1.0f);
+        }
+
+        private void PlayExplosionAudio(float volumeScale)
+        {
+            if (explosionSound == null) return;
+
+            if (audioSource != null)
+            {
+                audioSource.pitch = Random.Range(minPitch, maxPitch);
+                audioSource.PlayOneShot(explosionSound, volumeScale);
+            }
+            else if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.PlaySFX(explosionSound);
             }
