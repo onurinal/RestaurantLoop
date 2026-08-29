@@ -49,6 +49,7 @@ namespace RestaurantLoop.Core
         public int MaxCapacity => maxCapacity + attemptCapacityBonus;
 
         public event Action<int, int> CapacityChanged;
+        public event Action CapacityRejected;
         public event Action<StackItem> StackEnteredBelt;
 
         public float EntranceDistance => entranceRatio * (path != null ? path.Length : 0f);
@@ -124,6 +125,18 @@ namespace RestaurantLoop.Core
         }
 
         /// <summary>
+        /// Announces a player-facing rejection only while the conveyor is at capacity.
+        /// Gameplay callers use this after deciding that a tap was rejected for capacity.
+        /// </summary>
+        public void NotifyCapacityRejected()
+        {
+            if (!CanAcceptStack)
+            {
+                CapacityRejected?.Invoke();
+            }
+        }
+
+        /// <summary>
         /// Raises only this attempt's simultaneous conveyor-stack limit. It never
         /// creates a stack or changes queue/rack state.
         /// </summary>
@@ -169,6 +182,7 @@ namespace RestaurantLoop.Core
 
             if (!CanAcceptStack)
             {
+                NotifyCapacityRejected();
                 return false;
             }
 

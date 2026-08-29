@@ -71,6 +71,7 @@ namespace RestaurantLoop.Core
             if (!ConveyorManager.Instance.CanAcceptStack)
             {
                 stackToSend.Shake();
+                ConveyorManager.Instance.NotifyCapacityRejected();
                 return false;
             }
 

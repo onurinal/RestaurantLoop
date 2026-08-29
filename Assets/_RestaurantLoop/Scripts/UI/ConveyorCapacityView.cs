@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using DG.Tweening;
 using RestaurantLoop.Core;
 
 namespace RestaurantLoop.UI
@@ -12,6 +13,24 @@ namespace RestaurantLoop.UI
         [SerializeField] private ConveyorManager conveyor;
         [SerializeField] private TMP_Text countText;
 
+        [Header("Capacity Rejection Feedback")]
+        [SerializeField] private Color capacityRejectedColor = Color.red;
+        [SerializeField, Min(0.01f)] private float rejectionFeedbackDuration = 0.3f;
+        [SerializeField, Min(0f)] private float rejectionShakeDegrees = 12f;
+        [SerializeField, Min(1)] private int rejectionShakeVibrato = 10;
+
+        private Color defaultTextColor;
+        private Quaternion defaultTextRotation;
+        private Tween rejectionFeedbackTween;
+
+        private void Awake()
+        {
+            if (countText == null) return;
+
+            defaultTextColor = countText.color;
+            defaultTextRotation = countText.rectTransform.localRotation;
+        }
+
         private void OnEnable()
         {
             if (conveyor == null)
@@ -20,6 +39,7 @@ namespace RestaurantLoop.UI
             }
 
             conveyor.CapacityChanged += Refresh;
+            conveyor.CapacityRejected += PlayCapacityRejectedFeedback;
             Refresh(conveyor.OccupiedCapacity, conveyor.MaxCapacity);
         }
 
@@ -28,7 +48,10 @@ namespace RestaurantLoop.UI
             if (conveyor != null)
             {
                 conveyor.CapacityChanged -= Refresh;
+                conveyor.CapacityRejected -= PlayCapacityRejectedFeedback;
             }
+
+            ResetFeedbackVisuals();
         }
 
         private void Refresh(int occupied, int maximum)
@@ -37,6 +60,36 @@ namespace RestaurantLoop.UI
             {
                 countText.text = $"{occupied}/{maximum}";
             }
+        }
+
+        private void PlayCapacityRejectedFeedback()
+        {
+            if (countText == null) return;
+
+            rejectionFeedbackTween?.Kill();
+            ResetFeedbackVisuals();
+
+            Color rejectedColor = capacityRejectedColor;
+            rejectedColor.a = defaultTextColor.a;
+            countText.color = rejectedColor;
+
+            rejectionFeedbackTween = DOTween.Sequence()
+                .Join(countText.rectTransform.DOShakeRotation(
+                    rejectionFeedbackDuration,
+                    new Vector3(0f, 0f, rejectionShakeDegrees),
+                    rejectionShakeVibrato,
+                    90f,
+                    false))
+                .Append(countText.DOColor(defaultTextColor, rejectionFeedbackDuration))
+                .OnComplete(ResetFeedbackVisuals);
+        }
+
+        private void ResetFeedbackVisuals()
+        {
+            if (countText == null) return;
+
+            countText.rectTransform.localRotation = defaultTextRotation;
+            countText.color = defaultTextColor;
         }
     }
 }
