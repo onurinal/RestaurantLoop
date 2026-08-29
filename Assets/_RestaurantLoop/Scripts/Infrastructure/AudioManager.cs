@@ -29,6 +29,12 @@ namespace RestaurantLoop.Audio
         [Tooltip("Played when the rack overflows and the level is lost")]
         public AudioClip levelLoseSound;
 
+        [Header("Power-Up SFX")]
+        public AudioClip powerUp1Sound;
+        public AudioClip powerUp2Sound;
+        public AudioClip powerUp3Sound;
+        public AudioClip powerUp4Sound;
+
         private void Awake()
         {
             // Singleton pattern to ensure only one AudioManager exists

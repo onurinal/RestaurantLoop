@@ -41,6 +41,12 @@ namespace RestaurantLoop.UI
         [SerializeField] private Button retryButton;
         [SerializeField] private Button loseMainMenuButton;
 
+        [Header("Power-Up Buttons")]
+        [SerializeField] private Button powerUp1Button;
+        [SerializeField] private Button powerUp2Button;
+        [SerializeField] private Button powerUp3Button;
+        [SerializeField] private Button powerUp4Button;
+
         private bool isMusicOn = true;
         private bool isSfxOn = true;
 
@@ -87,6 +93,7 @@ namespace RestaurantLoop.UI
                 UpdateTopLevelText(LevelManager.Instance.CurrentLevelNumber);
             }
 
+            // Bind Game State Buttons
             nextLevelButton.onClick.AddListener(OnNextLevelClicked);
             nextLevelButton.onClick.AddListener(PlayTapSound);
             retryButton.onClick.AddListener(OnRetryClicked);
@@ -95,6 +102,12 @@ namespace RestaurantLoop.UI
             winMainMenuButton.onClick.AddListener(PlayTapSound);
             loseMainMenuButton.onClick.AddListener(OnMainMenuClicked);
             loseMainMenuButton.onClick.AddListener(PlayTapSound);
+
+            // Bind Custom Power-Up Audio Events
+            if (powerUp1Button != null) powerUp1Button.onClick.AddListener(PlayPowerUp1Sound);
+            if (powerUp2Button != null) powerUp2Button.onClick.AddListener(PlayPowerUp2Sound);
+            if (powerUp3Button != null) powerUp3Button.onClick.AddListener(PlayPowerUp3Sound);
+            if (powerUp4Button != null) powerUp4Button.onClick.AddListener(PlayPowerUp4Sound);
         }
 
         private void PlayTapSound()
@@ -103,6 +116,31 @@ namespace RestaurantLoop.UI
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.tapSound);
             }
+        }
+
+        // --- Custom Power-Up Sounds ---
+        private void PlayPowerUp1Sound()
+        {
+            if (AudioManager.Instance != null && AudioManager.Instance.powerUp1Sound != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.powerUp1Sound);
+        }
+
+        private void PlayPowerUp2Sound()
+        {
+            if (AudioManager.Instance != null && AudioManager.Instance.powerUp2Sound != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.powerUp2Sound);
+        }
+
+        private void PlayPowerUp3Sound()
+        {
+            if (AudioManager.Instance != null && AudioManager.Instance.powerUp3Sound != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.powerUp3Sound);
+        }
+
+        private void PlayPowerUp4Sound()
+        {
+            if (AudioManager.Instance != null && AudioManager.Instance.powerUp4Sound != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.powerUp4Sound);
         }
 
         private void UpdateTopLevelText(int levelNumber)
@@ -191,6 +229,12 @@ namespace RestaurantLoop.UI
             retryButton.onClick.RemoveAllListeners();
             winMainMenuButton.onClick.RemoveAllListeners();
             loseMainMenuButton.onClick.RemoveAllListeners();
+
+            // Unbind Power-Up Buttons
+            if (powerUp1Button != null) powerUp1Button.onClick.RemoveAllListeners();
+            if (powerUp2Button != null) powerUp2Button.onClick.RemoveAllListeners();
+            if (powerUp3Button != null) powerUp3Button.onClick.RemoveAllListeners();
+            if (powerUp4Button != null) powerUp4Button.onClick.RemoveAllListeners();
         }
     }
 }

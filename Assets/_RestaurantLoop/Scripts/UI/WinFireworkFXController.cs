@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using RestaurantLoop.Audio; // Added to access AudioManager
 
 namespace RestaurantLoop.UI
 {
@@ -16,6 +17,9 @@ namespace RestaurantLoop.UI
         [SerializeField] private GameObject fireworkPrefab;
         [SerializeField] private Camera targetCamera;
         [SerializeField] private Canvas winCanvas;
+
+        [Header("Audio")]
+        [SerializeField] private AudioClip explosionSound; // Assign the firework explosion sound from the Inspector
 
         [Header("Render Sorting")]
         [SerializeField, Min(1)] private int sortingOrderOffset = 100;
@@ -121,6 +125,12 @@ namespace RestaurantLoop.UI
             activeSpawnedFireworks.Add(instance);
             ApplyParticleSorting(instance);
             Destroy(instance, instanceLifetime);
+
+            // Play the sound as soon as the firework spawns
+            if (explosionSound != null && AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(explosionSound);
+            }
         }
 
         private void ClearSpawnedFireworks()
