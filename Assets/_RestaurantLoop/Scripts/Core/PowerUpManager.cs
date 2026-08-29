@@ -102,7 +102,7 @@ namespace RestaurantLoop.Core
 
         public bool CanBeginHandSelection => IsAttemptPlaying && IsCrowdReady && !IsInteractionLocked && handUses > 0 &&
             ConveyorManager.Instance != null && ConveyorManager.Instance.CanAcceptStack &&
-            ConveyorManager.Instance.IsEntranceClear() && QueueManager.Instance != null &&
+            QueueManager.Instance != null &&
             QueueManager.Instance.HasSelectableDeeperStack;
 
         public bool CanBeginClearColorSelection => IsAttemptPlaying && IsCrowdReady && !IsInteractionLocked && clearColorUses > 0 &&

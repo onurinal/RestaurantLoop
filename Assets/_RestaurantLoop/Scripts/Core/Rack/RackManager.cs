@@ -143,7 +143,7 @@ namespace RestaurantLoop.Core
             RackSlot targetSlot = GetSlotContainingStack(stack);
             if (targetSlot == null) return false;
 
-            if (!ConveyorManager.Instance.CanAcceptStack || !ConveyorManager.Instance.IsEntranceClear())
+            if (!ConveyorManager.Instance.CanAcceptStack)
             {
                 stack.Shake();
                 return false;

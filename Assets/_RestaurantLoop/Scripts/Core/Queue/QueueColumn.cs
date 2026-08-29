@@ -68,7 +68,7 @@ namespace RestaurantLoop.Core
             }
 
             // Check conveyor availability BEFORE clearing the slot
-            if (!ConveyorManager.Instance.CanAcceptStack || !ConveyorManager.Instance.IsEntranceClear())
+            if (!ConveyorManager.Instance.CanAcceptStack)
             {
                 stackToSend.Shake();
                 return false;

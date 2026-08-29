@@ -25,6 +25,13 @@ namespace RestaurantLoop.Core
         [Tooltip("Minimum safe distance (in spline units) required around the entrance before accepting new stacks.")]
         [SerializeField] private float entranceSafetyBuffer = 1.8f;
 
+        [Header("Queued Entrance Landing")]
+        [Tooltip("World-space height above the conveyor entrance where a stack waits for a safe landing gap.")]
+        [SerializeField, Min(0f)] private float queuedEntranceHoverHeight = 2.5f;
+        [Tooltip("Additional vertical separation for each later stack waiting above the entrance.")]
+        [SerializeField, Min(0f)] private float queuedEntranceHoverStackSpacing = 0.7f;
+        [SerializeField, Min(0.01f)] private float queuedEntranceLandingDuration = 0.18f;
+
         private readonly List<StackItem> activeStacks = new List<StackItem>();
         private readonly List<StackItem> pendingJumpStacks = new List<StackItem>();
         private int occupiedCapacity = 0;
@@ -178,10 +185,14 @@ namespace RestaurantLoop.Core
         {
             if (stack == null || stack.RemainingItemCount <= 0) return false;
 
-            if (!IsEntranceClear() || !CanAcceptStack)
+            // Capacity remains an immediate rejection. Entrance congestion only
+            // uses the hover queue when the player tapped while it was blocked.
+            if (!CanAcceptStack)
             {
                 return false;
             }
+
+            bool entranceWasBlocked = !IsEntranceClear();
 
             if (!TryReserveSlot())
             {
@@ -192,28 +203,54 @@ namespace RestaurantLoop.Core
             stack.transform.SetParent(null, true);
             RegisterPendingJump(stack);
 
-            Vector3 entrancePosition = path.GetPosition(EntranceDistance);
-            stack.JumpToConveyor(entrancePosition, () =>
+            if (!entranceWasBlocked)
             {
-                CompletePendingJump(stack);
-
-                if (stack != null && stack.gameObject.activeInHierarchy)
+                Vector3 entrancePosition = path.GetPosition(EntranceDistance);
+                stack.JumpToConveyor(entrancePosition, () => CompleteEntranceLanding(stack));
+            }
+            else
+            {
+                Vector3 queuedEntrancePosition = GetQueuedEntrancePosition(stack);
+                stack.JumpToConveyor(queuedEntrancePosition, () =>
                 {
-                    TryAddStack(stack);
-                }
-
-                // --- TUTORIAL STEP 2 TRIGGER: ITEM SUCCESSFULLY LANDED ON CONVEYOR IN LEVEL 1 ---
-                if (LevelManager.Instance != null && LevelManager.Instance.CurrentLevelNumber == 1)
-                {
-                    if (TutorialManager.Instance != null && TutorialManager.Instance.CurrentStep == TutorialManager.TutorialStep.TapFoodToConveyor)
-                    {
-                        TutorialManager.Instance.EnterStepWaitInRack();
-                    }
-                }
-                // --------------------------------------------------------------------------------
-            });
+                    StartCoroutine(Routine_LandQueuedStack(stack));
+                });
+            }
 
             return true;
+        }
+
+        private IEnumerator Routine_LandQueuedStack(StackItem stack)
+        {
+            while (stack != null && stack.gameObject.activeInHierarchy && !IsQueuedStackReadyToLand(stack))
+            {
+                yield return null;
+            }
+
+            if (stack == null || !stack.gameObject.activeInHierarchy) yield break;
+
+            Vector3 entrancePosition = path.GetPosition(EntranceDistance);
+            stack.MoveToConveyor(entrancePosition, queuedEntranceLandingDuration, () => CompleteEntranceLanding(stack));
+        }
+
+        private void CompleteEntranceLanding(StackItem stack)
+        {
+            CompletePendingJump(stack);
+
+            if (stack != null && stack.gameObject.activeInHierarchy)
+            {
+                TryAddStack(stack);
+            }
+
+            // --- TUTORIAL STEP 2 TRIGGER: ITEM SUCCESSFULLY LANDED ON CONVEYOR IN LEVEL 1 ---
+            if (LevelManager.Instance != null && LevelManager.Instance.CurrentLevelNumber == 1)
+            {
+                if (TutorialManager.Instance != null && TutorialManager.Instance.CurrentStep == TutorialManager.TutorialStep.TapFoodToConveyor)
+                {
+                    TutorialManager.Instance.EnterStepWaitInRack();
+                }
+            }
+            // --------------------------------------------------------------------------------
         }
 
         public bool ShouldKeepLoopingOnBelt()
@@ -249,11 +286,15 @@ namespace RestaurantLoop.Core
         {
             RegisterPendingJump(stack);
 
-            while (!IsEntranceClearForAutoLoop())
+            // Auto-looping and player-tapped stacks share one FIFO entrance queue.
+            // Waiting for the list to contain only this stack deadlocked the belt
+            // whenever rapid taps queued stacks behind an auto-looping stack.
+            while (!IsPendingStackReadyToEnter(stack))
             {
                 if (stack == null || !stack.gameObject.activeInHierarchy)
                 {
                     CompletePendingJump(stack);
+                    ReleaseCapacity();
                     yield break;
                 }
 
@@ -263,6 +304,7 @@ namespace RestaurantLoop.Core
             if (stack == null || !stack.gameObject.activeInHierarchy)
             {
                 CompletePendingJump(stack);
+                ReleaseCapacity();
                 yield break;
             }
 
@@ -368,6 +410,41 @@ namespace RestaurantLoop.Core
             }
 
             pendingJumpsCount = pendingJumpStacks.Count;
+        }
+
+        private Vector3 GetQueuedEntrancePosition(StackItem stack)
+        {
+            int queueIndex = Mathf.Max(0, pendingJumpStacks.IndexOf(stack));
+            float height = queuedEntranceHoverHeight + (queueIndex * queuedEntranceHoverStackSpacing);
+            return path.GetPosition(EntranceDistance) + (Vector3.up * height);
+        }
+
+        private bool IsQueuedStackReadyToLand(StackItem stack)
+        {
+            return IsPendingStackReadyToEnter(stack);
+        }
+
+        private bool IsPendingStackReadyToEnter(StackItem stack)
+        {
+            // Pending stacks enter FIFO, preventing overlapping landings while
+            // allowing auto-looping stacks and player-tapped stacks to progress
+            // through the same queue.
+            if (pendingJumpStacks.Count == 0 || pendingJumpStacks[0] != stack) return false;
+
+            float entranceDist = EntranceDistance;
+            float pathLen = path != null ? path.Length : 0f;
+
+            for (int i = 0; i < activeStacks.Count; i++)
+            {
+                StackItem activeStack = activeStacks[i];
+                if (activeStack == null || activeStack.IsJumping) continue;
+
+                float delta = Mathf.Abs(activeStack.CurrentDistance - entranceDist);
+                if (pathLen > 0f) delta = Mathf.Min(delta, pathLen - delta);
+                if (delta < entranceSafetyBuffer) return false;
+            }
+
+            return true;
         }
 
         private static void DestroyStackForClearColor(StackItem stack)

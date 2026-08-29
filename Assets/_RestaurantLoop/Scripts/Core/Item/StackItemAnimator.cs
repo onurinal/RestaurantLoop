@@ -35,6 +35,19 @@ namespace RestaurantLoop.Core
                 });
         }
 
+        public void MoveToConveyor(Vector3 targetPosition, float duration, Action onComplete)
+        {
+            IsJumping = true;
+            transform.DOKill();
+            transform.DOMove(targetPosition, duration)
+                .SetEase(Ease.InQuad)
+                .OnComplete(() =>
+                {
+                    IsJumping = false;
+                    onComplete?.Invoke();
+                });
+        }
+
         public void JumpToSlot(Transform slotTransform, Action onComplete = null)
         {
             IsJumping = true;

@@ -219,6 +219,14 @@ namespace RestaurantLoop.Core
             });
         }
 
+        /// <summary>
+        /// Smoothly settles a stack from its queued entrance hover point onto the conveyor.
+        /// </summary>
+        public void MoveToConveyor(Vector3 targetPosition, float duration, Action onComplete)
+        {
+            animator.MoveToConveyor(targetPosition, duration, onComplete);
+        }
+
         public void JumpToSlot(Transform slotTransform, Action onComplete = null)
         {
             currentMode = StackVisualMode.SingleWithUI;
