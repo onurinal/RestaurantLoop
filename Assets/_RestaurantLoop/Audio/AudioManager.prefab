@@ -54,7 +54,7 @@ MonoBehaviour:
   boardClickSound: {fileID: 8300000, guid: 7e42f7bae9bbd784dad61f9fdf0ab97b, type: 3}
   throwSound: {fileID: 8300000, guid: d278fed5d3637e84ebbaa01b1ac79336, type: 3}
   rackDropSound: {fileID: 8300000, guid: 831aba7f28efcb343a418f54953cb854, type: 3}
-  nomNomSound: {fileID: 8300000, guid: cbd176b617e322645b30db035dd26d5a, type: 3}
+  nomNomSound: {fileID: 8300000, guid: e006202d4a9c70643a738e5c4f0b35cd, type: 3}
   happyJumpSound: {fileID: 8300000, guid: 5791c0e0a6066274bb9de1196ffe4eb9, type: 3}
   popSound: {fileID: 8300000, guid: 8ff5486e5ce3bdb4088cab4ece2c4864, type: 3}
   customerEntranceSound: {fileID: 8300000, guid: 1b934124947d2d044811f2a283908af2, type: 3}
