@@ -31,6 +31,7 @@ namespace RestaurantLoop.Core
         private static readonly int JumpHash = Animator.StringToHash("Jump");
 
         private Vector3 authoredLocalScale;
+        private OrderBalloon orderBalloon;
         private Transform ModelTransform => visualContainer != null ? visualContainer : (animator != null ? animator.transform : transform);
 
         private void Awake()
@@ -38,6 +39,7 @@ namespace RestaurantLoop.Core
             authoredLocalScale = transform.localScale;
             if (animator == null) animator = GetComponentInChildren<Animator>();
             if (customerRenderer == null) customerRenderer = GetComponentInChildren<SkinnedMeshRenderer>();
+            if (balloonObject != null) orderBalloon = balloonObject.GetComponent<OrderBalloon>();
 
             propBlock = new MaterialPropertyBlock();
         }
@@ -62,7 +64,7 @@ namespace RestaurantLoop.Core
             transform.rotation = Quaternion.identity;
             ModelTransform.localRotation = Quaternion.identity;
 
-            SetBalloonActive(false);
+            SetBalloonActive(false, animate: false);
             SetDesaturation(1f, 0f);
         }
 
@@ -88,9 +90,39 @@ namespace RestaurantLoop.Core
             });
         }
 
-        public void SetBalloonActive(bool active)
+        public void SetBalloonActive(bool active, bool animate = true)
         {
-            if (balloonObject != null) balloonObject.SetActive(active);
+            if (balloonObject == null) return;
+
+            if (active)
+            {
+                if (balloonObject.activeSelf)
+                {
+                    orderBalloon?.PlayIn();
+                }
+                else
+                {
+                    balloonObject.SetActive(true);
+                }
+
+                return;
+            }
+
+            if (!balloonObject.activeSelf) return;
+
+            if (!animate || orderBalloon == null)
+            {
+                balloonObject.SetActive(false);
+                return;
+            }
+
+            orderBalloon.PlayOut(() =>
+            {
+                if (balloonObject != null)
+                {
+                    balloonObject.SetActive(false);
+                }
+            });
         }
 
         public void SetModelRotation(float yAngle)
