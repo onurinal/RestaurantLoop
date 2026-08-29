@@ -1764,6 +1764,22 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 8300000, guid: cbd176b617e322645b30db035dd26d5a, type: 3}
     - target: {fileID: 6029360811432592935, guid: 7d3076738a2a8b14982d23dd701c72dc, type: 3}
+      propertyPath: powerUp1Sound
+      value: 
+      objectReference: {fileID: 8300000, guid: cb3efaeb7cfb5d446a27aa11616c683c, type: 3}
+    - target: {fileID: 6029360811432592935, guid: 7d3076738a2a8b14982d23dd701c72dc, type: 3}
+      propertyPath: powerUp2Sound
+      value: 
+      objectReference: {fileID: 8300000, guid: a6748185c66b9c74fb2c8a0df79a5f77, type: 3}
+    - target: {fileID: 6029360811432592935, guid: 7d3076738a2a8b14982d23dd701c72dc, type: 3}
+      propertyPath: powerUp3Sound
+      value: 
+      objectReference: {fileID: 8300000, guid: d1783b6404b446b45ab91ddaba9593cb, type: 3}
+    - target: {fileID: 6029360811432592935, guid: 7d3076738a2a8b14982d23dd701c72dc, type: 3}
+      propertyPath: powerUp4Sound
+      value: 
+      objectReference: {fileID: 8300000, guid: 5d60646723cba9c45966fe183d7561a5, type: 3}
+    - target: {fileID: 6029360811432592935, guid: 7d3076738a2a8b14982d23dd701c72dc, type: 3}
       propertyPath: rackDropSound
       value: 
       objectReference: {fileID: 8300000, guid: 831aba7f28efcb343a418f54953cb854, type: 3}
