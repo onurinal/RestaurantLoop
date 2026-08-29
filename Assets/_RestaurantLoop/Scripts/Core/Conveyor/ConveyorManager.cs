@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
@@ -33,9 +32,12 @@ namespace RestaurantLoop.Core
         [SerializeField, Min(0.01f)] private float queuedEntranceLandingDuration = 0.18f;
 
         private readonly List<StackItem> activeStacks = new List<StackItem>();
-        private readonly List<StackItem> pendingJumpStacks = new List<StackItem>();
+        private readonly List<StackItem> pendingPlayerEntries = new List<StackItem>();
+        private readonly List<StackItem> returningEntryStacks = new List<StackItem>();
+        private readonly HashSet<StackItem> hoveringPlayerEntries = new HashSet<StackItem>();
+        private StackItem inboundEntryStack;
+        private bool inboundEntryIsReturn;
         private int occupiedCapacity = 0;
-        private int pendingJumpsCount = 0;
         private int attemptCapacityBonus;
 
         public bool CanAcceptStack => occupiedCapacity < MaxCapacity;
@@ -74,39 +76,19 @@ namespace RestaurantLoop.Core
             }
         }
 
-        public bool IsEntranceClear()
+        private void LateUpdate()
         {
-            if (pendingJumpsCount > 0) return false;
-
-            float entranceDist = EntranceDistance;
-            float pathLen = path != null ? path.Length : 0f;
-
-            for (int i = 0; i < activeStacks.Count; i++)
-            {
-                StackItem stack = activeStacks[i];
-                if (stack == null || stack.IsJumping) continue;
-
-                float dist = stack.CurrentDistance;
-                float delta = Mathf.Abs(dist - entranceDist);
-
-                if (pathLen > 0f)
-                {
-                    delta = Mathf.Min(delta, pathLen - delta);
-                }
-
-                if (delta < entranceSafetyBuffer)
-                {
-                    return false;
-                }
-            }
-
-            return true;
+            if (LevelManager.Instance != null && !LevelManager.Instance.IsGameActive) return;
+            AdvanceEntranceScheduler();
         }
 
-        private bool IsEntranceClearForAutoLoop()
+        public bool IsEntranceClear()
         {
-            if (pendingJumpsCount > 1) return false;
+            return inboundEntryStack == null && IsEntrancePhysicallyClear();
+        }
 
+        private bool IsEntrancePhysicallyClear()
+        {
             float entranceDist = EntranceDistance;
             float pathLen = path != null ? path.Length : 0f;
 
@@ -185,14 +167,10 @@ namespace RestaurantLoop.Core
         {
             if (stack == null || stack.RemainingItemCount <= 0) return false;
 
-            // Capacity remains an immediate rejection. Entrance congestion only
-            // uses the hover queue when the player tapped while it was blocked.
             if (!CanAcceptStack)
             {
                 return false;
             }
-
-            bool entranceWasBlocked = !IsEntranceClear();
 
             if (!TryReserveSlot())
             {
@@ -201,56 +179,17 @@ namespace RestaurantLoop.Core
 
             stack.transform.DOKill();
             stack.transform.SetParent(null, true);
-            RegisterPendingJump(stack);
+            pendingPlayerEntries.Add(stack);
 
-            if (!entranceWasBlocked)
+            // Only player stacks wait. Returning conveyor stacks are scheduled
+            // first in LateUpdate, after all movement and input for the frame.
+            if (pendingPlayerEntries.Count > 1 || inboundEntryStack != null ||
+                returningEntryStacks.Count > 0 || !IsEntrancePhysicallyClear())
             {
-                Vector3 entrancePosition = path.GetPosition(EntranceDistance);
-                stack.JumpToConveyor(entrancePosition, () => CompleteEntranceLanding(stack));
-            }
-            else
-            {
-                Vector3 queuedEntrancePosition = GetQueuedEntrancePosition(stack);
-                stack.JumpToConveyor(queuedEntrancePosition, () =>
-                {
-                    StartCoroutine(Routine_LandQueuedStack(stack));
-                });
+                StartPlayerHover(stack);
             }
 
             return true;
-        }
-
-        private IEnumerator Routine_LandQueuedStack(StackItem stack)
-        {
-            while (stack != null && stack.gameObject.activeInHierarchy && !IsQueuedStackReadyToLand(stack))
-            {
-                yield return null;
-            }
-
-            if (stack == null || !stack.gameObject.activeInHierarchy) yield break;
-
-            Vector3 entrancePosition = path.GetPosition(EntranceDistance);
-            stack.MoveToConveyor(entrancePosition, queuedEntranceLandingDuration, () => CompleteEntranceLanding(stack));
-        }
-
-        private void CompleteEntranceLanding(StackItem stack)
-        {
-            CompletePendingJump(stack);
-
-            if (stack != null && stack.gameObject.activeInHierarchy)
-            {
-                TryAddStack(stack);
-            }
-
-            // --- TUTORIAL STEP 2 TRIGGER: ITEM SUCCESSFULLY LANDED ON CONVEYOR IN LEVEL 1 ---
-            if (LevelManager.Instance != null && LevelManager.Instance.CurrentLevelNumber == 1)
-            {
-                if (TutorialManager.Instance != null && TutorialManager.Instance.CurrentStep == TutorialManager.TutorialStep.TapFoodToConveyor)
-                {
-                    TutorialManager.Instance.EnterStepWaitInRack();
-                }
-            }
-            // --------------------------------------------------------------------------------
         }
 
         public bool ShouldKeepLoopingOnBelt()
@@ -265,7 +204,12 @@ namespace RestaurantLoop.Core
             if (ShouldKeepLoopingOnBelt())
             {
                 RemoveStackFromBelt(stack);
-                StartCoroutine(Routine_AutoLoopJump(stack));
+                returningEntryStacks.Add(stack);
+
+                // Input normally runs before the conveyor update. If a new
+                // stack began a direct entry this frame, it yields to the
+                // returning belt stack before either can occupy the entrance.
+                RerouteInboundPlayerToHover();
                 return;
             }
 
@@ -282,45 +226,6 @@ namespace RestaurantLoop.Core
             }
         }
 
-        private IEnumerator Routine_AutoLoopJump(StackItem stack)
-        {
-            RegisterPendingJump(stack);
-
-            // Auto-looping and player-tapped stacks share one FIFO entrance queue.
-            // Waiting for the list to contain only this stack deadlocked the belt
-            // whenever rapid taps queued stacks behind an auto-looping stack.
-            while (!IsPendingStackReadyToEnter(stack))
-            {
-                if (stack == null || !stack.gameObject.activeInHierarchy)
-                {
-                    CompletePendingJump(stack);
-                    ReleaseCapacity();
-                    yield break;
-                }
-
-                yield return null;
-            }
-
-            if (stack == null || !stack.gameObject.activeInHierarchy)
-            {
-                CompletePendingJump(stack);
-                ReleaseCapacity();
-                yield break;
-            }
-
-            Vector3 entrancePosition = path.GetPosition(EntranceDistance);
-
-            stack.JumpToConveyor(entrancePosition, () =>
-            {
-                CompletePendingJump(stack);
-
-                if (stack != null && stack.gameObject.activeInHierarchy)
-                {
-                    TryAddStack(stack);
-                }
-            });
-        }
-
         public void ClearAllItems()
         {
             StopAllCoroutines();
@@ -335,9 +240,11 @@ namespace RestaurantLoop.Core
             }
 
             activeStacks.Clear();
-            pendingJumpStacks.Clear();
+            pendingPlayerEntries.Clear();
+            returningEntryStacks.Clear();
+            hoveringPlayerEntries.Clear();
+            inboundEntryStack = null;
             occupiedCapacity = 0;
-            pendingJumpsCount = 0;
             attemptCapacityBonus = 0;
             CapacityChanged?.Invoke(occupiedCapacity, MaxCapacity);
         }
@@ -363,13 +270,27 @@ namespace RestaurantLoop.Core
                 removedCount++;
             }
 
-            for (int i = pendingJumpStacks.Count - 1; i >= 0; i--)
+            for (int i = pendingPlayerEntries.Count - 1; i >= 0; i--)
             {
-                StackItem stack = pendingJumpStacks[i];
+                StackItem stack = pendingPlayerEntries[i];
                 if (stack == null || stack.Data != data) continue;
 
-                pendingJumpStacks.RemoveAt(i);
-                pendingJumpsCount = pendingJumpStacks.Count;
+                pendingPlayerEntries.RemoveAt(i);
+                returningEntryStacks.Remove(stack);
+                hoveringPlayerEntries.Remove(stack);
+                if (inboundEntryStack == stack) inboundEntryStack = null;
+                ReleaseCapacity();
+                DestroyStackForClearColor(stack);
+                removedCount++;
+            }
+
+            for (int i = returningEntryStacks.Count - 1; i >= 0; i--)
+            {
+                StackItem stack = returningEntryStacks[i];
+                if (stack == null || stack.Data != data) continue;
+
+                returningEntryStacks.RemoveAt(i);
+                if (inboundEntryStack == stack) inboundEntryStack = null;
                 ReleaseCapacity();
                 DestroyStackForClearColor(stack);
                 removedCount++;
@@ -392,59 +313,156 @@ namespace RestaurantLoop.Core
             return entry > exit ? entry - exit : entry + (totalLength - exit);
         }
 
-        private void RegisterPendingJump(StackItem stack)
-        {
-            if (stack != null && !pendingJumpStacks.Contains(stack)) pendingJumpStacks.Add(stack);
-            pendingJumpsCount = pendingJumpStacks.Count;
-        }
-
-        private void CompletePendingJump(StackItem stack)
-        {
-            for (int i = pendingJumpStacks.Count - 1; i >= 0; i--)
-            {
-                if (ReferenceEquals(pendingJumpStacks[i], stack))
-                {
-                    pendingJumpStacks.RemoveAt(i);
-                    break;
-                }
-            }
-
-            pendingJumpsCount = pendingJumpStacks.Count;
-        }
-
         private Vector3 GetQueuedEntrancePosition(StackItem stack)
         {
-            int queueIndex = Mathf.Max(0, pendingJumpStacks.IndexOf(stack));
+            int queueIndex = Mathf.Max(0, pendingPlayerEntries.IndexOf(stack));
             float height = queuedEntranceHoverHeight + (queueIndex * queuedEntranceHoverStackSpacing);
             return path.GetPosition(EntranceDistance) + (Vector3.up * height);
         }
 
-        private bool IsQueuedStackReadyToLand(StackItem stack)
+        private void AdvanceEntranceScheduler()
         {
-            return IsPendingStackReadyToEnter(stack);
-        }
+            RemoveInvalidEntryRequests();
+            if (inboundEntryStack != null) return;
 
-        private bool IsPendingStackReadyToEnter(StackItem stack)
-        {
-            // Pending stacks enter FIFO, preventing overlapping landings while
-            // allowing auto-looping stacks and player-tapped stacks to progress
-            // through the same queue.
-            if (pendingJumpStacks.Count == 0 || pendingJumpStacks[0] != stack) return false;
-
-            float entranceDist = EntranceDistance;
-            float pathLen = path != null ? path.Length : 0f;
-
-            for (int i = 0; i < activeStacks.Count; i++)
+            // Conveyor stacks retain priority because they are continuing an
+            // existing belt reservation, not asking to join the belt anew.
+            if (returningEntryStacks.Count > 0)
             {
-                StackItem activeStack = activeStacks[i];
-                if (activeStack == null || activeStack.IsJumping) continue;
-
-                float delta = Mathf.Abs(activeStack.CurrentDistance - entranceDist);
-                if (pathLen > 0f) delta = Mathf.Min(delta, pathLen - delta);
-                if (delta < entranceSafetyBuffer) return false;
+                StartWaitingPlayerVisuals();
+                if (IsEntrancePhysicallyClear()) StartReturningEntry(returningEntryStacks[0]);
+                return;
             }
 
-            return true;
+            if (pendingPlayerEntries.Count == 0) return;
+
+            StackItem playerStack = pendingPlayerEntries[0];
+            if (IsEntrancePhysicallyClear())
+            {
+                StartPlayerEntry(playerStack);
+            }
+            else if (!hoveringPlayerEntries.Contains(playerStack))
+            {
+                StartPlayerHover(playerStack);
+            }
+        }
+
+        private void StartPlayerHover(StackItem stack)
+        {
+            if (stack == null || !stack.gameObject.activeInHierarchy || hoveringPlayerEntries.Contains(stack)) return;
+
+            hoveringPlayerEntries.Add(stack);
+            stack.JumpToConveyor(GetQueuedEntrancePosition(stack), null);
+        }
+
+        private void StartWaitingPlayerVisuals()
+        {
+            for (int i = 0; i < pendingPlayerEntries.Count; i++)
+            {
+                StartPlayerHover(pendingPlayerEntries[i]);
+            }
+        }
+
+        private void StartPlayerEntry(StackItem stack)
+        {
+            if (stack == null || !stack.gameObject.activeInHierarchy) return;
+
+            inboundEntryStack = stack;
+            inboundEntryIsReturn = false;
+
+            Vector3 entrancePosition = path.GetPosition(EntranceDistance);
+            if (hoveringPlayerEntries.Remove(stack))
+            {
+                stack.MoveToConveyor(entrancePosition, queuedEntranceLandingDuration, () => CompletePlayerEntry(stack));
+            }
+            else
+            {
+                stack.JumpToConveyor(entrancePosition, () => CompletePlayerEntry(stack));
+            }
+        }
+
+        private void StartReturningEntry(StackItem stack)
+        {
+            if (stack == null || !stack.gameObject.activeInHierarchy) return;
+
+            inboundEntryStack = stack;
+            inboundEntryIsReturn = true;
+            Vector3 entrancePosition = path.GetPosition(EntranceDistance);
+            stack.JumpToConveyor(entrancePosition, () => CompleteReturningEntry(stack));
+        }
+
+        private void CompletePlayerEntry(StackItem stack)
+        {
+            if (inboundEntryStack == stack) inboundEntryStack = null;
+            inboundEntryIsReturn = false;
+            pendingPlayerEntries.Remove(stack);
+            hoveringPlayerEntries.Remove(stack);
+
+            if (stack != null && stack.gameObject.activeInHierarchy)
+            {
+                TryAddStack(stack);
+            }
+            else
+            {
+                ReleaseCapacity();
+            }
+
+            // --- TUTORIAL STEP 2 TRIGGER: ITEM SUCCESSFULLY LANDED ON CONVEYOR IN LEVEL 1 ---
+            if (LevelManager.Instance != null && LevelManager.Instance.CurrentLevelNumber == 1 &&
+                TutorialManager.Instance != null &&
+                TutorialManager.Instance.CurrentStep == TutorialManager.TutorialStep.TapFoodToConveyor)
+            {
+                TutorialManager.Instance.EnterStepWaitInRack();
+            }
+            // --------------------------------------------------------------------------------
+        }
+
+        private void CompleteReturningEntry(StackItem stack)
+        {
+            if (inboundEntryStack == stack) inboundEntryStack = null;
+            inboundEntryIsReturn = false;
+            returningEntryStacks.Remove(stack);
+
+            if (stack != null && stack.gameObject.activeInHierarchy)
+            {
+                TryAddStack(stack);
+            }
+            else
+            {
+                ReleaseCapacity();
+            }
+        }
+
+        private void RerouteInboundPlayerToHover()
+        {
+            if (inboundEntryStack == null || inboundEntryIsReturn) return;
+
+            StackItem playerStack = inboundEntryStack;
+            inboundEntryStack = null;
+            StackItem.KillTweensInHierarchy(playerStack.gameObject);
+            StartPlayerHover(playerStack);
+        }
+
+        private void RemoveInvalidEntryRequests()
+        {
+            for (int i = pendingPlayerEntries.Count - 1; i >= 0; i--)
+            {
+                StackItem stack = pendingPlayerEntries[i];
+                if (stack != null && stack.gameObject.activeInHierarchy) continue;
+
+                pendingPlayerEntries.RemoveAt(i);
+                hoveringPlayerEntries.Remove(stack);
+                ReleaseCapacity();
+            }
+
+            for (int i = returningEntryStacks.Count - 1; i >= 0; i--)
+            {
+                StackItem stack = returningEntryStacks[i];
+                if (stack != null && stack.gameObject.activeInHierarchy) continue;
+
+                returningEntryStacks.RemoveAt(i);
+                ReleaseCapacity();
+            }
         }
 
         private static void DestroyStackForClearColor(StackItem stack)
