@@ -38,7 +38,7 @@ namespace RestaurantLoop.Core
                 foodDisplayTransform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime, Space.Self);
             }
 
-            BalloonFoodOverlayCamera.EnsureConfigured();
+            
         }
 
         private void ApplyCameraOffset()
@@ -78,7 +78,7 @@ namespace RestaurantLoop.Core
             foodDisplayTransform.localRotation = Quaternion.identity;
             foodDisplayTransform.localScale = Vector3.one * foodScale;
 
-            BalloonFoodOverlayCamera.Register(foodDisplay);
+            
         }
 
         public void SetColorAndState(Color baseColor, bool isEdge)

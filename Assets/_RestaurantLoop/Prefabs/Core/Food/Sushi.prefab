@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 7507831767151467040}
   - component: {fileID: 2551260996675904716}
   - component: {fileID: 2041076039506086694}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Sushi
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -133,7 +133,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7296015360992186765}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: VisualContainer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -166,7 +166,7 @@ GameObject:
   - component: {fileID: 7842221600459690581}
   - component: {fileID: 2604901080574874365}
   - component: {fileID: 8896031000473755918}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Stack Count Text
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -407,6 +407,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 30c1b46b15f88ee49b47661b138e2e80, type: 3}
       propertyPath: m_Name
       value: Model
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 30c1b46b15f88ee49b47661b138e2e80, type: 3}
+      propertyPath: m_Layer
+      value: 9
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

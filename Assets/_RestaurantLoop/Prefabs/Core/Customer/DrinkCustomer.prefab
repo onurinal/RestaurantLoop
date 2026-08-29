@@ -1076,7 +1076,7 @@ GameObject:
   - component: {fileID: 7040884599026270340}
   - component: {fileID: 7324514239991689004}
   - component: {fileID: 1472822403046612821}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: OrderBalloon
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1174,6 +1174,7 @@ MonoBehaviour:
   foodLocalPosition: {x: 0.167, y: -1.0321, z: -0.26}
   foodScale: 1.01
   rotationSpeed: 20
+  cameraOffsetDistance: 0.8
 --- !u!1 &7182673874331937002
 GameObject:
   m_ObjectHideFlags: 0

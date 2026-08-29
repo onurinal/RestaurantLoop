@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 185928109252462914}
   - component: {fileID: 7293080282349449739}
   - component: {fileID: 9047534107090354303}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Stack Count Text
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -195,7 +195,7 @@ GameObject:
   - component: {fileID: 7507831767151467040}
   - component: {fileID: 2551260996675904716}
   - component: {fileID: 2041076039506086694}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Drink
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -314,7 +314,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7296015360992186765}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: VisualContainer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -403,6 +403,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
       propertyPath: m_Name
       value: Model
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 7b57980c185f66042b7d44fca2dcafbc, type: 3}
+      propertyPath: m_Layer
+      value: 9
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
