@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
+using DG.Tweening;
 using RestaurantLoop.Audio; 
 
 namespace RestaurantLoop.UI
@@ -10,6 +11,14 @@ namespace RestaurantLoop.UI
     {
         [Header("Panels")]
         [SerializeField] private GameObject settingsPanel;
+
+        [Header("Settings Panel Pop Animation")]
+        [SerializeField, Min(0f)] private float panelPopInDuration = 0.25f;
+        [SerializeField, Min(0f)] private float panelPopOutDuration = 0.16f;
+        [SerializeField, Range(0.1f, 1f)] private float panelPopInStartScale = 0.75f;
+        [SerializeField, Range(0.1f, 1f)] private float panelPopOutEndScale = 0.75f;
+        [SerializeField] private Ease panelPopInEase = Ease.OutBack;
+        [SerializeField] private Ease panelPopOutEase = Ease.InBack;
 
         [Header("Main Menu Elements")]
         [SerializeField] private Button playButton;
@@ -37,6 +46,12 @@ namespace RestaurantLoop.UI
 
         private bool isMusicOn = true;
         private bool isSfxOn = true;
+        private Vector3 settingsPanelBaseScale;
+
+        private void Awake()
+        {
+            settingsPanelBaseScale = settingsPanel != null ? settingsPanel.transform.localScale : Vector3.one;
+        }
 
         private void Start()
         {
@@ -83,8 +98,36 @@ namespace RestaurantLoop.UI
             SceneManager.LoadScene("Onur-2"); 
         }
 
-        private void OpenSettings() => settingsPanel.SetActive(true);
-        private void CloseSettings() => settingsPanel.SetActive(false);
+        private void OpenSettings()
+        {
+            if (settingsPanel == null) return;
+
+            Transform panelTransform = settingsPanel.transform;
+            panelTransform.DOKill();
+            settingsPanel.SetActive(true);
+            panelTransform.localScale = Vector3.Scale(settingsPanelBaseScale, Vector3.one * panelPopInStartScale);
+            panelTransform
+                .DOScale(settingsPanelBaseScale, panelPopInDuration)
+                .SetEase(panelPopInEase)
+                .SetUpdate(true);
+        }
+
+        private void CloseSettings()
+        {
+            if (settingsPanel == null || !settingsPanel.activeSelf) return;
+
+            Transform panelTransform = settingsPanel.transform;
+            panelTransform.DOKill();
+            panelTransform
+                .DOScale(Vector3.Scale(settingsPanelBaseScale, Vector3.one * panelPopOutEndScale), panelPopOutDuration)
+                .SetEase(panelPopOutEase)
+                .SetUpdate(true)
+                .OnComplete(() =>
+                {
+                    settingsPanel.SetActive(false);
+                    panelTransform.localScale = settingsPanelBaseScale;
+                });
+        }
 
         // --- New Toggle Logic ---
         private void ToggleMusic()

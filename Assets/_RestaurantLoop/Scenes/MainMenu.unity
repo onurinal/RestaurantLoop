@@ -1105,6 +1105,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.UI.MainMenuUIManager
   settingsPanel: {fileID: 1767836286}
+  panelPopInDuration: 0.25
+  panelPopOutDuration: 0.16
+  panelPopInStartScale: 0.75
+  panelPopOutEndScale: 0.75
+  panelPopInEase: 27
+  panelPopOutEase: 26
   playButton: {fileID: 532749119}
   settingsButton: {fileID: 856471269}
   levelText: {fileID: 1843344644}
@@ -1404,12 +1410,36 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 238643576757367479, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 238643576757367479, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 238643576757367479, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 1776543136606078438, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
       propertyPath: m_Name
       value: SettingsPanel
       objectReference: {fileID: 0}
     - target: {fileID: 1776543136606078438, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
       propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8772270294683930705, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
+      propertyPath: m_fontSize
+      value: 62.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 8772270294683930705, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
+      propertyPath: m_fontSizeBase
+      value: 62.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 8772270294683930705, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
+      propertyPath: m_TextWrappingMode
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
