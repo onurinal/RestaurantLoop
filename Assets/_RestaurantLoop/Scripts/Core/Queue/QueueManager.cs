@@ -16,13 +16,16 @@ namespace RestaurantLoop.Core
         [Tooltip("Count-label opacity for queue stacks behind the front row. Selection power-ups temporarily restore full opacity.")]
         [SerializeField, Range(0f, 1f)] private float nonFrontRowCountTextOpacity = 0.7f;
 
+        [Header("Spawn Lock Visuals")]
+        [Tooltip("Brightness applied to queue slots and stacks while customers are entering.")]
+        [SerializeField, Range(0f, 1f)] private float spawningBrightness = 0.6f;
+
         private List<QueueColumn> columns = new List<QueueColumn>();
+        private bool spawnLockVisualInitialized;
+        private bool isSpawnVisualLocked;
 
         public event Action QueueChanged;
 
-        /// <summary>
-        /// Calculates the total number of remaining active stacks waiting across all queue columns.
-        /// </summary>
         public int RemainingStackCount
         {
             get
@@ -30,10 +33,7 @@ namespace RestaurantLoop.Core
                 int count = 0;
                 foreach (var col in columns)
                 {
-                    if (col != null)
-                    {
-                        count += col.OccupiedSlotCount;
-                    }
+                    if (col != null) count += col.OccupiedSlotCount;
                 }
 
                 return count;
@@ -45,10 +45,12 @@ namespace RestaurantLoop.Core
             if (Instance == null) Instance = this;
             else Destroy(gameObject);
 
-            if (queueSpawner == null)
-            {
-                queueSpawner = GetComponent<QueueSpawner>();
-            }
+            if (queueSpawner == null) queueSpawner = GetComponent<QueueSpawner>();
+        }
+
+        private void Update()
+        {
+            RefreshSpawnLockVisuals();
         }
 
         public void SetupQueue(LevelDataSO levelData)
@@ -82,7 +84,6 @@ namespace RestaurantLoop.Core
 
                         if (config.itemData != null && config.itemData.StackPrefab != null)
                         {
-                            // Instantiate fresh GameObject directly from prefab asset to prevent pooled object pollution
                             GameObject stackObj = Instantiate(
                                 config.itemData.StackPrefab,
                                 slot.transform.position,
@@ -110,7 +111,7 @@ namespace RestaurantLoop.Core
                 }
             }
 
-            RefreshQueueCountTextOpacity();
+            RefreshSpawnLockVisuals(force: true);
         }
 
         public void ClearQueue()
@@ -124,10 +125,7 @@ namespace RestaurantLoop.Core
                     QueueSlot[] childSlots = col.GetComponentsInChildren<QueueSlot>(true);
                     foreach (var slot in childSlots)
                     {
-                        if (slot != null)
-                        {
-                            slot.ClearSlot();
-                        }
+                        if (slot != null) slot.ClearSlot();
                     }
 
                     StackItem[] childStacks = col.GetComponentsInChildren<StackItem>(true);
@@ -146,12 +144,11 @@ namespace RestaurantLoop.Core
             }
 
             columns.Clear();
+            spawnLockVisualInitialized = false;
+            isSpawnVisualLocked = false;
             NotifyQueueChanged();
         }
 
-        /// <summary>
-        /// Finds and returns the first available front-row stack item, completely avoiding deeper/back stacks for the tutorial.
-        /// </summary>
         public StackItem GetFirstFrontRowStack()
         {
             foreach (var column in columns)
@@ -161,13 +158,13 @@ namespace RestaurantLoop.Core
                 QueueSlot[] childSlots = column.GetComponentsInChildren<QueueSlot>(true);
                 foreach (var slot in childSlots)
                 {
-                    // Ensure the slot is occupied and is strictly NOT a deeper/back slot
                     if (slot != null && slot.IsOccupied && slot.CurrentStack != null && !column.IsDeeperSlot(slot))
                     {
                         return slot.CurrentStack;
                     }
                 }
             }
+
             return null;
         }
 
@@ -275,10 +272,7 @@ namespace RestaurantLoop.Core
 
             if (!changed) return false;
 
-            for (int i = 0; i < slots.Count; i++)
-            {
-                slots[i].ClearSlot();
-            }
+            for (int i = 0; i < slots.Count; i++) slots[i].ClearSlot();
 
             for (int i = 0; i < slots.Count; i++)
             {
@@ -317,6 +311,13 @@ namespace RestaurantLoop.Core
 
         public void SetHandSelectionVisuals(bool active)
         {
+            if (!active)
+            {
+                ClearSelectionHighlights();
+                RefreshQueueCountTextOpacity(false);
+                return;
+            }
+
             foreach (QueueColumn column in columns)
             {
                 if (column == null) continue;
@@ -334,6 +335,20 @@ namespace RestaurantLoop.Core
             }
 
             RefreshQueueCountTextOpacity(active);
+        }
+
+        private void ClearSelectionHighlights()
+        {
+            foreach (QueueColumn column in columns)
+            {
+                if (column == null) continue;
+
+                StackItem[] stacks = column.GetComponentsInChildren<StackItem>(true);
+                for (int i = 0; i < stacks.Length; i++)
+                {
+                    stacks[i].SetHandSelectionHighlight(false);
+                }
+            }
         }
 
         public bool IsClearColorSelectableStack(StackItem stack)
@@ -420,11 +435,33 @@ namespace RestaurantLoop.Core
             QueueChanged?.Invoke();
         }
 
+        private void RefreshSpawnLockVisuals(bool force = false)
+        {
+            bool shouldLock = CrowdManager.Instance != null && CrowdManager.Instance.IsSpawningCustomers;
+            if (!force && spawnLockVisualInitialized && shouldLock == isSpawnVisualLocked) return;
+
+            spawnLockVisualInitialized = true;
+            isSpawnVisualLocked = shouldLock;
+
+            foreach (QueueColumn column in columns)
+            {
+                if (column == null) continue;
+
+                QueueSlot[] slots = column.GetComponentsInChildren<QueueSlot>(true);
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    slots[i].SetSpawnLockedVisual(isSpawnVisualLocked, spawningBrightness);
+                }
+            }
+
+            RefreshQueueCountTextOpacity();
+        }
+
         private void RefreshQueueCountTextOpacity(bool? selectionModeActive = null)
         {
             bool useFullOpacity = selectionModeActive ??
-                (PowerUpManager.Instance != null &&
-                 (PowerUpManager.Instance.IsHandSelectionActive || PowerUpManager.Instance.IsClearColorSelectionActive));
+                                  (PowerUpManager.Instance != null &&
+                                   (PowerUpManager.Instance.IsHandSelectionActive || PowerUpManager.Instance.IsClearColorSelectionActive));
 
             foreach (QueueColumn column in columns)
             {
@@ -440,6 +477,7 @@ namespace RestaurantLoop.Core
                     float opacity = !useFullOpacity && column.IsDeeperSlot(slot)
                         ? nonFrontRowCountTextOpacity
                         : 1f;
+                    if (isSpawnVisualLocked) opacity *= spawningBrightness;
                     stack.SetCountTextOpacity(opacity);
                 }
             }
@@ -482,7 +520,7 @@ namespace RestaurantLoop.Core
         private static bool AreVisuallyEquivalent(StackItem first, StackItem second)
         {
             return first != null && second != null && first.Data == second.Data &&
-                first.RemainingItemCount == second.RemainingItemCount;
+                   first.RemainingItemCount == second.RemainingItemCount;
         }
 
         private static bool HasVisibleOrderChanged(List<StackItem> original, List<StackItem> shuffled)

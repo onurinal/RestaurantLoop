@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace RestaurantLoop.Core
 {
-    public class FoodCell : MonoBehaviour
+    public class FoodCell : MonoBehaviour, IInteractable
     {
         [SerializeField] private Renderer[] targetRenderers;
         [SerializeField] private Material neutralMaterial;
@@ -12,6 +12,25 @@ namespace RestaurantLoop.Core
         private void Awake()
         {
             CacheRenderers();
+        }
+
+        public void OnTap()
+        {
+            StackItem stackItem = GetComponentInChildren<StackItem>();
+
+            if (stackItem == null)
+            {
+                BaseSlot parentSlot = GetComponentInParent<BaseSlot>();
+                if (parentSlot != null)
+                {
+                    stackItem = parentSlot.GetComponentInChildren<StackItem>();
+                }
+            }
+
+            if (stackItem != null)
+            {
+                stackItem.OnTap();
+            }
         }
 
         public void SetFood(ItemDataSO itemData)
@@ -40,6 +59,7 @@ namespace RestaurantLoop.Core
                 }
 
                 targetRenderer.materials = newMaterials;
+                targetRenderer.SetPropertyBlock(null); // Clear PropertyBlock so new material color shows instantly
             }
         }
 
@@ -66,6 +86,8 @@ namespace RestaurantLoop.Core
                 {
                     targetRenderer.materials = authoredMaterials[i];
                 }
+
+                targetRenderer.SetPropertyBlock(null);
             }
         }
 

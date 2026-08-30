@@ -23,6 +23,7 @@ namespace RestaurantLoop.Core
                 {
                     if (slots[i] != null && slots[i].IsOccupied) count++;
                 }
+
                 return count;
             }
         }

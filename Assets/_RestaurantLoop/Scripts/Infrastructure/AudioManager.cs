@@ -84,6 +84,9 @@ namespace RestaurantLoop.Audio
         // Maps each specific clip to its individual volume modifier set in the inspector
         private Dictionary<AudioClip, float> clipVolumeModifiers = new Dictionary<AudioClip, float>();
 
+        public float SfxVolume => Mathf.Clamp01(PlayerPrefs.GetFloat("SfxVolume", 1f));
+        public bool IsSfxMuted => SfxVolume <= Mathf.Epsilon;
+
         private void Awake()
         {
             // Singleton pattern to ensure only one AudioManager exists
@@ -146,7 +149,7 @@ namespace RestaurantLoop.Audio
         {
             if (clip == null || sfxSource == null) return;
 
-            float globalSfxVolume = PlayerPrefs.GetFloat("SfxVolume", 1f);
+            float globalSfxVolume = SfxVolume;
 
             if (globalSfxVolume > 0f)
             {

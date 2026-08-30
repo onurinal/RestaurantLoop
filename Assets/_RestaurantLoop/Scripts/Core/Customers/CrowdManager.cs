@@ -56,7 +56,8 @@ namespace RestaurantLoop.Core
         private CentralCrowdService centralCrowd;
         private CustomerEntranceSequencer entranceSequencer;
         private Coroutine entranceSequenceCoroutine;
-        private int activeEdgeSlotCount = 6;
+        private bool isEntranceSequenceActive;
+        private int activeEdgeSlotCount;
 
         private readonly List<ItemDataSO> unspawnedDemandPool = new List<ItemDataSO>();
         private readonly Dictionary<ItemDataSO, int> remainingDemandPerType = new Dictionary<ItemDataSO, int>();
@@ -65,7 +66,11 @@ namespace RestaurantLoop.Core
         public float AlignmentTolerance => alignmentTolerance;
         public float EdgeInwardOffset => edgeInwardOffset;
 
-        public bool IsSpawningCustomers => entranceSequencer != null && entranceSequencer.IsRunning;
+        /// <summary>
+        /// True until all visible customers are seated and the entrance gate is fully closed.
+        /// Gameplay input uses this as the authoritative entrance lock.
+        /// </summary>
+        public bool IsSpawningCustomers => isEntranceSequenceActive;
         public int TotalRemainingDemand { get; private set; }
 
         public event Action<Customer, int> EdgeCustomerReplacementStarted;
@@ -142,8 +147,6 @@ namespace RestaurantLoop.Core
                 minCustomerDistance
             );
 
-            if (entranceSequenceCoroutine != null) StopCoroutine(entranceSequenceCoroutine);
-
             List<int> availableIndices = new List<int>();
             for (int i = 0; i < TOTAL_EDGE_SLOTS; i++) availableIndices.Add(i);
 
@@ -155,6 +158,7 @@ namespace RestaurantLoop.Core
 
             List<int> initialSlotIndices = availableIndices.GetRange(0, Mathf.Min(activeEdgeSlotCount, TOTAL_EDGE_SLOTS));
 
+            isEntranceSequenceActive = true;
             entranceSequenceCoroutine = StartCoroutine(RunEntranceSequence(initialSlotIndices));
 
             // Broadcast initial level demands to UI
@@ -180,8 +184,13 @@ namespace RestaurantLoop.Core
 
             if (entranceGate != null)
             {
-                entranceGate.CloseGate();
+                bool gateClosed = false;
+                entranceGate.CloseGate(() => gateClosed = true);
+                yield return new WaitUntil(() => gateClosed);
             }
+
+            isEntranceSequenceActive = false;
+            entranceSequenceCoroutine = null;
         }
 
         public void OnCustomerServed(Customer customer)
@@ -317,6 +326,14 @@ namespace RestaurantLoop.Core
 
         public void ClearCrowd()
         {
+            if (entranceSequenceCoroutine != null)
+            {
+                StopCoroutine(entranceSequenceCoroutine);
+                entranceSequenceCoroutine = null;
+            }
+
+            entranceSequencer?.Stop();
+            isEntranceSequenceActive = false;
             boardGrid?.ClearAllCellMaterials();
             for (int i = transform.childCount - 1; i >= 0; i--)
             {

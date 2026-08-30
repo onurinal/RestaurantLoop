@@ -164,14 +164,21 @@ namespace RestaurantLoop.UI
         {
             if (explosionSound == null) return;
 
+            AudioManager audioManager = AudioManager.Instance;
+            float globalSfxVolume = audioManager != null
+                ? audioManager.SfxVolume
+                : Mathf.Clamp01(PlayerPrefs.GetFloat("SfxVolume", 1f));
+
+            if ((audioManager != null && audioManager.IsSfxMuted) || globalSfxVolume <= Mathf.Epsilon) return;
+
             if (audioSource != null)
             {
                 audioSource.pitch = Random.Range(minPitch, maxPitch);
-                audioSource.PlayOneShot(explosionSound, volumeScale);
+                audioSource.PlayOneShot(explosionSound, volumeScale * globalSfxVolume);
             }
-            else if (AudioManager.Instance != null)
+            else if (audioManager != null)
             {
-                AudioManager.Instance.PlaySFX(explosionSound);
+                audioManager.PlaySFX(explosionSound);
             }
         }
 

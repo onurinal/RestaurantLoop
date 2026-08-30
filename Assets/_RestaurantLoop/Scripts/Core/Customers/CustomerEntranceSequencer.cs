@@ -17,6 +17,11 @@ namespace RestaurantLoop.Core
         public bool IsRunning { get; private set; }
         public Vector3 OuterSpawnOffset => outerSpawnOffset;
 
+        public void Stop()
+        {
+            IsRunning = false;
+        }
+
         public CustomerEntranceSequencer(float spawnInterval, float moveDuration, float pathJitterAmount, Vector3 outerSpawnOffset)
         {
             this.spawnInterval = spawnInterval;
@@ -41,6 +46,7 @@ namespace RestaurantLoop.Core
             Action<Customer, int> onEdgeSlotAssigned)
         {
             IsRunning = true;
+            int pendingWalks = 0;
 
             // --- PLAY CUSTOMER ENTRANCE SOUND ---
             // Triggered exactly when the first customer starts moving into the restaurant
@@ -68,8 +74,13 @@ namespace RestaurantLoop.Core
                 Vector3[] waypoints = EntrancePathUtility.BuildOrganicPath(spawnPos, targetPos, gapCenter, roomCenter, pathJitterAmount);
 
                 int assignedIndex = slotIndex;
+                pendingWalks++;
                 customer.MoveAlongPath(waypoints, moveDuration, true, targetYRotation: targetRotation, roomCenter: roomCenter,
-                    onComplete: () => { onEdgeSlotAssigned?.Invoke(customer, assignedIndex); });
+                    onComplete: () =>
+                    {
+                        pendingWalks--;
+                        onEdgeSlotAssigned?.Invoke(customer, assignedIndex);
+                    });
 
                 yield return new WaitForSeconds(spawnInterval);
             }
@@ -88,7 +99,9 @@ namespace RestaurantLoop.Core
                 slot.OccupyingCustomer = customer;
 
                 Vector3[] waypoints = EntrancePathUtility.BuildOrganicPath(spawnPos, slot.Position, gapCenter, roomCenter, pathJitterAmount);
-                customer.MoveAlongPath(waypoints, moveDuration, false, targetYRotation: slot.YRotation);
+                pendingWalks++;
+                customer.MoveAlongPath(waypoints, moveDuration, false, targetYRotation: slot.YRotation,
+                    onComplete: () => pendingWalks--);
 
                 yield return new WaitForSeconds(spawnInterval);
             }
@@ -106,6 +119,12 @@ namespace RestaurantLoop.Core
                 customer.SetModelRotation(slot.YRotation);
                 customer.gameObject.SetActive(false);
                 slot.OccupyingCustomer = customer;
+            }
+
+            // Spawning remains active until every visible customer has reached a seat.
+            while (pendingWalks > 0)
+            {
+                yield return null;
             }
 
             IsRunning = false;

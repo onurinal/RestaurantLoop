@@ -17,10 +17,22 @@ namespace RestaurantLoop.UI
         [SerializeField] private Button shuffleButton;
         [SerializeField] private Button handButton;
         [SerializeField] private Button clearColorButton;
-        private TMP_Text addStackLabel;
-        private TMP_Text shuffleLabel;
-        private TMP_Text handLabel;
-        private TMP_Text clearColorLabel;
+
+        [Header("Remaining-Use Texts")]
+        [Tooltip("Inspector-authored count text under the Add Stack button.")]
+        [SerializeField] private TMP_Text addStackCountText;
+        [Tooltip("Inspector-authored count text under the Shuffle button.")]
+        [SerializeField] private TMP_Text shuffleCountText;
+        [Tooltip("Inspector-authored count text under the Hand button.")]
+        [SerializeField] private TMP_Text handCountText;
+        [Tooltip("Inspector-authored count text under the Clear Color button.")]
+        [SerializeField] private TMP_Text clearColorCountText;
+
+        private CanvasGroup addStackCanvasGroup;
+        private CanvasGroup shuffleCanvasGroup;
+        private CanvasGroup handCanvasGroup;
+        private CanvasGroup clearColorCanvasGroup;
+        private const float SpawningAlpha = 0.6f;
 
         [Header("Hand Selection UI")]
         [Tooltip("Authored panel to show while Hand is waiting for a deeper queue stack.")]
@@ -48,11 +60,11 @@ namespace RestaurantLoop.UI
                 ? PowerUpManager.Instance
                 : gameObject.AddComponent<PowerUpManager>();
 
-            WarnAboutMissingPowerUpButtons();
-            addStackLabel = GetLabel(addStackButton);
-            shuffleLabel = GetLabel(shuffleButton);
-            handLabel = GetLabel(handButton);
-            clearColorLabel = GetLabel(clearColorButton);
+            WarnAboutMissingReferences();
+            addStackCanvasGroup = GetOrAddCanvasGroup(addStackButton);
+            shuffleCanvasGroup = GetOrAddCanvasGroup(shuffleButton);
+            handCanvasGroup = GetOrAddCanvasGroup(handButton);
+            clearColorCanvasGroup = GetOrAddCanvasGroup(clearColorButton);
 
             if (addStackButton != null) addStackButton.onClick.AddListener(UseAddStack);
             if (shuffleButton != null) shuffleButton.onClick.AddListener(UseShuffle);
@@ -110,10 +122,15 @@ namespace RestaurantLoop.UI
         {
             if (powerUps == null) return;
 
-            SetButton(addStackButton, addStackLabel, "Add\nStack", powerUps.GetRemainingUses(PowerUpType.AddStack), powerUps.CanUseAddStack);
-            SetButton(shuffleButton, shuffleLabel, "Shuffle", powerUps.GetRemainingUses(PowerUpType.Shuffle), powerUps.CanUseShuffle);
-            SetButton(handButton, handLabel, "Hand", powerUps.GetRemainingUses(PowerUpType.Hand), powerUps.CanBeginHandSelection);
-            SetButton(clearColorButton, clearColorLabel, "Clear\nColor", powerUps.GetRemainingUses(PowerUpType.ClearColor), powerUps.CanBeginClearColorSelection);
+            bool isSpawning = !IsCrowdReady;
+            SetButton(addStackButton, addStackCanvasGroup, addStackCountText,
+                powerUps.GetRemainingUses(PowerUpType.AddStack), powerUps.CanUseAddStack, isSpawning);
+            SetButton(shuffleButton, shuffleCanvasGroup, shuffleCountText,
+                powerUps.GetRemainingUses(PowerUpType.Shuffle), powerUps.CanUseShuffle, isSpawning);
+            SetButton(handButton, handCanvasGroup, handCountText,
+                powerUps.GetRemainingUses(PowerUpType.Hand), powerUps.CanBeginHandSelection, isSpawning);
+            SetButton(clearColorButton, clearColorCanvasGroup, clearColorCountText,
+                powerUps.GetRemainingUses(PowerUpType.ClearColor), powerUps.CanBeginClearColorSelection, isSpawning);
             lastHandAvailability = powerUps.CanBeginHandSelection;
             lastCrowdReady = IsCrowdReady;
         }
@@ -129,30 +146,53 @@ namespace RestaurantLoop.UI
         public void CancelHandSelection() => powerUps?.CancelHandSelection();
         public void CancelClearColorSelection() => powerUps?.CancelClearColorSelection();
 
-        private static TMP_Text GetLabel(Button button)
+        private static CanvasGroup GetOrAddCanvasGroup(Button button)
         {
-            return button != null ? button.GetComponentInChildren<TMP_Text>(true) : null;
+            if (button == null) return null;
+            return button.TryGetComponent(out CanvasGroup canvasGroup)
+                ? canvasGroup
+                : button.gameObject.AddComponent<CanvasGroup>();
         }
 
-        private void WarnAboutMissingPowerUpButtons()
+        private void WarnAboutMissingReferences()
         {
-            List<string> missingButtons = new List<string>();
-            if (addStackButton == null) missingButtons.Add("Add Stack Button");
-            if (shuffleButton == null) missingButtons.Add("Shuffle Button");
-            if (handButton == null) missingButtons.Add("Hand Button");
-            if (clearColorButton == null) missingButtons.Add("Clear Color Button");
+            List<string> missingReferences = new List<string>();
+            if (addStackButton == null) missingReferences.Add("Add Stack Button");
+            if (shuffleButton == null) missingReferences.Add("Shuffle Button");
+            if (handButton == null) missingReferences.Add("Hand Button");
+            if (clearColorButton == null) missingReferences.Add("Clear Color Button");
+            if (addStackCountText == null) missingReferences.Add("Add Stack Count Text");
+            if (shuffleCountText == null) missingReferences.Add("Shuffle Count Text");
+            if (handCountText == null) missingReferences.Add("Hand Count Text");
+            if (clearColorCountText == null) missingReferences.Add("Clear Color Count Text");
 
-            if (missingButtons.Count > 0)
+            if (missingReferences.Count > 0)
             {
-                Debug.LogWarning($"[PowerUpUIController] Missing inspector button assignments: {string.Join(", ", missingButtons)}.", this);
+                Debug.LogWarning($"[PowerUpUIController] Missing Inspector assignments: {string.Join(", ", missingReferences)}.", this);
             }
         }
 
-        private static void SetButton(Button button, TMP_Text label, string title, int uses, bool interactable)
+        private static void SetButton(
+            Button button,
+            CanvasGroup canvasGroup,
+            TMP_Text label,
+            int uses,
+            bool interactable,
+            bool isSpawning)
         {
             if (button == null) return;
-            button.interactable = interactable;
-            if (label != null) label.text = $"{uses}";
+
+            button.interactable = interactable && !isSpawning;
+            if (canvasGroup != null)
+            {
+                canvasGroup.alpha = isSpawning ? SpawningAlpha : 1f;
+                canvasGroup.interactable = !isSpawning;
+                // Keep the UI surface blocking raycasts so a disabled button cannot pass
+                // the same touch through to gameplay objects behind it.
+                canvasGroup.blocksRaycasts = true;
+            }
+
+            if (label != null) label.text = uses.ToString();
         }
 
         private void SetHandSelectionOverlayVisible(bool visible)
