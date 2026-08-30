@@ -24,15 +24,31 @@ namespace RestaurantLoop.Core
             return gapPos + outerOffset;
         }
 
-        public static Vector3[] BuildOrganicPath(Vector3 startPos, Vector3 targetPos, Vector3 gapCenter, Vector3 roomCenter, float jitterAmount)
+        public static Vector3[] BuildOrganicPath(
+            Vector3 startPos,
+            Vector3 targetPos,
+            Vector3 gapCenter,
+            Vector3 roomCenter,
+            float jitterAmount,
+            int sequenceIndex = 0)
         {
             Vector3 inboundDirection = (roomCenter - gapCenter).normalized;
             Vector3 perpendicularDirection = Vector3.Cross(inboundDirection, Vector3.up);
 
-            float jitter = Random.Range(-jitterAmount, jitterAmount);
+            float jitter = GetDeterministicJitter(sequenceIndex, jitterAmount);
             Vector3 intermediateLandingPos = gapCenter + (inboundDirection * 2.0f) + (perpendicularDirection * jitter);
 
             return new Vector3[] { startPos, gapCenter, intermediateLandingPos, targetPos };
+        }
+
+        private static float GetDeterministicJitter(int sequenceIndex, float jitterAmount)
+        {
+            unchecked
+            {
+                uint hash = (uint)(sequenceIndex + 1) * 2654435761u;
+                float normalized = (hash & 0xFFFFu) / 65535f;
+                return Mathf.Lerp(-jitterAmount, jitterAmount, normalized);
+            }
         }
     }
 }

@@ -121,18 +121,15 @@ namespace RestaurantLoop.Core
             remainingDemandPerType.Clear();
             unspawnedDemandPool.Clear();
 
-            // Populate total level demands directly from LevelData
-            foreach (var cfg in levelData.customerDemands)
-            {
-                TotalRemainingDemand += cfg.totalCustomerCount;
-                remainingDemandPerType[cfg.itemData] = cfg.totalCustomerCount;
-                for (int i = 0; i < cfg.totalCustomerCount; i++) unspawnedDemandPool.Add(cfg.itemData);
-            }
+            levelData.CopyResolvedCustomerSequenceTo(unspawnedDemandPool);
+            unspawnedDemandPool.RemoveAll(item => item == null);
+            TotalRemainingDemand = unspawnedDemandPool.Count;
 
-            for (int i = unspawnedDemandPool.Count - 1; i > 0; i--)
+            for (int i = 0; i < unspawnedDemandPool.Count; i++)
             {
-                int rand = UnityEngine.Random.Range(0, i + 1);
-                (unspawnedDemandPool[i], unspawnedDemandPool[rand]) = (unspawnedDemandPool[rand], unspawnedDemandPool[i]);
+                ItemDataSO item = unspawnedDemandPool[i];
+                remainingDemandPerType.TryGetValue(item, out int currentCount);
+                remainingDemandPerType[item] = currentCount + 1;
             }
 
             int centralCrowdCount = Mathf.Max(0, TotalRemainingDemand - activeEdgeSlotCount);
@@ -147,21 +144,24 @@ namespace RestaurantLoop.Core
                 minCustomerDistance
             );
 
-            List<int> availableIndices = new List<int>();
-            for (int i = 0; i < TOTAL_EDGE_SLOTS; i++) availableIndices.Add(i);
-
-            for (int i = availableIndices.Count - 1; i > 0; i--)
+            List<int> availableSlots = new List<int>();
+            for (int i = 0; i < TOTAL_EDGE_SLOTS; i++)
             {
-                int rand = UnityEngine.Random.Range(0, i + 1);
-                (availableIndices[i], availableIndices[rand]) = (availableIndices[rand], availableIndices[i]);
+                availableSlots.Add(i);
             }
 
-            List<int> initialSlotIndices = availableIndices.GetRange(0, Mathf.Min(activeEdgeSlotCount, TOTAL_EDGE_SLOTS));
+            for (int i = availableSlots.Count - 1; i > 0; i--)
+            {
+                int randIndex = UnityEngine.Random.Range(0, i + 1);
+                (availableSlots[i], availableSlots[randIndex]) = (availableSlots[randIndex], availableSlots[i]);
+            }
+
+            int initialEdgeCount = Mathf.Min(activeEdgeSlotCount, TOTAL_EDGE_SLOTS, TotalRemainingDemand);
+            List<int> initialSlotIndices = availableSlots.GetRange(0, initialEdgeCount);
 
             isEntranceSequenceActive = true;
             entranceSequenceCoroutine = StartCoroutine(RunEntranceSequence(initialSlotIndices));
 
-            // Broadcast initial level demands to UI
             OnDemandChanged?.Invoke(TotalRemainingDemand, remainingDemandPerType);
         }
 
@@ -298,16 +298,18 @@ namespace RestaurantLoop.Core
 
         private void PromoteCrowdToEdgeSlot(int freedSlotIndex)
         {
-            CentralCrowdSlot visibleSlot = centralCrowd.GetRandomVisibleSlot();
-            if (visibleSlot == null || visibleSlot.OccupyingCustomer == null) return;
+            CentralCrowdSlot sourceSlot = GetFirstOccupiedCentralSlot();
+            if (sourceSlot == null || sourceSlot.OccupyingCustomer == null) return;
 
             List<int> freeSlotIndices = edgeSlots.GetUnoccupiedSlotIndices();
             if (freeSlotIndices.Count == 0) return;
 
             int targetSlotIndex = freeSlotIndices[UnityEngine.Random.Range(0, freeSlotIndices.Count)];
 
-            Customer customer = visibleSlot.OccupyingCustomer;
-            visibleSlot.OccupyingCustomer = null;
+            Customer customer = sourceSlot.OccupyingCustomer;
+            sourceSlot.OccupyingCustomer = null;
+            if (!customer.gameObject.activeSelf) customer.gameObject.SetActive(true);
+
             edgeSlots.Occupy(targetSlotIndex, customer);
 
             customer.MoveToEdgeSlot(
@@ -317,6 +319,19 @@ namespace RestaurantLoop.Core
                 onComplete: () => { boardGrid.SetEdgeCellFood(targetSlotIndex, customer.RequiredData); });
 
             EdgeCustomerReplacementStarted?.Invoke(customer, targetSlotIndex);
+        }
+
+        private CentralCrowdSlot GetFirstOccupiedCentralSlot()
+        {
+            if (centralCrowd == null) return null;
+
+            IReadOnlyList<CentralCrowdSlot> slots = centralCrowd.Slots;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                if (slots[i].OccupyingCustomer != null) return slots[i];
+            }
+
+            return null;
         }
 
         public Dictionary<ItemDataSO, int> GetRemainingLevelDemands()

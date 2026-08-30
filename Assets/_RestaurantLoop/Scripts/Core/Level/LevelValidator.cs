@@ -103,8 +103,13 @@ namespace RestaurantLoop.Core
 
         private static bool HasConservedContent(LevelDataSO data)
         {
-            return data != null && data.customerDemands != null && data.queueStackConfigs != null &&
-                data.TotalCustomerDemand == data.TotalQueueItems;
+            if (data == null || data.customerDemands == null || data.queueStackConfigs == null ||
+                data.TotalCustomerDemand != data.TotalQueueItems) return false;
+
+            // Empty is a supported deterministic fallback for legacy assets. Once an explicit
+            // sequence exists, it must be internally consistent before simulation can proceed.
+            return data.OrderedCustomerSequence.Count == 0 ||
+                   data.ValidateOrderedCustomerSequence(out _);
         }
 
         private static List<List<QueueStackConfig>> BuildQueueColumns(LevelDataSO data)
@@ -130,10 +135,7 @@ namespace RestaurantLoop.Core
         private static List<ItemDataSO> BuildDemand(LevelDataSO data)
         {
             List<ItemDataSO> demand = new List<ItemDataSO>();
-            foreach (CustomerDemandConfig config in data.customerDemands)
-            {
-                for (int count = 0; count < config.totalCustomerCount; count++) demand.Add(config.itemData);
-            }
+            data.CopyResolvedCustomerSequenceTo(demand);
             return demand;
         }
 

@@ -47,6 +47,7 @@ namespace RestaurantLoop.Core
         {
             IsRunning = true;
             int pendingWalks = 0;
+            int entranceSequenceIndex = 0;
 
             // --- PLAY CUSTOMER ENTRANCE SOUND ---
             // Triggered exactly when the first customer starts moving into the restaurant
@@ -71,7 +72,8 @@ namespace RestaurantLoop.Core
                 Vector3 targetPos = getEdgeSlotPosFunc(slotIndex);
                 float targetRotation = getEdgeSlotRotFunc != null ? getEdgeSlotRotFunc(slotIndex) : 0f;
 
-                Vector3[] waypoints = EntrancePathUtility.BuildOrganicPath(spawnPos, targetPos, gapCenter, roomCenter, pathJitterAmount);
+                Vector3[] waypoints = EntrancePathUtility.BuildOrganicPath(
+                    spawnPos, targetPos, gapCenter, roomCenter, pathJitterAmount, entranceSequenceIndex++);
 
                 int assignedIndex = slotIndex;
                 pendingWalks++;
@@ -98,7 +100,8 @@ namespace RestaurantLoop.Core
                 CentralCrowdSlot slot = centralCrowd.Slots[i];
                 slot.OccupyingCustomer = customer;
 
-                Vector3[] waypoints = EntrancePathUtility.BuildOrganicPath(spawnPos, slot.Position, gapCenter, roomCenter, pathJitterAmount);
+                Vector3[] waypoints = EntrancePathUtility.BuildOrganicPath(
+                    spawnPos, slot.Position, gapCenter, roomCenter, pathJitterAmount, entranceSequenceIndex++);
                 pendingWalks++;
                 customer.MoveAlongPath(waypoints, moveDuration, false, targetYRotation: slot.YRotation,
                     onComplete: () => pendingWalks--);

@@ -1,11 +1,11 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace RestaurantLoop.Core
 {
     /// <summary>
-    /// Mathematical utility for partitioning customer demand into solvable 5-step stack sizes and layout bounds.
-    /// Ensures perfectly balanced rectangular queue grids.
+    /// Seeded generation helpers for queue stacks and explicit customer order.
+    /// Guarantees exact customer demand conservation and perfectly aligned rectangular queue grids.
     /// </summary>
     public static class LevelMathUtility
     {
@@ -16,53 +16,81 @@ namespace RestaurantLoop.Core
             int minStackSize,
             int maxStackSize,
             int columnCount,
-            out int calculatedRowCount)
+            out int calculatedRowCount,
+            int seed = 0)
         {
-            List<QueueStackConfig> generatedStacks = new List<QueueStackConfig>();
+            List<CustomerDemandConfig> validDemands = GetValidDemands(demandConfigs);
+            System.Random random = new System.Random(seed);
 
+            columnCount = Mathf.Max(1, columnCount);
             minStackSize = Mathf.Max(StepSize, Mathf.RoundToInt((float)minStackSize / StepSize) * StepSize);
             maxStackSize = Mathf.Max(minStackSize, Mathf.RoundToInt((float)maxStackSize / StepSize) * StepSize);
 
-            foreach (var demand in demandConfigs)
+            // Calculate total raw demand
+            int totalRawDemand = 0;
+            for (int i = 0; i < validDemands.Count; i++) totalRawDemand += validDemands[i].totalCustomerCount;
+
+            // Determine target stack count (must be a multiple of columnCount and >= food types count)
+            int minRequiredStacks = Mathf.Max(columnCount, validDemands.Count);
+            int targetRows = Mathf.Max(1, Mathf.RoundToInt((float)totalRawDemand / (columnCount * minStackSize)));
+            int targetTotalStacks = targetRows * columnCount;
+
+            if (targetTotalStacks < minRequiredStacks)
             {
-                int remainingDemand = demand.totalCustomerCount;
+                targetTotalStacks = Mathf.CeilToInt((float)minRequiredStacks / columnCount) * columnCount;
+                targetRows = targetTotalStacks / columnCount;
+            }
 
-                while (remainingDemand > 0)
+            // Distribute target stacks among available food types
+            List<QueueStackConfig> generatedStacks = new List<QueueStackConfig>();
+            int[] stacksPerFood = new int[validDemands.Count];
+            int assignedStacks = 0;
+
+            // Give at least 1 stack to each food type
+            for (int i = 0; i < validDemands.Count; i++)
+            {
+                stacksPerFood[i] = 1;
+                assignedStacks++;
+            }
+
+            // Distribute remaining stack quota based on demand weight
+            while (assignedStacks < targetTotalStacks)
+            {
+                int maxDemandIndex = 0;
+                float maxRatio = -1f;
+
+                for (int i = 0; i < validDemands.Count; i++)
                 {
-                    if (remainingDemand <= minStackSize)
+                    float ratio = (float)validDemands[i].totalCustomerCount / stacksPerFood[i];
+                    if (ratio > maxRatio)
                     {
-                        generatedStacks.Add(new QueueStackConfig
-                        {
-                            itemData = demand.itemData,
-                            itemCount = remainingDemand
-                        });
-                        remainingDemand = 0;
-                        break;
+                        maxRatio = ratio;
+                        maxDemandIndex = i;
                     }
+                }
 
-                    int maxPossible = Mathf.Min(remainingDemand, maxStackSize);
-                    int minPossible = minStackSize;
+                stacksPerFood[maxDemandIndex]++;
+                assignedStacks++;
+            }
 
-                    int minSteps = minPossible / StepSize;
-                    int maxSteps = maxPossible / StepSize;
+            // Build exact stack sizes matching StepSize constraints
+            for (int i = 0; i < validDemands.Count; i++)
+            {
+                CustomerDemandConfig demand = validDemands[i];
+                int totalFoodDemand = demand.totalCustomerCount;
+                int foodStacksCount = stacksPerFood[i];
 
-                    int chosenSteps = Random.Range(minSteps, maxSteps + 1);
-                    int stackSize = chosenSteps * StepSize;
+                int baseStackSize = Mathf.Max(StepSize, (totalFoodDemand / foodStacksCount / StepSize) * StepSize);
+                int currentSum = 0;
 
-                    int leftover = remainingDemand - stackSize;
-                    if (leftover > 0 && leftover < minStackSize)
-                    {
-                        if (stackSize + leftover <= maxStackSize)
-                        {
-                            stackSize += leftover;
-                        }
-                        else
-                        {
-                            stackSize = remainingDemand - minStackSize;
-                        }
-                    }
+                for (int s = 0; s < foodStacksCount; s++)
+                {
+                    int stackSize = (s == foodStacksCount - 1)
+                        ? Mathf.Max(StepSize, totalFoodDemand - currentSum)
+                        : baseStackSize;
 
-                    remainingDemand -= stackSize;
+                    stackSize = Mathf.Clamp((stackSize / StepSize) * StepSize, StepSize, maxStackSize);
+                    currentSum += stackSize;
 
                     generatedStacks.Add(new QueueStackConfig
                     {
@@ -70,40 +98,120 @@ namespace RestaurantLoop.Core
                         itemCount = stackSize
                     });
                 }
+
+                // Update demand config count to match adjusted stack totals exactly
+                demandConfigs[i] = new CustomerDemandConfig
+                {
+                    itemData = demand.itemData,
+                    totalCustomerCount = currentSum
+                };
             }
 
-            int remainder = generatedStacks.Count % columnCount;
-            if (remainder != 0)
+            Shuffle(generatedStacks, random);
+            calculatedRowCount = targetRows;
+            return generatedStacks;
+        }
+
+        public static List<ItemDataSO> GenerateDeterministicCustomerSequence(
+            List<CustomerDemandConfig> demands,
+            int seed)
+        {
+            List<ItemDataSO> items = new List<ItemDataSO>();
+            List<int> remainingCounts = new List<int>();
+            AggregateDemands(demands, items, remainingCounts);
+
+            int totalCount = 0;
+            for (int i = 0; i < remainingCounts.Count; i++) totalCount += remainingCounts[i];
+
+            List<ItemDataSO> sequence = new List<ItemDataSO>(totalCount);
+            List<int> activeIndices = new List<int>(items.Count);
+            System.Random random = new System.Random(seed);
+            ItemDataSO lastItem = null;
+
+            while (sequence.Count < totalCount)
             {
-                int extraStacksNeeded = columnCount - remainder;
-
-                for (int i = 0; i < extraStacksNeeded; i++)
+                activeIndices.Clear();
+                for (int i = 0; i < remainingCounts.Count; i++)
                 {
-                    var randomDemandType = demandConfigs[Random.Range(0, demandConfigs.Count)];
+                    if (remainingCounts[i] > 0) activeIndices.Add(i);
+                }
 
-                    int minSteps = minStackSize / StepSize;
-                    int maxSteps = maxStackSize / StepSize;
-                    int chosenSteps = Random.Range(minSteps, maxSteps + 1);
-                    int paddingStackSize = chosenSteps * StepSize;
+                Shuffle(activeIndices, random);
+                AvoidImmediateRepeat(activeIndices, items, lastItem);
 
-                    generatedStacks.Add(new QueueStackConfig
-                    {
-                        itemData = randomDemandType.itemData,
-                        itemCount = paddingStackSize
-                    });
+                for (int i = 0; i < activeIndices.Count; i++)
+                {
+                    int itemIndex = activeIndices[i];
+                    if (remainingCounts[itemIndex] <= 0) continue;
+
+                    ItemDataSO item = items[itemIndex];
+                    sequence.Add(item);
+                    remainingCounts[itemIndex]--;
+                    lastItem = item;
                 }
             }
 
-            for (int i = generatedStacks.Count - 1; i > 0; i--)
+            return sequence;
+        }
+
+        private static List<CustomerDemandConfig> GetValidDemands(List<CustomerDemandConfig> demands)
+        {
+            List<CustomerDemandConfig> validDemands = new List<CustomerDemandConfig>();
+            if (demands == null) return validDemands;
+
+            for (int i = 0; i < demands.Count; i++)
             {
-                int randomIndex = Random.Range(0, i + 1);
-                var temp = generatedStacks[i];
-                generatedStacks[i] = generatedStacks[randomIndex];
-                generatedStacks[randomIndex] = temp;
+                CustomerDemandConfig demand = demands[i];
+                if (demand.itemData != null && demand.totalCustomerCount > 0) validDemands.Add(demand);
             }
 
-            calculatedRowCount = generatedStacks.Count / columnCount;
-            return generatedStacks;
+            return validDemands;
+        }
+
+        private static void AggregateDemands(
+            List<CustomerDemandConfig> demands,
+            List<ItemDataSO> items,
+            List<int> counts)
+        {
+            if (demands == null) return;
+
+            for (int i = 0; i < demands.Count; i++)
+            {
+                CustomerDemandConfig demand = demands[i];
+                if (demand.itemData == null || demand.totalCustomerCount <= 0) continue;
+
+                int existingIndex = items.IndexOf(demand.itemData);
+                if (existingIndex >= 0)
+                {
+                    counts[existingIndex] += demand.totalCustomerCount;
+                }
+                else
+                {
+                    items.Add(demand.itemData);
+                    counts.Add(demand.totalCustomerCount);
+                }
+            }
+        }
+
+        private static void AvoidImmediateRepeat(List<int> indices, List<ItemDataSO> items, ItemDataSO lastItem)
+        {
+            if (lastItem == null || indices.Count < 2 || items[indices[0]] != lastItem) return;
+
+            for (int i = 1; i < indices.Count; i++)
+            {
+                if (items[indices[i]] == lastItem) continue;
+                (indices[0], indices[i]) = (indices[i], indices[0]);
+                return;
+            }
+        }
+
+        private static void Shuffle<T>(List<T> values, System.Random random)
+        {
+            for (int i = values.Count - 1; i > 0; i--)
+            {
+                int selectedIndex = random.Next(0, i + 1);
+                (values[i], values[selectedIndex]) = (values[selectedIndex], values[i]);
+            }
         }
     }
 }
