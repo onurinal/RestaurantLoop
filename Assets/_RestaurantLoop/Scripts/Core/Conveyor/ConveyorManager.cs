@@ -37,6 +37,7 @@ namespace RestaurantLoop.Core
         private readonly HashSet<StackItem> hoveringPlayerEntries = new HashSet<StackItem>();
         private StackItem inboundEntryStack;
         private bool inboundEntryIsReturn;
+        private Action inboundEntryCompletedCallback;
         private int occupiedCapacity = 0;
         private int attemptCapacityBonus;
 
@@ -58,6 +59,8 @@ namespace RestaurantLoop.Core
 
         private void Awake()
         {
+            inboundEntryCompletedCallback = HandleInboundEntryCompleted;
+
             if (Instance == null) Instance = this;
             else Destroy(gameObject);
 
@@ -69,11 +72,12 @@ namespace RestaurantLoop.Core
             // Pause conveyor movement if game is inactive or level state is Won/Lost
             if (LevelManager.Instance != null && !LevelManager.Instance.IsGameActive) return;
 
+            float deltaTime = Time.deltaTime;
             for (int i = activeStacks.Count - 1; i >= 0; i--)
             {
                 if (activeStacks[i] != null)
                 {
-                    activeStacks[i].MoveAlongBelt(path, moveSpeed, isClockwise, Time.deltaTime);
+                    activeStacks[i].MoveAlongBelt(path, moveSpeed, isClockwise, deltaTime);
                 }
             }
         }
@@ -163,10 +167,7 @@ namespace RestaurantLoop.Core
 
         public void RemoveStackFromBelt(StackItem stack)
         {
-            if (activeStacks.Contains(stack))
-            {
-                activeStacks.Remove(stack);
-            }
+            activeStacks.Remove(stack);
         }
 
         public void ReleaseCapacity()
@@ -387,11 +388,11 @@ namespace RestaurantLoop.Core
             Vector3 entrancePosition = path.GetPosition(EntranceDistance);
             if (hoveringPlayerEntries.Remove(stack))
             {
-                stack.MoveToConveyor(entrancePosition, queuedEntranceLandingDuration, () => CompletePlayerEntry(stack));
+                stack.MoveToConveyor(entrancePosition, queuedEntranceLandingDuration, inboundEntryCompletedCallback);
             }
             else
             {
-                stack.JumpToConveyor(entrancePosition, () => CompletePlayerEntry(stack));
+                stack.JumpToConveyor(entrancePosition, inboundEntryCompletedCallback);
             }
         }
 
@@ -402,7 +403,20 @@ namespace RestaurantLoop.Core
             inboundEntryStack = stack;
             inboundEntryIsReturn = true;
             Vector3 entrancePosition = path.GetPosition(EntranceDistance);
-            stack.JumpToConveyor(entrancePosition, () => CompleteReturningEntry(stack));
+            stack.JumpToConveyor(entrancePosition, inboundEntryCompletedCallback);
+        }
+
+        private void HandleInboundEntryCompleted()
+        {
+            StackItem completedStack = inboundEntryStack;
+            if (inboundEntryIsReturn)
+            {
+                CompleteReturningEntry(completedStack);
+            }
+            else
+            {
+                CompletePlayerEntry(completedStack);
+            }
         }
 
         private void CompletePlayerEntry(StackItem stack)

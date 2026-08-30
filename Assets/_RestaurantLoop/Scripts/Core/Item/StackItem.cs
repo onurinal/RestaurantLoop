@@ -21,6 +21,7 @@ namespace RestaurantLoop.Core
     public class StackItem : MonoBehaviour, IInteractable
     {
         private static readonly HashSet<StackItem> ActiveStacksInGame = new HashSet<StackItem>();
+        private static readonly List<Transform> TweenKillBuffer = new List<Transform>(128);
         public static int TotalActiveStackCount => ActiveStacksInGame.Count;
 
         [Header("Item Configuration")]
@@ -35,6 +36,13 @@ namespace RestaurantLoop.Core
         private Tween handSelectionTween;
         private Vector3 selectionBaseLocalScale;
         private bool hasSelectionBaseScale;
+        private Action pendingConveyorJumpCompletion;
+        private Action pendingConveyorMoveCompletion;
+        private Action pendingSlotJumpCompletion;
+        private Action conveyorJumpCompletedCallback;
+        private Action conveyorMoveCompletedCallback;
+        private Action slotJumpCompletedCallback;
+        private Action<Customer> customerServedCallback;
 
         private StackVisualMode currentMode = StackVisualMode.SingleWithUI;
 
@@ -55,6 +63,7 @@ namespace RestaurantLoop.Core
         private void OnDisable()
         {
             ActiveStacksInGame.Remove(this);
+            ClearPendingMovementCallbacks();
         }
 
         private void Awake()
@@ -63,6 +72,10 @@ namespace RestaurantLoop.Core
             animator = GetComponent<StackItemAnimator>();
             movement = GetComponent<StackItemMovement>();
             wobbler = GetComponent<StackItemWobbler>();
+            conveyorJumpCompletedCallback = HandleConveyorJumpCompleted;
+            conveyorMoveCompletedCallback = HandleConveyorMoveCompleted;
+            slotJumpCompletedCallback = HandleSlotJumpCompleted;
+            customerServedCallback = HandleCustomerServed;
         }
 
         public void Initialize(ItemDataSO data, int count)
@@ -104,9 +117,6 @@ namespace RestaurantLoop.Core
 
         public void SetHandSelectionHighlight(bool highlighted)
         {
-            // Queue and rack slots use different parent transforms.  Scaling the
-            // StackItem root therefore makes a rack food model inherit that slot's
-            // scale a second time.  Pulse the authored visual container instead.
             if (visuals != null)
             {
                 visuals.SetSelectionHighlight(highlighted);
@@ -140,17 +150,11 @@ namespace RestaurantLoop.Core
                 .SetUpdate(true);
         }
 
-        /// <summary>
-        /// Sets the opacity of this stack's count label without affecting its food visual.
-        /// </summary>
         public void SetCountTextOpacity(float opacity)
         {
             visuals?.SetCountTextOpacity(opacity);
         }
 
-        /// <summary>
-        /// Uses this stack as the visual source for Clear Color's fan-out serving effect.
-        /// </summary>
         public void PlayClearColorThrow(Vector3 targetCustomerPosition)
         {
             if (visuals == null || animator == null) return;
@@ -201,7 +205,10 @@ namespace RestaurantLoop.Core
 
             if (serviceCooldown > 0f) serviceCooldown -= deltaTime;
 
-            movement.MoveAlongBelt(path, speed, isClockwise, deltaTime, OnExitReached);
+            if (movement.MoveAlongBelt(path, speed, isClockwise, deltaTime))
+            {
+                OnExitReached();
+            }
 
             if (!IsWaitingForRack && serviceCooldown <= 0f)
             {
@@ -213,6 +220,7 @@ namespace RestaurantLoop.Core
         {
             wobbler?.SetWobbleActive(false);
             KillTweensInHierarchy(gameObject);
+            pendingConveyorJumpCompletion = onComplete;
 
             if (currentMode != StackVisualMode.Stacked)
             {
@@ -220,22 +228,14 @@ namespace RestaurantLoop.Core
                 visuals.TransitionToStacked(remainingCount);
             }
 
-            animator.JumpToConveyor(targetPosition, () =>
-            {
-                if (AudioManager.Instance != null && AudioManager.Instance.boardClickSound != null)
-                    AudioManager.Instance.PlaySFX(AudioManager.Instance.boardClickSound);
-
-                onComplete?.Invoke();
-            });
+            animator.JumpToConveyor(targetPosition, conveyorJumpCompletedCallback);
         }
 
-        /// <summary>
-        /// Smoothly settles a stack from its queued entrance hover point onto the conveyor.
-        /// </summary>
         public void MoveToConveyor(Vector3 targetPosition, float duration, Action onComplete)
         {
             wobbler?.SetWobbleActive(false);
-            animator.MoveToConveyor(targetPosition, duration, onComplete);
+            pendingConveyorMoveCompletion = onComplete;
+            animator.MoveToConveyor(targetPosition, duration, conveyorMoveCompletedCallback);
         }
 
         public void JumpToSlot(Transform slotTransform, Action onComplete = null)
@@ -243,14 +243,8 @@ namespace RestaurantLoop.Core
             wobbler?.SetWobbleActive(false);
             currentMode = StackVisualMode.SingleWithUI;
             visuals.CollapseToSingle();
-
-            animator.JumpToSlot(slotTransform, () =>
-            {
-                if (AudioManager.Instance != null && AudioManager.Instance.rackDropSound != null)
-                    AudioManager.Instance.PlaySFX(AudioManager.Instance.rackDropSound);
-
-                onComplete?.Invoke();
-            });
+            pendingSlotJumpCompletion = onComplete;
+            animator.JumpToSlot(slotTransform, slotJumpCompletedCallback);
         }
 
         public static void ClearAllActiveStacks()
@@ -267,11 +261,6 @@ namespace RestaurantLoop.Core
             ActiveStacksInGame.Clear();
         }
 
-        /// <summary>
-        /// Returns a gameplay stack to the shared pool after clearing its transient
-        /// visual copies and tweens. This is intentionally idempotent because belt,
-        /// rack, and queue cleanup can all observe the same stack during a level reset.
-        /// </summary>
         public static void ReleaseToPool(StackItem stack)
         {
             if (stack == null) return;
@@ -293,14 +282,18 @@ namespace RestaurantLoop.Core
             if (target == null) return;
 
             DOTween.Kill(target);
-            Transform[] allTransforms = target.GetComponentsInChildren<Transform>(true);
-            for (int i = 0; i < allTransforms.Length; i++)
+            TweenKillBuffer.Clear();
+            target.GetComponentsInChildren(true, TweenKillBuffer);
+            for (int i = 0; i < TweenKillBuffer.Count; i++)
             {
-                if (allTransforms[i] != null)
+                Transform child = TweenKillBuffer[i];
+                if (child != null)
                 {
-                    allTransforms[i].DOKill();
+                    child.DOKill();
                 }
             }
+
+            TweenKillBuffer.Clear();
         }
 
         private void PrepareForPoolRelease()
@@ -308,11 +301,58 @@ namespace RestaurantLoop.Core
             handSelectionTween?.Kill();
             handSelectionTween = null;
             hasSelectionBaseScale = false;
+            ClearPendingMovementCallbacks();
 
             KillTweensInHierarchy(gameObject);
             wobbler?.ResetImmediately();
             visuals?.ResetForPoolRelease();
             SetWaitingForRack(false);
+        }
+
+        private void HandleConveyorJumpCompleted()
+        {
+            if (AudioManager.Instance != null && AudioManager.Instance.boardClickSound != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.boardClickSound);
+            }
+
+            Action completion = pendingConveyorJumpCompletion;
+            pendingConveyorJumpCompletion = null;
+            completion?.Invoke();
+        }
+
+        private void HandleConveyorMoveCompleted()
+        {
+            Action completion = pendingConveyorMoveCompletion;
+            pendingConveyorMoveCompletion = null;
+            completion?.Invoke();
+        }
+
+        private void HandleSlotJumpCompleted()
+        {
+            if (AudioManager.Instance != null && AudioManager.Instance.rackDropSound != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.rackDropSound);
+            }
+
+            Action completion = pendingSlotJumpCompletion;
+            pendingSlotJumpCompletion = null;
+            completion?.Invoke();
+        }
+
+        private void HandleCustomerServed(Customer customer)
+        {
+            if (CrowdManager.Instance != null)
+            {
+                CrowdManager.Instance.OnCustomerServed(customer);
+            }
+        }
+
+        private void ClearPendingMovementCallbacks()
+        {
+            pendingConveyorJumpCompletion = null;
+            pendingConveyorMoveCompletion = null;
+            pendingSlotJumpCompletion = null;
         }
 
         private void CheckForNearbyCustomer()
@@ -333,7 +373,7 @@ namespace RestaurantLoop.Core
             SetItemCount(remainingCount);
             FoodCommittedToCustomer?.Invoke(this, targetCustomer, itemData);
 
-            targetCustomer.ReceiveItem(this, () => { CrowdManager.Instance.OnCustomerServed(targetCustomer); });
+            targetCustomer.ReceiveItem(this, customerServedCallback);
 
             if (remainingCount <= 0) DepleteAndDestroy();
         }

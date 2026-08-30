@@ -13,7 +13,6 @@ namespace RestaurantLoop.Core
         [Header("Animation & Visuals")]
         [SerializeField] private Animator animator;
         [SerializeField] private Transform visualContainer;
-        [Tooltip("Child GameObject containing the balloon sprite.")]
         [SerializeField] private GameObject balloonObject;
         [SerializeField] private Renderer customerRenderer;
 
@@ -23,16 +22,13 @@ namespace RestaurantLoop.Core
         private static readonly int DesatProperty = Shader.PropertyToID("_Desaturation");
         private float currentDesat = 1f;
 
-        // A renderer that carries a MaterialPropertyBlock is excluded from the SRP Batcher,
-        // and with dynamic batching off and skinned meshes unable to static-batch, that left
-        // every customer as an isolated draw. Desaturation only ever settles on two values,
-        // so each authored material gets two shared variants that differ solely in
-        // _Desaturation. Settled customers draw from a shared material (batcher-eligible);
-        // only the handful mid-fade still use a property block. Pixels are unchanged.
         private static readonly Dictionary<Material, Material> DesaturatedVariants = new Dictionary<Material, Material>();
         private static readonly Dictionary<Material, Material> SaturatedVariants = new Dictionary<Material, Material>();
         private Material baseSharedMaterial;
         private Tween desatTween;
+
+        private TweenCallback<float> desatUpdateCallback;
+        private TweenCallback desatCompleteCallback;
 
         public bool IsServed { get; private set; }
         public bool IsEdgeCustomer { get; private set; }
@@ -53,14 +49,26 @@ namespace RestaurantLoop.Core
             if (customerRenderer == null) customerRenderer = GetComponentInChildren<SkinnedMeshRenderer>();
             if (balloonObject != null) orderBalloon = balloonObject.GetComponent<OrderBalloon>();
 
-            // Captured once, before anything can swap in a variant, so variants are always
-            // derived from the authored prefab material.
             if (customerRenderer != null) baseSharedMaterial = customerRenderer.sharedMaterial;
 
             propBlock = new MaterialPropertyBlock();
+            desatUpdateCallback = OnDesaturationUpdate;
+            desatCompleteCallback = OnDesaturationComplete;
+        }
+
+        private void OnDisable()
+        {
+            KillTransientTweens();
+
+            if (customerRenderer != null) customerRenderer.SetPropertyBlock(null);
         }
 
         private void OnDestroy()
+        {
+            KillTransientTweens();
+        }
+
+        private void KillTransientTweens()
         {
             desatTween?.Kill();
             desatTween = null;
@@ -90,8 +98,6 @@ namespace RestaurantLoop.Core
         {
             if (customerRenderer == null) return;
 
-            // Previously untargeted, so DOKill() could not reach it: a customer despawned
-            // mid-fade left a live tween writing into the recycled renderer.
             desatTween?.Kill();
             desatTween = null;
 
@@ -102,26 +108,28 @@ namespace RestaurantLoop.Core
                 return;
             }
 
-            desatTween = DOVirtual.Float(currentDesat, targetValue, duration, v =>
-                {
-                    currentDesat = v;
-                    customerRenderer.GetPropertyBlock(propBlock);
-                    propBlock.SetFloat(DesatProperty, v);
-                    customerRenderer.SetPropertyBlock(propBlock);
-                })
+            desatTween = DOVirtual.Float(currentDesat, targetValue, duration, desatUpdateCallback)
                 .SetTarget(this)
-                .OnComplete(() =>
-                {
-                    desatTween = null;
-                    ApplySettledDesaturation(targetValue);
-                });
+                .OnComplete(desatCompleteCallback);
         }
 
-        /// <summary>
-        /// Ends a desaturation change on a shared material where possible, clearing the
-        /// per-renderer override so the customer is SRP-Batcher eligible again. Falls back to
-        /// a property block for any value that is not one of the two settled ones.
-        /// </summary>
+        private void OnDesaturationUpdate(float value)
+        {
+            currentDesat = value;
+            if (customerRenderer != null)
+            {
+                customerRenderer.GetPropertyBlock(propBlock);
+                propBlock.SetFloat(DesatProperty, value);
+                customerRenderer.SetPropertyBlock(propBlock);
+            }
+        }
+
+        private void OnDesaturationComplete()
+        {
+            desatTween = null;
+            ApplySettledDesaturation(currentDesat);
+        }
+
         private void ApplySettledDesaturation(float value)
         {
             if (customerRenderer == null) return;
@@ -148,12 +156,10 @@ namespace RestaurantLoop.Core
             else if (Mathf.Approximately(value, 0f)) cache = SaturatedVariants;
             else return null;
 
-            // The null check also covers a variant destroyed by a scene load.
             if (!cache.TryGetValue(baseSharedMaterial, out Material variant) || variant == null)
             {
                 variant = new Material(baseSharedMaterial)
                 {
-                    // Survives scene loads so the static cache never hands out a destroyed material.
                     hideFlags = HideFlags.HideAndDontSave
                 };
                 variant.SetFloat(DesatProperty, value);
@@ -308,7 +314,7 @@ namespace RestaurantLoop.Core
             balloonObject.transform.localScale = localScale;
         }
 
-        public void ReceiveItem(StackItem stack, Action onComplete)
+        public void ReceiveItem(StackItem stack, Action<Customer> onComplete)
         {
             IsServed = true;
             SetEdgeStatus(false);
@@ -320,10 +326,6 @@ namespace RestaurantLoop.Core
             StartCoroutine(EatAndLeaveRoutine(onComplete));
         }
 
-        /// <summary>
-        /// Plays the normal happy departure presentation without invoking normal edge-slot service logic.
-        /// Clear Color removes those slots and demands atomically before this visual completes.
-        /// </summary>
         public void ResolveByClearColor()
         {
             StopAllCoroutines();
@@ -336,7 +338,7 @@ namespace RestaurantLoop.Core
             StartCoroutine(ClearColorExitRoutine());
         }
 
-        private IEnumerator EatAndLeaveRoutine(Action onComplete)
+        private IEnumerator EatAndLeaveRoutine(Action<Customer> onComplete)
         {
             yield return new WaitForSeconds(0.35f);
 
@@ -359,7 +361,7 @@ namespace RestaurantLoop.Core
             transform.DOJump(transform.position, 0.5f, 1, 0.4f)
                 .OnComplete(() =>
                 {
-                    onComplete?.Invoke();
+                    onComplete?.Invoke(this);
                     PoolManager.Instance.Despawn(gameObject);
                 });
         }

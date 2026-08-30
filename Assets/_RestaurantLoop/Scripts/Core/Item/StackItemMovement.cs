@@ -33,12 +33,15 @@ namespace RestaurantLoop.Core
             UpdateTransform(path, true, true);
         }
 
-        public void MoveAlongBelt(SplineConveyorPath path, float speed, bool isClockwise, float deltaTime, Action onExitReached)
+        /// <summary>
+        /// Advances the stack and reports whether its authored travel distance is complete.
+        /// Returning a value avoids constructing an Action delegate for every stack, every frame.
+        /// </summary>
+        public bool MoveAlongBelt(SplineConveyorPath path, float speed, bool isClockwise, float deltaTime)
         {
             if (isWaitingForRack)
             {
-                onExitReached?.Invoke();
-                return;
+                return true;
             }
 
             float remainingTravelDistance = Mathf.Max(0f, targetTravelDistance - traveledDistance);
@@ -55,10 +58,7 @@ namespace RestaurantLoop.Core
             traveledDistance += stepDistance;
             UpdateTransform(path, isClockwise);
 
-            if (traveledDistance >= targetTravelDistance)
-            {
-                onExitReached?.Invoke();
-            }
+            return traveledDistance >= targetTravelDistance;
         }
 
         public void UpdateTransform(SplineConveyorPath path, bool isClockwise, bool animateRotation = false)

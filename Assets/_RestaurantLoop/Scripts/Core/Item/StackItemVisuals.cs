@@ -41,6 +41,8 @@ namespace RestaurantLoop.Core
         private bool hasSelectionBaseScale;
         private Color countTextBaseColor;
         private bool hasCountTextBaseColor;
+        private Tween collapsedItemsReleaseTween;
+        private TweenCallback collapsedItemsReleaseCallback;
 
         public GameObject SingleMeshModel => singleMeshModel;
         public Transform VisualContainer => visualContainer;
@@ -108,6 +110,7 @@ namespace RestaurantLoop.Core
 
         private void Awake()
         {
+            collapsedItemsReleaseCallback = ReleaseCollapsedStackedItems;
             mainCamera = Camera.main;
             if (countText == null) countText = GetComponentInChildren<TMP_Text>(true);
             if (singleMeshModel == null) singleMeshModel = transform.GetComponentInChildren<MeshRenderer>(true)?.gameObject;
@@ -230,9 +233,8 @@ namespace RestaurantLoop.Core
 
             for (int itemIndex = 1; itemIndex < remainingCount; itemIndex++)
             {
-                int index = itemIndex;
-                DOVirtual.DelayedCall((index - 1) * itemTransitionStagger, () => AddStackedItem(index, true))
-                    .SetTarget(this);
+                float delay = (itemIndex - 1) * itemTransitionStagger;
+                AddStackedItem(itemIndex, true, delay);
             }
         }
 
@@ -247,6 +249,7 @@ namespace RestaurantLoop.Core
             ResetSingleModelForStack();
             TweenSingleModelRotation(singleModeRotation);
 
+            float lastReleaseDelay = -1f;
             for (int itemIndex = spawnedStackedItems.Count - 1, collapseOrder = 0; itemIndex >= 0; itemIndex--, collapseOrder++)
             {
                 GameObject item = spawnedStackedItems[itemIndex];
@@ -255,8 +258,17 @@ namespace RestaurantLoop.Core
                 float delay = collapseOrder * itemTransitionStagger;
                 item.transform.DOKill();
                 item.transform.DOLocalMove(GetStackedLocalPosition(itemIndex), itemTransitionDuration).SetDelay(delay).SetEase(Ease.InQuad);
-                item.transform.DOScale(Vector3.zero, itemTransitionDuration).SetDelay(delay).SetEase(Ease.InQuad)
-                    .OnComplete(() => DespawnStackedItem(item));
+                item.transform.DOScale(Vector3.zero, itemTransitionDuration).SetDelay(delay).SetEase(Ease.InQuad);
+                lastReleaseDelay = Mathf.Max(lastReleaseDelay, delay);
+            }
+
+            collapsedItemsReleaseTween?.Kill();
+            collapsedItemsReleaseTween = null;
+            if (lastReleaseDelay >= 0f)
+            {
+                collapsedItemsReleaseTween = DOVirtual
+                    .DelayedCall(lastReleaseDelay + itemTransitionDuration, collapsedItemsReleaseCallback)
+                    .SetTarget(this);
             }
         }
 
@@ -267,7 +279,7 @@ namespace RestaurantLoop.Core
             if (show && count > 0)
             {
                 countText.gameObject.SetActive(true);
-                countText.text = count.ToString();
+                countText.SetText("{0}", count);
             }
             else
             {
@@ -318,6 +330,7 @@ namespace RestaurantLoop.Core
         public void ClearStackedVisuals()
         {
             DOTween.Kill(this);
+            collapsedItemsReleaseTween = null;
             foreach (var item in spawnedStackedItems)
             {
                 if (item != null)
@@ -354,7 +367,7 @@ namespace RestaurantLoop.Core
             for (int itemIndex = 1; itemIndex < count; itemIndex++) AddStackedItem(itemIndex, false);
         }
 
-        private void AddStackedItem(int index, bool animate)
+        private void AddStackedItem(int index, bool animate, float delay = 0f)
         {
             if (singleMeshModel == null || !singleMeshModel.activeInHierarchy) return;
 
@@ -373,8 +386,8 @@ namespace RestaurantLoop.Core
             if (!animate) return;
 
             itemTransform.localScale = Vector3.zero;
-            itemTransform.DOLocalMove(targetPosition, itemTransitionDuration).SetEase(Ease.OutBack);
-            itemTransform.DOScale(singleModelBaseLocalScale, itemTransitionDuration).SetEase(Ease.OutBack);
+            itemTransform.DOLocalMove(targetPosition, itemTransitionDuration).SetDelay(delay).SetEase(Ease.OutBack);
+            itemTransform.DOScale(singleModelBaseLocalScale, itemTransitionDuration).SetDelay(delay).SetEase(Ease.OutBack);
         }
 
         private int GetStackedVisualCount()
@@ -407,12 +420,20 @@ namespace RestaurantLoop.Core
             singleMeshModel.transform.DOLocalRotate(targetRotation, rotationTransitionDuration).SetEase(Ease.OutQuad);
         }
 
-        private void DespawnStackedItem(GameObject item)
+        private void ReleaseCollapsedStackedItems()
         {
-            if (item == null) return;
+            collapsedItemsReleaseTween = null;
+            for (int i = spawnedStackedItems.Count - 1; i >= 0; i--)
+            {
+                GameObject item = spawnedStackedItems[i];
+                if (item != null)
+                {
+                    item.transform.DOKill();
+                    ReleaseVisualToPool(item);
+                }
+            }
 
-            spawnedStackedItems.Remove(item);
-            ReleaseVisualToPool(item);
+            spawnedStackedItems.Clear();
         }
 
         private static void ReleaseVisualToPool(GameObject item)
