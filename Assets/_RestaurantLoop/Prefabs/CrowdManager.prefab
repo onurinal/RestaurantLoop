@@ -1,0 +1,85 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &742329677657356348
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9032379774380255338}
+  - component: {fileID: 8696936319799021683}
+  - component: {fileID: 1230525105429173920}
+  m_Layer: 0
+  m_Name: CrowdManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &9032379774380255338
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 742329677657356348}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8696936319799021683
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 742329677657356348}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf31b3e1589d4cf39d64d3851967f176, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.CrowdManager
+  alignmentTolerance: 1
+  edgeInwardOffset: 2
+  crowdCenterOffset: {x: 0, y: 0, z: 0}
+  innerCrowdArea: {x: 7, y: 11}
+  minCustomerDistance: 0.75
+  maxVisibleCrowdCount: 100
+  spawnInterval: 0.01
+  moveDuration: 1
+  pathJitterAmount: 0.5
+  outerSpawnOffset: {x: -6.5, y: 0, z: 0}
+  entranceGate: {fileID: 0}
+  gateOpenDelay: 0.4
+  showCrowdGizmos: 1
+  showToleranceGizmos: 1
+  previewCrowdCount: 25
+  crowdAreaGizmoColor: {r: 1, g: 0, b: 1, a: 0.8}
+  activeEdgeCellColor: {r: 0, g: 1, b: 0.3, a: 0.9}
+  customerPrefab: {fileID: 6890054401377583542, guid: 848140d34d6091b47881c58657729262, type: 3}
+  conveyorBuilder: {fileID: 0}
+--- !u!114 &1230525105429173920
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 742329677657356348}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9384499d1ccb4fa2bc37d928cc7e02a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.DiningBoardGrid
+  conveyorBuilder: {fileID: 0}
+  gridCellPrefab: {fileID: 6477775823511950983, guid: af9cfcce987bc1748955e34fa74ac722, type: 3}
+  boardColumns: 5
+  boardRows: 7
+  boardInset: {x: 1, y: 1.35}
+  cellFill: 0.7
+  gridCellYOffset: 0
