@@ -17,6 +17,7 @@ namespace RestaurantLoop.Core
     [RequireComponent(typeof(StackItemVisuals))]
     [RequireComponent(typeof(StackItemAnimator))]
     [RequireComponent(typeof(StackItemMovement))]
+    [RequireComponent(typeof(StackItemWobbler))]
     public class StackItem : MonoBehaviour, IInteractable
     {
         private static readonly HashSet<StackItem> ActiveStacksInGame = new HashSet<StackItem>();
@@ -30,6 +31,7 @@ namespace RestaurantLoop.Core
         private StackItemVisuals visuals;
         private StackItemAnimator animator;
         private StackItemMovement movement;
+        private StackItemWobbler wobbler;
         private Tween handSelectionTween;
         private Vector3 selectionBaseLocalScale;
         private bool hasSelectionBaseScale;
@@ -60,6 +62,7 @@ namespace RestaurantLoop.Core
             visuals = GetComponent<StackItemVisuals>();
             animator = GetComponent<StackItemAnimator>();
             movement = GetComponent<StackItemMovement>();
+            wobbler = GetComponent<StackItemWobbler>();
         }
 
         public void Initialize(ItemDataSO data, int count)
@@ -80,17 +83,20 @@ namespace RestaurantLoop.Core
             visuals.SetItemData(itemData);
             visuals.CollapseToSingle();
             visuals.RefreshVisuals(currentMode, remainingCount);
+            wobbler?.ResetState(remainingCount);
         }
 
         public void SetItemCount(int newCount)
         {
             remainingCount = Mathf.Max(0, newCount);
             visuals.SetItemCountVisuals(remainingCount, currentMode);
+            wobbler?.SetStackCount(remainingCount);
         }
 
         public void SetVisualMode(StackVisualMode mode)
         {
             currentMode = mode;
+            if (currentMode != StackVisualMode.Stacked) wobbler?.SetWobbleActive(false);
             visuals.RefreshVisuals(currentMode, remainingCount);
         }
 
@@ -185,6 +191,8 @@ namespace RestaurantLoop.Core
             }
 
             movement.InitializeOnBelt(path, startDistance, totalDistanceToExit);
+            wobbler?.SetStackCount(remainingCount);
+            wobbler?.SetWobbleActive(true);
         }
 
         public void MoveAlongBelt(SplineConveyorPath path, float speed, bool isClockwise, float deltaTime)
@@ -203,6 +211,7 @@ namespace RestaurantLoop.Core
 
         public void JumpToConveyor(Vector3 targetPosition, Action onComplete)
         {
+            wobbler?.SetWobbleActive(false);
             KillTweensInHierarchy(gameObject);
 
             if (currentMode != StackVisualMode.Stacked)
@@ -225,11 +234,13 @@ namespace RestaurantLoop.Core
         /// </summary>
         public void MoveToConveyor(Vector3 targetPosition, float duration, Action onComplete)
         {
+            wobbler?.SetWobbleActive(false);
             animator.MoveToConveyor(targetPosition, duration, onComplete);
         }
 
         public void JumpToSlot(Transform slotTransform, Action onComplete = null)
         {
+            wobbler?.SetWobbleActive(false);
             currentMode = StackVisualMode.SingleWithUI;
             visuals.CollapseToSingle();
 
@@ -299,6 +310,7 @@ namespace RestaurantLoop.Core
             hasSelectionBaseScale = false;
 
             KillTweensInHierarchy(gameObject);
+            wobbler?.ResetImmediately();
             visuals?.ResetForPoolRelease();
             SetWaitingForRack(false);
         }

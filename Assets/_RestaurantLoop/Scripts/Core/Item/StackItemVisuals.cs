@@ -43,6 +43,7 @@ namespace RestaurantLoop.Core
         private bool hasCountTextBaseColor;
 
         public GameObject SingleMeshModel => singleMeshModel;
+        public Transform VisualContainer => visualContainer;
 
         private void OnDisable()
         {
