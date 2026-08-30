@@ -3,18 +3,18 @@
 namespace RestaurantLoop.Infrastructure
 {
     /// <summary>
-    /// Dynamically scales the Camera's Orthographic Size based on Samsung Galaxy S10e as the baseline.
+    /// Dynamically scales the Camera's Orthographic Size
     /// Locks horizontal viewport width across all aspect ratios in both Edit Mode and Play Mode.
     /// </summary>
     [ExecuteAlways]
     [RequireComponent(typeof(Camera))]
     public class OrthographicCameraScaler : MonoBehaviour
     {
-        [Header("Reference Device Settings (Samsung Galaxy S10e)")]
-        [Tooltip("Reference screen width aspect (1080 for Samsung Galaxy S10e).")]
+        [Header("Reference Device Settings")]
+        [Tooltip("Reference screen width aspect")]
         [SerializeField] private float referenceWidth = 1080f;
 
-        [Tooltip("Reference screen height aspect (2280 for Samsung Galaxy S10e).")]
+        [Tooltip("Reference screen height aspect")]
         [SerializeField] private float referenceHeight = 2280f;
 
         [Tooltip("Desired Orthographic Size on the reference device.")]
