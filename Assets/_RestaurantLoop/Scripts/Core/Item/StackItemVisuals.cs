@@ -44,6 +44,11 @@ namespace RestaurantLoop.Core
 
         public GameObject SingleMeshModel => singleMeshModel;
 
+        private void OnDisable()
+        {
+            ResetForPoolRelease();
+        }
+
         /// <summary>
         /// Pulses only the food visual while a power-up is choosing a stack.
         /// This deliberately avoids scaling StackItem itself: a rack stack can
@@ -317,11 +322,20 @@ namespace RestaurantLoop.Core
                 if (item != null)
                 {
                     item.transform.DOKill();
-                    PoolManager.Instance.Despawn(item);
+                    ReleaseVisualToPool(item);
                 }
             }
 
             spawnedStackedItems.Clear();
+        }
+
+        /// <summary>Clears pooled duplicate food visuals and transient selection state.</summary>
+        public void ResetForPoolRelease()
+        {
+            selectionHighlightTween?.Kill();
+            selectionHighlightTween = null;
+            hasSelectionBaseScale = false;
+            ClearStackedVisuals();
         }
 
         private void BuildStackImmediately(int count)
@@ -397,7 +411,21 @@ namespace RestaurantLoop.Core
             if (item == null) return;
 
             spawnedStackedItems.Remove(item);
-            PoolManager.Instance.Despawn(item);
+            ReleaseVisualToPool(item);
+        }
+
+        private static void ReleaseVisualToPool(GameObject item)
+        {
+            if (item == null) return;
+
+            if (PoolManager.Instance != null)
+            {
+                PoolManager.Instance.Despawn(item);
+            }
+            else
+            {
+                Destroy(item);
+            }
         }
     }
 }

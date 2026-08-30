@@ -35,7 +35,10 @@ namespace RestaurantLoop.Infrastructure
                     actionOnDestroy: (obj) => Destroy(obj),
                     collectionCheck: false,
                     defaultCapacity: 10,
-                    maxSize: 100
+                    // The largest supported level has 120 customers. Keep enough
+                    // instances for a single prefab type to avoid level-to-level
+                    // churn in that worst case.
+                    maxSize: 128
                 );
             }
 
@@ -57,6 +60,14 @@ namespace RestaurantLoop.Infrastructure
         public void Despawn(GameObject instance)
         {
             if (instance == null) return;
+
+            // A stack can be referenced by more than one gameplay container while
+            // a level is being cleared. Releasing an already-pooled instance must
+            // be harmless instead of destroying it on the second cleanup pass.
+            if (!instance.activeSelf && instance.transform.parent == transform)
+            {
+                return;
+            }
 
             instance.transform.DOKill();
 

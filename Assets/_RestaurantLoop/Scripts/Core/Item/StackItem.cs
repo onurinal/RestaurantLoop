@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
 using RestaurantLoop.Audio;
+using RestaurantLoop.Infrastructure;
 
 namespace RestaurantLoop.Core
 {
@@ -248,12 +249,32 @@ namespace RestaurantLoop.Core
             {
                 if (stacks[i] != null && stacks[i].gameObject != null)
                 {
-                    KillTweensInHierarchy(stacks[i].gameObject);
-                    DestroyImmediate(stacks[i].gameObject);
+                    ReleaseToPool(stacks[i]);
                 }
             }
 
             ActiveStacksInGame.Clear();
+        }
+
+        /// <summary>
+        /// Returns a gameplay stack to the shared pool after clearing its transient
+        /// visual copies and tweens. This is intentionally idempotent because belt,
+        /// rack, and queue cleanup can all observe the same stack during a level reset.
+        /// </summary>
+        public static void ReleaseToPool(StackItem stack)
+        {
+            if (stack == null) return;
+
+            stack.PrepareForPoolRelease();
+
+            if (PoolManager.Instance != null)
+            {
+                PoolManager.Instance.Despawn(stack.gameObject);
+            }
+            else
+            {
+                Destroy(stack.gameObject);
+            }
         }
 
         public static void KillTweensInHierarchy(GameObject target)
@@ -269,6 +290,17 @@ namespace RestaurantLoop.Core
                     allTransforms[i].DOKill();
                 }
             }
+        }
+
+        private void PrepareForPoolRelease()
+        {
+            handSelectionTween?.Kill();
+            handSelectionTween = null;
+            hasSelectionBaseScale = false;
+
+            KillTweensInHierarchy(gameObject);
+            visuals?.ResetForPoolRelease();
+            SetWaitingForRack(false);
         }
 
         private void CheckForNearbyCustomer()
@@ -301,8 +333,7 @@ namespace RestaurantLoop.Core
             ConveyorManager.Instance.ReleaseCapacity();
             StackDepleted?.Invoke(this);
 
-            KillTweensInHierarchy(gameObject);
-            Destroy(gameObject);
+            ReleaseToPool(this);
         }
 
         private void OnExitReached()

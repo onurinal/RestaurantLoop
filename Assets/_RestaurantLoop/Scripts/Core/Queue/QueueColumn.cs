@@ -61,8 +61,7 @@ namespace RestaurantLoop.Core
             if (stackToSend.RemainingItemCount <= 0)
             {
                 slot.ClearSlot();
-                stackToSend.transform.SetParent(null, true);
-                Destroy(stackToSend.gameObject);
+                StackItem.ReleaseToPool(stackToSend);
                 ShiftColumnItemsUp(slotIndex);
                 QueueManager.Instance?.NotifyQueueChanged();
                 return true;

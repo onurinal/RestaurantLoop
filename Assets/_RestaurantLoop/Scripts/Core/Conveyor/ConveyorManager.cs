@@ -234,9 +234,8 @@ namespace RestaurantLoop.Core
 
             if (!addedToRack)
             {
-                // Destroy overflow stack immediately to prevent ghost objects floating in scene
-                StackItem.KillTweensInHierarchy(stack.gameObject);
-                Destroy(stack.gameObject);
+                // Return overflow to the stack pool immediately to prevent ghost objects floating in scene.
+                StackItem.ReleaseToPool(stack);
 
                 LevelManager.Instance?.ReportRackOverflow();
             }
@@ -250,8 +249,7 @@ namespace RestaurantLoop.Core
             {
                 if (activeStacks[i] != null)
                 {
-                    StackItem.KillTweensInHierarchy(activeStacks[i].gameObject);
-                    DestroyImmediate(activeStacks[i].gameObject);
+                    StackItem.ReleaseToPool(activeStacks[i]);
                 }
             }
 
@@ -485,8 +483,7 @@ namespace RestaurantLoop.Core
         {
             if (ReferenceEquals(stack, null)) return;
 
-            StackItem.KillTweensInHierarchy(stack.gameObject);
-            Destroy(stack.gameObject);
+            StackItem.ReleaseToPool(stack);
         }
 
         private void OnDrawGizmosSelected()

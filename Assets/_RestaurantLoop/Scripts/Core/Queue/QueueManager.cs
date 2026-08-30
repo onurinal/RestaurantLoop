@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using System;
+using RestaurantLoop.Infrastructure;
 
 namespace RestaurantLoop.Core
 {
@@ -84,12 +85,17 @@ namespace RestaurantLoop.Core
 
                         if (config.itemData != null && config.itemData.StackPrefab != null)
                         {
-                            GameObject stackObj = Instantiate(
-                                config.itemData.StackPrefab,
-                                slot.transform.position,
-                                Quaternion.identity,
-                                slot.transform
-                            );
+                            GameObject stackObj = PoolManager.Instance != null
+                                ? PoolManager.Instance.Spawn(
+                                    config.itemData.StackPrefab,
+                                    slot.transform.position,
+                                    Quaternion.identity,
+                                    slot.transform)
+                                : Instantiate(
+                                    config.itemData.StackPrefab,
+                                    slot.transform.position,
+                                    Quaternion.identity,
+                                    slot.transform);
 
                             StackItem.KillTweensInHierarchy(stackObj);
 
@@ -133,8 +139,7 @@ namespace RestaurantLoop.Core
                     {
                         if (stack != null)
                         {
-                            StackItem.KillTweensInHierarchy(stack.gameObject);
-                            Destroy(stack.gameObject);
+                            StackItem.ReleaseToPool(stack);
                         }
                     }
 
@@ -407,8 +412,7 @@ namespace RestaurantLoop.Core
                     if (stack.Data == data)
                     {
                         removedCount++;
-                        StackItem.KillTweensInHierarchy(stack.gameObject);
-                        Destroy(stack.gameObject);
+                        StackItem.ReleaseToPool(stack);
                     }
                     else
                     {

@@ -215,8 +215,7 @@ namespace RestaurantLoop.Core
                 {
                     if (rackSlots[i].CurrentStack != null)
                     {
-                        StackItem.KillTweensInHierarchy(rackSlots[i].CurrentStack.gameObject);
-                        Destroy(rackSlots[i].CurrentStack.gameObject);
+                        StackItem.ReleaseToPool(rackSlots[i].CurrentStack);
                     }
 
                     rackSlots[i].ClearSlot();
@@ -253,8 +252,7 @@ namespace RestaurantLoop.Core
                 if (stack == null || stack.Data != data) continue;
 
                 slot.ClearSlot();
-                StackItem.KillTweensInHierarchy(stack.gameObject);
-                Destroy(stack.gameObject);
+                StackItem.ReleaseToPool(stack);
                 removedCount++;
             }
 
@@ -300,6 +298,11 @@ namespace RestaurantLoop.Core
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
                 Transform child = transform.GetChild(i);
+                StackItem[] childStacks = child.GetComponentsInChildren<StackItem>(true);
+                for (int stackIndex = 0; stackIndex < childStacks.Length; stackIndex++)
+                {
+                    StackItem.ReleaseToPool(childStacks[stackIndex]);
+                }
                 StackItem.KillTweensInHierarchy(child.gameObject);
                 Destroy(child.gameObject);
             }
