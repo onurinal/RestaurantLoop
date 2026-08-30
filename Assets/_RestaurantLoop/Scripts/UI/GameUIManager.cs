@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
+using DG.Tweening;
 using RestaurantLoop.Audio;
 using RestaurantLoop.Core;
 
@@ -13,6 +14,14 @@ namespace RestaurantLoop.UI
         [SerializeField] private GameObject settingsPanel;
         [SerializeField] private GameObject winPanel;
         [SerializeField] private GameObject losePanel;
+
+        [Header("Panel Pop Animation")]
+        [SerializeField, Min(0f)] private float panelPopInDuration = 0.25f;
+        [SerializeField, Min(0f)] private float panelPopOutDuration = 0.16f;
+        [SerializeField, Range(0.1f, 1f)] private float panelPopInStartScale = 0.75f;
+        [SerializeField, Range(0.1f, 1f)] private float panelPopOutEndScale = 0.75f;
+        [SerializeField] private Ease panelPopInEase = Ease.OutBack;
+        [SerializeField] private Ease panelPopOutEase = Ease.InBack;
 
         [Header("In-Game UI Elements")]
         [SerializeField] private TextMeshProUGUI topLevelText;
@@ -49,6 +58,17 @@ namespace RestaurantLoop.UI
 
         private bool isMusicOn = true;
         private bool isSfxOn = true;
+        private bool isPanelTransitioning;
+        private Vector3 settingsPanelBaseScale;
+        private Vector3 winPanelBaseScale;
+        private Vector3 losePanelBaseScale;
+
+        private void Awake()
+        {
+            settingsPanelBaseScale = GetPanelScale(settingsPanel);
+            winPanelBaseScale = GetPanelScale(winPanel);
+            losePanelBaseScale = GetPanelScale(losePanel);
+        }
 
         private void Start()
         {
@@ -148,8 +168,8 @@ namespace RestaurantLoop.UI
             if (topLevelText != null) topLevelText.text = $"LEVEL {levelNumber}";
         }
 
-        private void OpenSettings() => settingsPanel.SetActive(true);
-        private void CloseSettings() => settingsPanel.SetActive(false);
+        private void OpenSettings() => ShowPanel(settingsPanel, settingsPanelBaseScale);
+        private void CloseSettings() => HidePanel(settingsPanel, settingsPanelBaseScale);
 
         // --- New Toggle Logic ---
         private void ToggleMusic()
@@ -198,27 +218,96 @@ namespace RestaurantLoop.UI
             PlayerPrefs.SetFloat("SfxVolume", value);
         }
 
-        private void ShowWinPanel() => winPanel.SetActive(true);
-        private void ShowLosePanel() => losePanel.SetActive(true);
+        private void ShowWinPanel() => ShowPanel(winPanel, winPanelBaseScale);
+        private void ShowLosePanel() => ShowPanel(losePanel, losePanelBaseScale);
 
         private void OnNextLevelClicked()
         {
-            winPanel.SetActive(false);
-            if (LevelManager.Instance != null) LevelManager.Instance.CompleteLevel();
+            if (isPanelTransitioning) return;
+
+            HidePanel(winPanel, winPanelBaseScale, () =>
+            {
+                if (LevelManager.Instance != null) LevelManager.Instance.CompleteLevel();
+            });
         }
 
         private void OnRetryClicked()
         {
-            losePanel.SetActive(false);
+            if (isPanelTransitioning) return;
 
-            // Restart current level without reloading the Unity scene
-            if (LevelManager.Instance != null)
+            HidePanel(losePanel, losePanelBaseScale, () =>
             {
-                LevelManager.Instance.LoadCurrentLevel();
+                // Restart current level without reloading the Unity scene
+                if (LevelManager.Instance != null)
+                {
+                    LevelManager.Instance.LoadCurrentLevel();
+                }
+            });
+        }
+
+        private void OnMainMenuClicked()
+        {
+            if (isPanelTransitioning) return;
+
+            if (winPanel.activeSelf)
+            {
+                HidePanel(winPanel, winPanelBaseScale, LoadMainMenu);
+            }
+            else if (losePanel.activeSelf)
+            {
+                HidePanel(losePanel, losePanelBaseScale, LoadMainMenu);
+            }
+            else
+            {
+                LoadMainMenu();
             }
         }
 
-        private void OnMainMenuClicked() => SceneManager.LoadScene("MainMenu");
+        private void ShowPanel(GameObject panel, Vector3 baseScale)
+        {
+            if (panel == null) return;
+
+            isPanelTransitioning = false;
+            Transform panelTransform = panel.transform;
+            panelTransform.DOKill();
+            panel.SetActive(true);
+            panelTransform.localScale = Vector3.Scale(baseScale, Vector3.one * panelPopInStartScale);
+            panelTransform
+                .DOScale(baseScale, panelPopInDuration)
+                .SetEase(panelPopInEase)
+                .SetUpdate(true);
+        }
+
+        private void HidePanel(GameObject panel, Vector3 baseScale, System.Action onComplete = null)
+        {
+            if (panel == null || !panel.activeSelf)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            isPanelTransitioning = true;
+            Transform panelTransform = panel.transform;
+            panelTransform.DOKill();
+            panelTransform
+                .DOScale(Vector3.Scale(baseScale, Vector3.one * panelPopOutEndScale), panelPopOutDuration)
+                .SetEase(panelPopOutEase)
+                .SetUpdate(true)
+                .OnComplete(() =>
+                {
+                    panel.SetActive(false);
+                    panelTransform.localScale = baseScale;
+                    isPanelTransitioning = false;
+                    onComplete?.Invoke();
+                });
+        }
+
+        private static Vector3 GetPanelScale(GameObject panel)
+        {
+            return panel != null ? panel.transform.localScale : Vector3.one;
+        }
+
+        private void LoadMainMenu() => SceneManager.LoadScene("MainMenu");
 
         private void OnDestroy()
         {
