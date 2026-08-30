@@ -49,9 +49,13 @@ namespace RestaurantLoop.Core
                     if (r == null || r.GetComponent<TMP_Text>() != null) continue;
 
                     r.SetPropertyBlock(null);
-                    if (r.sharedMaterials != null)
+
+                    // Renderer.sharedMaterials allocates a new array on every access, and it
+                    // was being read again on each iteration of the loop condition.
+                    Material[] sharedMaterials = r.sharedMaterials;
+                    if (sharedMaterials != null)
                     {
-                        for (int m = 0; m < r.sharedMaterials.Length; m++)
+                        for (int m = 0; m < sharedMaterials.Length; m++)
                         {
                             r.SetPropertyBlock(null, m);
                         }

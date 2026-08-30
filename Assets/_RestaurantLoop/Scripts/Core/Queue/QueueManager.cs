@@ -183,8 +183,10 @@ namespace RestaurantLoop.Core
                 {
                     if (column == null) continue;
 
-                    QueueSlot[] childSlots = column.GetComponentsInChildren<QueueSlot>(true);
-                    for (int i = 0; i < childSlots.Length; i++)
+                    // Cached slot list: this is evaluated every frame from the power-up UI,
+                    // where GetComponentsInChildren allocated an array per column per frame.
+                    IReadOnlyList<QueueSlot> childSlots = column.Slots;
+                    for (int i = 0; i < childSlots.Count; i++)
                     {
                         QueueSlot slot = childSlots[i];
                         if (slot != null && column.IsDeeperSlot(slot) && slot.IsOccupied &&
@@ -221,8 +223,8 @@ namespace RestaurantLoop.Core
                 {
                     if (column == null) continue;
 
-                    QueueSlot[] childSlots = column.GetComponentsInChildren<QueueSlot>(true);
-                    for (int i = 0; i < childSlots.Length; i++)
+                    IReadOnlyList<QueueSlot> childSlots = column.Slots;
+                    for (int i = 0; i < childSlots.Count; i++)
                     {
                         if (IsClearColorSelectableStack(childSlots[i]?.CurrentStack)) return true;
                     }
@@ -364,8 +366,11 @@ namespace RestaurantLoop.Core
             foreach (QueueColumn column in columns)
             {
                 if (column == null) continue;
-                QueueSlot[] childSlots = column.GetComponentsInChildren<QueueSlot>(true);
-                for (int i = 0; i < childSlots.Length; i++)
+
+                // This runs inside HasClearColorSelectableStack's own per-column loop, so the
+                // old GetComponentsInChildren call made the pair allocate O(columns^2) arrays.
+                IReadOnlyList<QueueSlot> childSlots = column.Slots;
+                for (int i = 0; i < childSlots.Count; i++)
                 {
                     if (childSlots[i] != null && childSlots[i].CurrentStack == stack) return true;
                 }

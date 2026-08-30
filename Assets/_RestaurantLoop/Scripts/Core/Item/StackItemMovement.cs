@@ -65,9 +65,12 @@ namespace RestaurantLoop.Core
         {
             if (path == null || path.Length <= 0f) return;
 
-            // Fetch exact world position and direction evaluated by physical distance meters
-            transform.position = path.GetPosition(currentDistance);
-            Vector3 direction = path.GetDirection(currentDistance, isClockwise);
+            if (!path.TryGetSample(currentDistance, isClockwise, out Vector3 position, out Vector3 direction))
+            {
+                return;
+            }
+
+            transform.position = position;
 
             if (direction != Vector3.zero)
             {

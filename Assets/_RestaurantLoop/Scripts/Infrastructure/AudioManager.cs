@@ -81,8 +81,31 @@ namespace RestaurantLoop.Audio
         private Dictionary<AudioClip, List<float>> activeClips = new Dictionary<AudioClip, List<float>>();
         private Dictionary<AudioClip, float> clipVolumeModifiers = new Dictionary<AudioClip, float>();
 
-        public float SfxVolume => Mathf.Clamp01(PlayerPrefs.GetFloat("SfxVolume", 1f));
+        // PlayerPrefs.GetFloat is a native call with string-key marshalling. It was previously
+        // hit on every PlaySFX (hundreds per level) and once per frame by CrowdAudioGenerator.
+        // The value only changes through the settings sliders, which invalidate this cache.
+        private float cachedSfxVolume = -1f;
+
+        public float SfxVolume
+        {
+            get
+            {
+                if (cachedSfxVolume < 0f)
+                {
+                    cachedSfxVolume = Mathf.Clamp01(PlayerPrefs.GetFloat("SfxVolume", 1f));
+                }
+
+                return cachedSfxVolume;
+            }
+        }
+
         public bool IsSfxMuted => SfxVolume <= Mathf.Epsilon;
+
+        /// <summary>Call after writing the SfxVolume preference so the cache re-reads it.</summary>
+        public void InvalidateSfxVolumeCache()
+        {
+            cachedSfxVolume = -1f;
+        }
 
         private void Awake()
         {
@@ -168,14 +191,24 @@ namespace RestaurantLoop.Audio
                     activeClips[clip] = new List<float>();
                 }
 
-                activeClips[clip].RemoveAll(startTime => currentTime - startTime >= clip.length);
+                // A RemoveAll lambda capturing currentTime and clip allocated a closure plus a
+                // delegate on every sound. Same filtering, done in place.
+                List<float> startTimes = activeClips[clip];
+                float clipLength = clip.length;
+                for (int i = startTimes.Count - 1; i >= 0; i--)
+                {
+                    if (currentTime - startTimes[i] >= clipLength)
+                    {
+                        startTimes.RemoveAt(i);
+                    }
+                }
 
-                if (!ignoreLimit && activeClips[clip].Count >= maxSimultaneousSounds)
+                if (!ignoreLimit && startTimes.Count >= maxSimultaneousSounds)
                 {
                     return;
                 }
 
-                activeClips[clip].Add(currentTime);
+                startTimes.Add(currentTime);
 
                 float individualVolumeMultiplier = 1f;
                 if (clipVolumeModifiers.TryGetValue(clip, out float specificVolume))

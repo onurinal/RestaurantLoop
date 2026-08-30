@@ -53,6 +53,7 @@ namespace RestaurantLoop.UI
         private PowerUpManager powerUps;
         private bool lastHandAvailability;
         private bool lastCrowdReady;
+        private readonly Dictionary<TMP_Text, int> lastLabelValues = new Dictionary<TMP_Text, int>();
 
         private void Start()
         {
@@ -172,7 +173,7 @@ namespace RestaurantLoop.UI
             }
         }
 
-        private static void SetButton(
+        private void SetButton(
             Button button,
             CanvasGroup canvasGroup,
             TMP_Text label,
@@ -192,7 +193,17 @@ namespace RestaurantLoop.UI
                 canvasGroup.blocksRaycasts = true;
             }
 
-            if (label != null) label.text = uses.ToString();
+            // Assigning TMP_Text.text marks the text dirty and forces a full glyph/mesh
+            // rebuild even when the string is identical, and Refresh runs on every conveyor
+            // capacity change. Skipping the redundant assignment renders the same glyphs.
+            if (label != null)
+            {
+                if (!lastLabelValues.TryGetValue(label, out int previous) || previous != uses)
+                {
+                    lastLabelValues[label] = uses;
+                    label.text = uses.ToString();
+                }
+            }
         }
 
         private void SetHandSelectionOverlayVisible(bool visible)

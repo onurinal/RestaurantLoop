@@ -175,7 +175,14 @@ namespace RestaurantLoop.Core
 
         private void ResetRotationImmediately()
         {
-            if (visualContainer != null) visualContainer.localRotation = baseLocalRotation;
+            if (visualContainer == null) return;
+
+            // Every queue and rack stack has wobble disabled, so this ran every frame for each
+            // of them, dirtying the transform hierarchy to write a rotation it already had.
+            if (visualContainer.localRotation != baseLocalRotation)
+            {
+                visualContainer.localRotation = baseLocalRotation;
+            }
         }
 
 #if UNITY_EDITOR

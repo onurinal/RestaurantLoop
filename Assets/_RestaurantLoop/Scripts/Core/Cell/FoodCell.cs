@@ -8,6 +8,7 @@ namespace RestaurantLoop.Core
         [SerializeField] private Material neutralMaterial;
 
         private Material[][] authoredMaterials;
+        private Material[][] materialBuffers;
 
         private void Awake()
         {
@@ -48,18 +49,19 @@ namespace RestaurantLoop.Core
                 return;
             }
 
-            foreach (Renderer targetRenderer in targetRenderers)
+            for (int rendererIndex = 0; rendererIndex < targetRenderers.Length; rendererIndex++)
             {
+                Renderer targetRenderer = targetRenderers[rendererIndex];
                 if (targetRenderer == null) continue;
 
-                Material[] newMaterials = new Material[targetRenderer.sharedMaterials.Length];
+                Material[] newMaterials = GetMaterialBuffer(rendererIndex);
                 for (int i = 0; i < newMaterials.Length; i++)
                 {
                     newMaterials[i] = material;
                 }
 
                 targetRenderer.materials = newMaterials;
-                targetRenderer.SetPropertyBlock(null); // Clear PropertyBlock so new material color shows instantly
+                targetRenderer.SetPropertyBlock(null);
             }
         }
 
@@ -74,7 +76,7 @@ namespace RestaurantLoop.Core
 
                 if (neutralMaterial != null)
                 {
-                    Material[] newMaterials = new Material[targetRenderer.sharedMaterials.Length];
+                    Material[] newMaterials = GetMaterialBuffer(i);
                     for (int materialIndex = 0; materialIndex < newMaterials.Length; materialIndex++)
                     {
                         newMaterials[materialIndex] = neutralMaterial;
@@ -91,6 +93,31 @@ namespace RestaurantLoop.Core
             }
         }
 
+        /// <summary>
+        /// Scratch array matching a renderer's authored material-slot count, reused across
+        /// calls so SetMaterial/Clear no longer allocate on every stack movement.
+        /// </summary>
+        private Material[] GetMaterialBuffer(int rendererIndex)
+        {
+            int slotCount = authoredMaterials != null && rendererIndex < authoredMaterials.Length
+                ? authoredMaterials[rendererIndex].Length
+                : 0;
+
+            if (materialBuffers == null || materialBuffers.Length != targetRenderers.Length)
+            {
+                materialBuffers = new Material[targetRenderers.Length][];
+            }
+
+            Material[] buffer = materialBuffers[rendererIndex];
+            if (buffer == null || buffer.Length != slotCount)
+            {
+                buffer = new Material[slotCount];
+                materialBuffers[rendererIndex] = buffer;
+            }
+
+            return buffer;
+        }
+
         private void CacheRenderers()
         {
             if (targetRenderers == null || targetRenderers.Length == 0)
@@ -101,6 +128,7 @@ namespace RestaurantLoop.Core
             if (authoredMaterials != null && authoredMaterials.Length == targetRenderers.Length) return;
 
             authoredMaterials = new Material[targetRenderers.Length][];
+            materialBuffers = new Material[targetRenderers.Length][];
             for (int i = 0; i < targetRenderers.Length; i++)
             {
                 authoredMaterials[i] = targetRenderers[i] != null

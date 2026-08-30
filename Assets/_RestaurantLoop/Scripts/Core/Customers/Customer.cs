@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using RestaurantLoop.Infrastructure;
@@ -22,6 +23,17 @@ namespace RestaurantLoop.Core
         private static readonly int DesatProperty = Shader.PropertyToID("_Desaturation");
         private float currentDesat = 1f;
 
+        // A renderer that carries a MaterialPropertyBlock is excluded from the SRP Batcher,
+        // and with dynamic batching off and skinned meshes unable to static-batch, that left
+        // every customer as an isolated draw. Desaturation only ever settles on two values,
+        // so each authored material gets two shared variants that differ solely in
+        // _Desaturation. Settled customers draw from a shared material (batcher-eligible);
+        // only the handful mid-fade still use a property block. Pixels are unchanged.
+        private static readonly Dictionary<Material, Material> DesaturatedVariants = new Dictionary<Material, Material>();
+        private static readonly Dictionary<Material, Material> SaturatedVariants = new Dictionary<Material, Material>();
+        private Material baseSharedMaterial;
+        private Tween desatTween;
+
         public bool IsServed { get; private set; }
         public bool IsEdgeCustomer { get; private set; }
         public ItemDataSO RequiredData => requiredData;
@@ -41,11 +53,17 @@ namespace RestaurantLoop.Core
             if (customerRenderer == null) customerRenderer = GetComponentInChildren<SkinnedMeshRenderer>();
             if (balloonObject != null) orderBalloon = balloonObject.GetComponent<OrderBalloon>();
 
+            // Captured once, before anything can swap in a variant, so variants are always
+            // derived from the authored prefab material.
+            if (customerRenderer != null) baseSharedMaterial = customerRenderer.sharedMaterial;
+
             propBlock = new MaterialPropertyBlock();
         }
 
         private void OnDestroy()
         {
+            desatTween?.Kill();
+            desatTween = null;
             transform.DOKill();
             ModelTransform.DOKill();
         }
@@ -72,22 +90,77 @@ namespace RestaurantLoop.Core
         {
             if (customerRenderer == null) return;
 
+            // Previously untargeted, so DOKill() could not reach it: a customer despawned
+            // mid-fade left a live tween writing into the recycled renderer.
+            desatTween?.Kill();
+            desatTween = null;
+
             if (duration <= 0f)
             {
                 currentDesat = targetValue;
+                ApplySettledDesaturation(targetValue);
+                return;
+            }
+
+            desatTween = DOVirtual.Float(currentDesat, targetValue, duration, v =>
+                {
+                    currentDesat = v;
+                    customerRenderer.GetPropertyBlock(propBlock);
+                    propBlock.SetFloat(DesatProperty, v);
+                    customerRenderer.SetPropertyBlock(propBlock);
+                })
+                .SetTarget(this)
+                .OnComplete(() =>
+                {
+                    desatTween = null;
+                    ApplySettledDesaturation(targetValue);
+                });
+        }
+
+        /// <summary>
+        /// Ends a desaturation change on a shared material where possible, clearing the
+        /// per-renderer override so the customer is SRP-Batcher eligible again. Falls back to
+        /// a property block for any value that is not one of the two settled ones.
+        /// </summary>
+        private void ApplySettledDesaturation(float value)
+        {
+            if (customerRenderer == null) return;
+
+            Material variant = GetDesaturationVariant(value);
+            if (variant == null)
+            {
                 customerRenderer.GetPropertyBlock(propBlock);
-                propBlock.SetFloat(DesatProperty, targetValue);
+                propBlock.SetFloat(DesatProperty, value);
                 customerRenderer.SetPropertyBlock(propBlock);
                 return;
             }
 
-            DOVirtual.Float(currentDesat, targetValue, duration, v =>
+            customerRenderer.SetPropertyBlock(null);
+            customerRenderer.sharedMaterial = variant;
+        }
+
+        private Material GetDesaturationVariant(float value)
+        {
+            if (baseSharedMaterial == null) return null;
+
+            Dictionary<Material, Material> cache;
+            if (Mathf.Approximately(value, 1f)) cache = DesaturatedVariants;
+            else if (Mathf.Approximately(value, 0f)) cache = SaturatedVariants;
+            else return null;
+
+            // The null check also covers a variant destroyed by a scene load.
+            if (!cache.TryGetValue(baseSharedMaterial, out Material variant) || variant == null)
             {
-                currentDesat = v;
-                customerRenderer.GetPropertyBlock(propBlock);
-                propBlock.SetFloat(DesatProperty, v);
-                customerRenderer.SetPropertyBlock(propBlock);
-            });
+                variant = new Material(baseSharedMaterial)
+                {
+                    // Survives scene loads so the static cache never hands out a destroyed material.
+                    hideFlags = HideFlags.HideAndDontSave
+                };
+                variant.SetFloat(DesatProperty, value);
+                cache[baseSharedMaterial] = variant;
+            }
+
+            return variant;
         }
 
         public void SetBalloonActive(bool active, bool animate = true)

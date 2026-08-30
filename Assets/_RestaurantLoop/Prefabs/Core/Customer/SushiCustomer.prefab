@@ -664,7 +664,7 @@ Animator:
   m_Enabled: 1
   m_Avatar: {fileID: 9000000, guid: d55c4c56c27b73141aeffc8559a8d92d, type: 3}
   m_Controller: {fileID: 9100000, guid: 5dbd8236cdb24da498c2833eaf9de04f, type: 2}
-  m_CullingMode: 0
+  m_CullingMode: 1
   m_UpdateMode: 0
   m_ApplyRootMotion: 1
   m_LinearVelocityBlending: 0
@@ -1327,6 +1327,15 @@ MonoBehaviour:
   foodLocalPosition: {x: 0.266, y: 0.06, z: -0.39}
   foodScale: 1.3
   rotationSpeed: 20
+  animateScale: 1
+  showStartScale: 0.45
+  showDuration: 0.28
+  showEase: 27
+  showEaseOvershoot: 1.2
+  hideEndScale: 0.45
+  hideDuration: 0.2
+  hideEase: 26
+  hideEaseOvershoot: 1.1
   cameraOffsetDistance: 0.8
 --- !u!1 &8213649379208089353
 GameObject:
@@ -1385,7 +1394,7 @@ Transform:
   m_GameObject: {fileID: 8596391427607125211}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -1.6097589, z: 0}
+  m_LocalPosition: {x: 0, y: -1.65, z: 0}
   m_LocalScale: {x: 3, y: 3, z: 3}
   m_ConstrainProportionsScale: 1
   m_Children:

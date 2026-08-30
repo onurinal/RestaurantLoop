@@ -14,6 +14,14 @@ namespace RestaurantLoop.Core
         public QueueSlot FrontSlot => slots.Count > 0 ? slots[0] : null;
         public bool IsTransitioning => isShifting;
 
+        /// <summary>
+        /// The column's slots, cached by InitializeChildSlots. Callers used to rebuild this
+        /// with GetComponentsInChildren, which allocates a new array on every call — including
+        /// from per-frame UI availability checks. Slots are direct children only, so this list
+        /// holds the same slots in the same order.
+        /// </summary>
+        public IReadOnlyList<QueueSlot> Slots => slots;
+
         public int OccupiedSlotCount
         {
             get

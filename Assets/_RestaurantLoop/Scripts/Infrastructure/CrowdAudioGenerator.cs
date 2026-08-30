@@ -97,8 +97,13 @@ namespace RestaurantLoop.Audio
 
         private void Update()
         {
-            // Get the global SFX volume from the UI Options Toggle (1 is ON, 0 is OFF)
-            float globalSfxVolume = PlayerPrefs.GetFloat("SfxVolume", 1f);
+            // Get the global SFX volume from the UI Options Toggle (1 is ON, 0 is OFF).
+            // Read from AudioManager's cache rather than hitting PlayerPrefs every frame;
+            // the preference is only ever written by the settings sliders, which are 0..1,
+            // so the cache's Clamp01 cannot change the value.
+            float globalSfxVolume = AudioManager.Instance != null
+                ? AudioManager.Instance.SfxVolume
+                : PlayerPrefs.GetFloat("SfxVolume", 1f);
             
             // Calculate final volume based on base volume, remaining crowd ratio, and UI settings
             float finalVolume = maxVolumePerVoice * currentCrowdRatio * globalSfxVolume;

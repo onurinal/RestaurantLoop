@@ -13,6 +13,11 @@ namespace RestaurantLoop.Core
 
         public bool IsJumping { get; private set; }
 
+        private void OnDisable()
+        {
+            IsJumping = false;
+        }
+
         public void Shake()
         {
             if (IsJumping || DOTween.IsTweening(transform)) return;
