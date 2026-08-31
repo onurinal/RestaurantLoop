@@ -709,7 +709,7 @@ MonoBehaviour:
   timerRoot: {fileID: 3358601007908450447}
   timerFillImage: {fileID: 5851335412657089827}
   pulseTarget: {fileID: 4559480753888327334}
-  warningNormalizedThreshold: 0.5
+  warningNormalizedThreshold: 0.9
   warningSecondsThreshold: 0
   pulseSpeed: 8
   pulseScaleAmount: 0.1
