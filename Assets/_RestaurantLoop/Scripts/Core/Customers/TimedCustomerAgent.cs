@@ -2,14 +2,10 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
+using RestaurantLoop.Audio; 
 
 namespace RestaurantLoop.Core
 {
-    /// <summary>
-    /// Owns the optional timed-customer countdown and its lightweight world-space UI.
-    /// The UI remains hidden while waiting in the inner crowd and pops up with an attention-grabbing
-    /// animation only when seated at an active edge slot.
-    /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Customer))]
     public sealed class TimedCustomerAgent : MonoBehaviour
@@ -21,8 +17,10 @@ namespace RestaurantLoop.Core
         [SerializeField] private RectTransform pulseTarget;
 
         [Header("Low Time Alert")]
-        [SerializeField, Range(0.05f, 0.9f)] private float warningNormalizedThreshold = 0.25f;
-        [SerializeField, Min(0f)] private float warningSecondsThreshold = 3f;
+        [Tooltip("Sürenin yüzde kaçı kaldığında SARI (uyarı) bölge başlasın? 0.5 = %50")]
+        [SerializeField, Range(0.05f, 0.9f)] private float warningNormalizedThreshold = 0.5f; 
+        [Tooltip("Saniye bazlı uyarıyı iptal ettik, sadece yüzdeye bakacak.")]
+        [SerializeField, Min(0f)] private float warningSecondsThreshold = 0f; 
         [SerializeField, Min(0f)] private float pulseSpeed = 8f;
         [SerializeField, Range(0f, 0.3f)] private float pulseScaleAmount = 0.1f;
         [SerializeField] private Color normalColor = new Color(0.18f, 0.85f, 0.25f, 1f);
@@ -40,6 +38,11 @@ namespace RestaurantLoop.Core
         private bool isTimed;
         private bool timerStarted;
         private bool completed;
+        
+        private bool hasPlayedWarningSound; 
+        private bool isWarningSoundActive; 
+        private bool isCriticalSoundActive; 
+
         private Tween popTween;
 
         public bool IsTimed => isTimed;
@@ -69,6 +72,7 @@ namespace RestaurantLoop.Core
             KillPopTween();
             if (pulseTarget != null) pulseTarget.localScale = pulseBaseScale;
             SetTimerVisible(false);
+            StopWarningSoundTracker(); 
         }
 
         private void Update()
@@ -81,7 +85,6 @@ namespace RestaurantLoop.Core
                 return;
             }
 
-            // Start countdown and pop UI only when promoted/seated at active edge slot
             if (!timerStarted)
             {
                 if (!CanStartCountdown()) return;
@@ -89,7 +92,12 @@ namespace RestaurantLoop.Core
                 ActivateAndPlayPopAnimation();
             }
 
-            if (LevelManager.Instance != null && !LevelManager.Instance.IsGameActive) return;
+            // YENİ DÜZELTME: Lose paneli açıldıysa (Oyun aktif değilse), sesi kesip öyle dur!
+            if (LevelManager.Instance != null && !LevelManager.Instance.IsGameActive)
+            {
+                StopWarningSoundTracker(); 
+                return;
+            }
 
             remainingTime = Mathf.Max(0f, remainingTime - Time.deltaTime);
             RefreshVisuals();
@@ -105,9 +113,13 @@ namespace RestaurantLoop.Core
             remainingTime = duration;
             timerStarted = false;
             completed = false;
+            
+            StopWarningSoundTracker();
+            hasPlayedWarningSound = false; 
+            isCriticalSoundActive = false; 
 
             if (pulseTarget != null) pulseTarget.localScale = pulseBaseScale;
-            SetTimerVisible(false); // Hidden while waiting in inner crowd
+            SetTimerVisible(false); 
             RefreshVisuals();
         }
 
@@ -119,6 +131,22 @@ namespace RestaurantLoop.Core
             KillPopTween();
             SetTimerVisible(false);
             if (pulseTarget != null) pulseTarget.localScale = pulseBaseScale;
+            
+            StopWarningSoundTracker();
+        }
+
+        private void StopWarningSoundTracker()
+        {
+            if (isWarningSoundActive)
+            {
+                isWarningSoundActive = false;
+                if (AudioManager.Instance != null) AudioManager.Instance.StopTimedWarning();
+            }
+            if (isCriticalSoundActive)
+            {
+                isCriticalSoundActive = false;
+                if (AudioManager.Instance != null) AudioManager.Instance.StopCriticalWarning();
+            }
         }
 
         private bool CanStartCountdown()
@@ -160,20 +188,21 @@ namespace RestaurantLoop.Core
             remainingTime = 0f;
             KillPopTween();
             RefreshVisuals();
+            
+            StopWarningSoundTracker();
+
             customer.PlayTimedFailureReaction();
             LevelManager.Instance?.OnLevelFailed();
         }
 
         private void RefreshVisuals()
         {
-            if (timerFillImage == null) return;
+            if (!isTimed || timerFillImage == null) return; 
 
             float normalized = duration > 0f ? Mathf.Clamp01(remainingTime / duration) : 0f;
             timerFillImage.fillAmount = normalized;
 
-            float warningBoundary = duration > 0f
-                ? Mathf.Clamp01(Mathf.Max(warningNormalizedThreshold, warningSecondsThreshold / duration))
-                : warningNormalizedThreshold;
+            float warningBoundary = warningNormalizedThreshold;
 
             if (normalized > warningBoundary)
             {
@@ -183,8 +212,21 @@ namespace RestaurantLoop.Core
                 {
                     pulseTarget.localScale = pulseBaseScale;
                 }
-
                 return;
+            }
+
+            if (!hasPlayedWarningSound)
+            {
+                hasPlayedWarningSound = true;
+                isWarningSoundActive = true;
+                if (AudioManager.Instance != null) AudioManager.Instance.StartTimedWarning();
+            }
+
+            float criticalBoundary = warningBoundary * 0.4f;
+            if (normalized <= criticalBoundary && !isCriticalSoundActive)
+            {
+                isCriticalSoundActive = true;
+                if (AudioManager.Instance != null) AudioManager.Instance.StartCriticalWarning();
             }
 
             float warningProgress = warningBoundary > 0f ? normalized / warningBoundary : 0f;

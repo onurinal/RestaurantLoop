@@ -58,6 +58,11 @@ namespace RestaurantLoop.Audio
         public AudioClip levelLoseSound;
         [Range(0f, 1f)] public float levelLoseSoundVolume = 1f;
 
+        [Header("Timed Customer SFX")]
+        [Tooltip("Looping tick sound played when a timed customer enters the yellow/red warning zone")]
+        public AudioClip timedCustomerWarningSound;
+        [Range(0f, 1f)] public float timedCustomerWarningSoundVolume = 1f;
+
         [Header("Power-Up SFX")]
         public AudioClip powerUp1Sound;
         [Range(0f, 1f)] public float powerUp1SoundVolume = 1f;
@@ -81,10 +86,11 @@ namespace RestaurantLoop.Audio
         private Dictionary<AudioClip, List<float>> activeClips = new Dictionary<AudioClip, List<float>>();
         private Dictionary<AudioClip, float> clipVolumeModifiers = new Dictionary<AudioClip, float>();
 
-        // PlayerPrefs.GetFloat is a native call with string-key marshalling. It was previously
-        // hit on every PlaySFX (hundreds per level) and once per frame by CrowdAudioGenerator.
-        // The value only changes through the settings sliders, which invalidate this cache.
         private float cachedSfxVolume = -1f;
+
+        private AudioSource timedWarningSource;
+        private int activeWarningCount = 0;
+        private int activeCriticalCount = 0; 
 
         public float SfxVolume
         {
@@ -94,14 +100,12 @@ namespace RestaurantLoop.Audio
                 {
                     cachedSfxVolume = Mathf.Clamp01(PlayerPrefs.GetFloat("SfxVolume", 1f));
                 }
-
                 return cachedSfxVolume;
             }
         }
 
         public bool IsSfxMuted => SfxVolume <= Mathf.Epsilon;
 
-        /// <summary>Call after writing the SfxVolume preference so the cache re-reads it.</summary>
         public void InvalidateSfxVolumeCache()
         {
             cachedSfxVolume = -1f;
@@ -114,6 +118,13 @@ namespace RestaurantLoop.Audio
                 Instance = this;
                 DontDestroyOnLoad(gameObject);
                 InitializeVolumeDictionary();
+
+                timedWarningSource = gameObject.AddComponent<AudioSource>();
+                timedWarningSource.loop = true;
+                timedWarningSource.playOnAwake = false;
+                
+                activeWarningCount = 0;
+                activeCriticalCount = 0; 
             }
             else
             {
@@ -129,6 +140,25 @@ namespace RestaurantLoop.Audio
                 musicSource.loop = true;
                 musicSource.volume = PlayerPrefs.GetFloat("MusicVolume", 1f) * backgroundMusicVolume;
                 musicSource.Play();
+            }
+        }
+
+        private void Update()
+        {
+            if (timedWarningSource != null && timedWarningSource.isPlaying)
+            {
+                float baseVolume = SfxVolume * timedCustomerWarningSoundVolume;
+                
+                if (activeCriticalCount > 0)
+                {
+                    timedWarningSource.volume = baseVolume;       // Kırmızı: Tam ses
+                    timedWarningSource.pitch = 1.25f;             // Kırmızı: Panik hissi için daha hızlı ritim
+                }
+                else
+                {
+                    timedWarningSource.volume = baseVolume * 0.85f; // Sarı: Duyulabilir ama kafa şişirmeyen net seviye
+                    timedWarningSource.pitch = 1.0f;               // Sarı: Normal ritim
+                }
             }
         }
 
@@ -159,10 +189,51 @@ namespace RestaurantLoop.Audio
             }
         }
 
-        /// <summary>
-        /// Resets active clip timers for a specific sound effect or all sound effects.
-        /// Useful when clear-color or power-up sequences trigger sound bursts in rapid succession.
-        /// </summary>
+        public void StartTimedWarning()
+        {
+            activeWarningCount++;
+            EvaluateWarningAudio();
+        }
+
+        public void StopTimedWarning()
+        {
+            activeWarningCount = Mathf.Max(0, activeWarningCount - 1);
+            EvaluateWarningAudio();
+        }
+
+        public void StartCriticalWarning()
+        {
+            activeCriticalCount++;
+            EvaluateWarningAudio();
+        }
+
+        public void StopCriticalWarning()
+        {
+            activeCriticalCount = Mathf.Max(0, activeCriticalCount - 1);
+            EvaluateWarningAudio();
+        }
+
+        private void EvaluateWarningAudio()
+        {
+            if (timedWarningSource == null || timedCustomerWarningSound == null) return;
+
+            if (activeWarningCount > 0 || activeCriticalCount > 0)
+            {
+                if (!timedWarningSource.isPlaying)
+                {
+                    timedWarningSource.clip = timedCustomerWarningSound;
+                    timedWarningSource.Play();
+                }
+            }
+            else
+            {
+                if (timedWarningSource.isPlaying)
+                {
+                    timedWarningSource.Stop();
+                }
+            }
+        }
+
         public void ResetClipLimits(AudioClip clip = null)
         {
             if (clip != null)
@@ -183,7 +254,6 @@ namespace RestaurantLoop.Audio
 
             if (globalSfxVolume > 0f)
             {
-                // Use unscaledTime so game pause/timeScale does not freeze audio clip cleanup
                 float currentTime = Time.unscaledTime;
 
                 if (!activeClips.ContainsKey(clip))
@@ -191,8 +261,6 @@ namespace RestaurantLoop.Audio
                     activeClips[clip] = new List<float>();
                 }
 
-                // A RemoveAll lambda capturing currentTime and clip allocated a closure plus a
-                // delegate on every sound. Same filtering, done in place.
                 List<float> startTimes = activeClips[clip];
                 float clipLength = clip.length;
                 for (int i = startTimes.Count - 1; i >= 0; i--)

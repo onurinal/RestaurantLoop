@@ -50,20 +50,39 @@ MonoBehaviour:
   sfxSource: {fileID: 3898750725045401640}
   musicSource: {fileID: 7430551240814991461}
   backgroundMusic: {fileID: 8300000, guid: feb581f323741a140a4734efddd699c1, type: 3}
+  backgroundMusicVolume: 1
   tapSound: {fileID: 8300000, guid: 19ee98aaf35a44842926bc72f3fdb2b1, type: 3}
+  tapSoundVolume: 1
   boardClickSound: {fileID: 8300000, guid: 7e42f7bae9bbd784dad61f9fdf0ab97b, type: 3}
+  boardClickSoundVolume: 1
   throwSound: {fileID: 8300000, guid: d278fed5d3637e84ebbaa01b1ac79336, type: 3}
+  throwSoundVolume: 1
   rackDropSound: {fileID: 8300000, guid: 831aba7f28efcb343a418f54953cb854, type: 3}
+  rackDropSoundVolume: 1
   nomNomSound: {fileID: 8300000, guid: e006202d4a9c70643a738e5c4f0b35cd, type: 3}
+  nomNomSoundVolume: 1
   happyJumpSound: {fileID: 8300000, guid: 5791c0e0a6066274bb9de1196ffe4eb9, type: 3}
+  happyJumpSoundVolume: 1
   popSound: {fileID: 8300000, guid: 8ff5486e5ce3bdb4088cab4ece2c4864, type: 3}
+  popSoundVolume: 1
   customerEntranceSound: {fileID: 8300000, guid: 1b934124947d2d044811f2a283908af2, type: 3}
+  customerEntranceSoundVolume: 1
   levelWinSound: {fileID: 8300000, guid: 6f7f7e0fd8f764f4a9a6bda8688b4bd2, type: 3}
+  levelWinSoundVolume: 1
   levelLoseSound: {fileID: 8300000, guid: fcbc6e96d9fa5344a9b2d27061987730, type: 3}
+  levelLoseSoundVolume: 1
+  timedCustomerWarningSound: {fileID: 8300000, guid: 8d7fad850b3aaaa4daac035eaf2c3610, type: 3}
+  timedCustomerWarningSoundVolume: 1
+  timedCustomerAngrySound: {fileID: 0}
+  timedCustomerAngrySoundVolume: 1
   powerUp1Sound: {fileID: 8300000, guid: cb3efaeb7cfb5d446a27aa11616c683c, type: 3}
+  powerUp1SoundVolume: 1
   powerUp2Sound: {fileID: 8300000, guid: a6748185c66b9c74fb2c8a0df79a5f77, type: 3}
+  powerUp2SoundVolume: 1
   powerUp3Sound: {fileID: 8300000, guid: d1783b6404b446b45ab91ddaba9593cb, type: 3}
+  powerUp3SoundVolume: 1
   powerUp4Sound: {fileID: 8300000, guid: 6ff6a3815c55fb7419e541f5fd246356, type: 3}
+  powerUp4SoundVolume: 1
   maxSimultaneousSounds: 2
 --- !u!82 &3898750725045401640
 AudioSource:

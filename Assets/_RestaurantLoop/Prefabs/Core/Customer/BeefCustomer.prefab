@@ -314,8 +314,8 @@ MonoBehaviour:
   timerRoot: {fileID: 9173257837327919778}
   timerFillImage: {fileID: 1042494600388039423}
   pulseTarget: {fileID: 6671300637624474368}
-  warningNormalizedThreshold: 0.25
-  warningSecondsThreshold: 3
+  warningNormalizedThreshold: 0.5
+  warningSecondsThreshold: 0
   pulseSpeed: 8
   pulseScaleAmount: 0.1
   normalColor: {r: 0.18, g: 0.85, b: 0.25, a: 1}
