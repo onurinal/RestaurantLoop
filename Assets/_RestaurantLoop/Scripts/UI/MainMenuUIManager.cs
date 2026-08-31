@@ -174,6 +174,10 @@ namespace RestaurantLoop.UI
         private void UpdateSfxVolume(float value)
         {
             PlayerPrefs.SetFloat("SfxVolume", value);
+            if (AudioManager.Instance != null) 
+            {
+                AudioManager.Instance.SetSfxVolume(value);
+            }
         }
 
         private void OnDestroy()

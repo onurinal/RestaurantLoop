@@ -90,7 +90,7 @@ namespace RestaurantLoop.Audio
 
         private AudioSource timedWarningSource;
         private int activeWarningCount = 0;
-        private int activeCriticalCount = 0; 
+        private int activeCriticalCount = 0;
 
         public float SfxVolume
         {
@@ -100,6 +100,7 @@ namespace RestaurantLoop.Audio
                 {
                     cachedSfxVolume = Mathf.Clamp01(PlayerPrefs.GetFloat("SfxVolume", 1f));
                 }
+
                 return cachedSfxVolume;
             }
         }
@@ -122,9 +123,9 @@ namespace RestaurantLoop.Audio
                 timedWarningSource = gameObject.AddComponent<AudioSource>();
                 timedWarningSource.loop = true;
                 timedWarningSource.playOnAwake = false;
-                
+
                 activeWarningCount = 0;
-                activeCriticalCount = 0; 
+                activeCriticalCount = 0;
             }
             else
             {
@@ -148,16 +149,16 @@ namespace RestaurantLoop.Audio
             if (timedWarningSource != null && timedWarningSource.isPlaying)
             {
                 float baseVolume = SfxVolume * timedCustomerWarningSoundVolume;
-                
+
                 if (activeCriticalCount > 0)
                 {
-                    timedWarningSource.volume = baseVolume;       // Kırmızı: Tam ses
-                    timedWarningSource.pitch = 1.25f;             // Kırmızı: Panik hissi için daha hızlı ritim
+                    timedWarningSource.volume = baseVolume; // Kırmızı: Tam ses
+                    timedWarningSource.pitch = 1.25f; // Kırmızı: Panik hissi için daha hızlı ritim
                 }
                 else
                 {
                     timedWarningSource.volume = baseVolume * 0.85f; // Sarı: Duyulabilir ama kafa şişirmeyen net seviye
-                    timedWarningSource.pitch = 1.0f;               // Sarı: Normal ritim
+                    timedWarningSource.pitch = 1.0f; // Sarı: Normal ritim
                 }
             }
         }
@@ -288,6 +289,17 @@ namespace RestaurantLoop.Audio
 
                 sfxSource.pitch = Random.Range(0.92f, 1.08f);
                 sfxSource.PlayOneShot(clip, finalVolume);
+            }
+        }
+
+        public void SetSfxVolume(float volume)
+        {
+            cachedSfxVolume = Mathf.Clamp01(volume);
+            PlayerPrefs.SetFloat("SfxVolume", cachedSfxVolume);
+
+            if (timedWarningSource != null && timedWarningSource.isPlaying)
+            {
+                timedWarningSource.volume = cachedSfxVolume * timedCustomerWarningSoundVolume;
             }
         }
     }
