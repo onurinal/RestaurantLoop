@@ -61,6 +61,7 @@ namespace RestaurantLoop.Core
 
         private readonly List<ItemDataSO> unspawnedDemandPool = new List<ItemDataSO>();
         private readonly Dictionary<ItemDataSO, int> remainingDemandPerType = new Dictionary<ItemDataSO, int>();
+        private readonly Dictionary<int, float> timedDurationBySequenceIndex = new Dictionary<int, float>();
 
         public int ActiveEdgeSlotCount => activeEdgeSlotCount;
         public float AlignmentTolerance => alignmentTolerance;
@@ -120,10 +121,22 @@ namespace RestaurantLoop.Core
             TotalRemainingDemand = 0;
             remainingDemandPerType.Clear();
             unspawnedDemandPool.Clear();
+            timedDurationBySequenceIndex.Clear();
 
             levelData.CopyResolvedCustomerSequenceTo(unspawnedDemandPool);
             unspawnedDemandPool.RemoveAll(item => item == null);
             TotalRemainingDemand = unspawnedDemandPool.Count;
+
+            IReadOnlyList<TimedCustomerConfig> timedCustomers = levelData.TimedCustomers;
+            for (int i = 0; i < timedCustomers.Count; i++)
+            {
+                TimedCustomerConfig timed = timedCustomers[i];
+                if (timed.customerIndex >= 0 && timed.customerIndex < TotalRemainingDemand &&
+                    timed.timeLimitDuration > 0f)
+                {
+                    timedDurationBySequenceIndex[timed.customerIndex] = timed.timeLimitDuration;
+                }
+            }
 
             for (int i = 0; i < unspawnedDemandPool.Count; i++)
             {
@@ -174,7 +187,8 @@ namespace RestaurantLoop.Core
                 yield return new WaitForSeconds(gateOpenDelay);
             }
 
-            yield return entranceSequencer.Run(PopUnspawnedDemand, GetCustomerPrefab, transform, GetOuterSpawnPosition(),
+            yield return entranceSequencer.Run(PopUnspawnedDemand, GetCustomerPrefab, GetTimedCustomerDuration,
+                transform, GetOuterSpawnPosition(),
                 GetConveyorEntranceWorldPosition(), GetRoomCenter(), edgeSlots, initialSlotIndices, centralCrowd, maxVisibleCrowdCount,
                 GetEdgeSlotWorldPosition, GetEdgeSlotYRotation, (customer, slotIndex) =>
                 {
@@ -358,6 +372,7 @@ namespace RestaurantLoop.Core
 
             centralCrowd?.Clear();
             unspawnedDemandPool.Clear();
+            timedDurationBySequenceIndex.Clear();
             entranceGate?.ResetGateImmediate();
         }
 
@@ -390,6 +405,8 @@ namespace RestaurantLoop.Core
         }
 
         private Customer GetCustomerPrefab(ItemDataSO data) => data != null && data.CustomerPrefab != null ? data.CustomerPrefab : customerPrefab;
+        private float GetTimedCustomerDuration(int sequenceIndex) =>
+            timedDurationBySequenceIndex.TryGetValue(sequenceIndex, out float duration) ? duration : 0f;
         private ConveyorManager GetConveyor() => ConveyorManager.Instance != null ? ConveyorManager.Instance : FindFirstObjectByType<ConveyorManager>();
 
         private Vector3 GetRoomCenter()

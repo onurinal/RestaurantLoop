@@ -182,6 +182,30 @@ namespace RestaurantLoop.Core
             return sequence;
         }
 
+        /// <summary>Checks the first accessible rows in the column-major queue layout.</summary>
+        public static bool IsItemAccessibleInFirstRows(
+            ItemDataSO item,
+            IReadOnlyList<QueueStackConfig> stacks,
+            int columnCount,
+            int rowCount,
+            int accessibleRowCount = 2)
+        {
+            if (item == null || stacks == null || columnCount <= 0 || rowCount <= 0) return false;
+
+            int rowsToInspect = Mathf.Min(rowCount, Mathf.Max(1, accessibleRowCount));
+            for (int column = 0; column < columnCount; column++)
+            {
+                int columnStart = column * rowCount;
+                for (int row = 0; row < rowsToInspect; row++)
+                {
+                    int stackIndex = columnStart + row;
+                    if (stackIndex < stacks.Count && stacks[stackIndex].itemData == item) return true;
+                }
+            }
+
+            return false;
+        }
+
         private static void AllocateRemainingSlots(
             IReadOnlyList<int> demandCounts,
             int[] slotsPerItem,

@@ -72,6 +72,14 @@ namespace RestaurantLoop.EditorTools
         [SerializeField] private int batchLateMinStackSize = 5;
         [SerializeField] private int batchLateMaxStackSize = 20;
 
+        // Timed Customers (Early levels 1-10 always use zero)
+        [SerializeField, Min(0)] private int batchMidMinTimedCustomers = 1;
+        [SerializeField, Min(0)] private int batchMidMaxTimedCustomers = 2;
+        [SerializeField, Min(0)] private int batchLateMinTimedCustomers = 3;
+        [SerializeField, Min(0)] private int batchLateMaxTimedCustomers = 6;
+        [SerializeField, Min(1)] private int batchTimedCustomerMinDuration = 12;
+        [SerializeField, Min(1)] private int batchTimedCustomerMaxDuration = 20;
+
         // Queue Layout Constraints (Global Min / Max)
         [SerializeField] private int batchMinQueueColumns = 2;
         [SerializeField] private int batchMaxQueueColumns = 4;
@@ -229,6 +237,16 @@ namespace RestaurantLoop.EditorTools
             DrawMinMaxInt("Late Stack Size", ref batchLateMinStackSize, ref batchLateMaxStackSize, 5, 500);
 
             EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField("Timed Customers", EditorStyles.miniBoldLabel);
+            EditorGUILayout.HelpBox("Levels 1-10 generate no timed customers. Timed foods must appear in queue row 1 or 2.", MessageType.Info);
+            DrawMinMaxInt("Mid Timed Customers", ref batchMidMinTimedCustomers, ref batchMidMaxTimedCustomers, 0, 100);
+            DrawMinMaxInt("Late Timed Customers", ref batchLateMinTimedCustomers, ref batchLateMaxTimedCustomers, 0, 100);
+            batchTimedCustomerMinDuration = EditorGUILayout.IntField("Minimum Timer Duration", batchTimedCustomerMinDuration);
+            batchTimedCustomerMaxDuration = EditorGUILayout.IntField("Maximum Timer Duration", batchTimedCustomerMaxDuration);
+            batchTimedCustomerMinDuration = Mathf.Max(1, batchTimedCustomerMinDuration);
+            batchTimedCustomerMaxDuration = Mathf.Max(batchTimedCustomerMinDuration, batchTimedCustomerMaxDuration);
+
+            EditorGUILayout.Space(4f);
             EditorGUILayout.LabelField("Queue Layout Grid Constraints", EditorStyles.miniBoldLabel);
             batchMinQueueColumns = EditorGUILayout.IntSlider("Min Queue Columns", batchMinQueueColumns, 1, 8);
             batchMaxQueueColumns = EditorGUILayout.IntSlider("Max Queue Columns", batchMaxQueueColumns, batchMinQueueColumns, 8);
@@ -341,8 +359,13 @@ namespace RestaurantLoop.EditorTools
                 List<ItemDataSO> sequence =
                     LevelMathUtility.GenerateDeterministicCustomerSequence(demandConfigs, effectiveSeed);
 
+                if (!TryBuildSingleTimedCustomers(
+                        demandConfigs, stacks, columnCount, rowCount, sequence, effectiveSeed,
+                        out List<TimedCustomerConfig> timedCustomers, out _)) continue;
+
                 LevelDataSO validationAsset = CreateInstance<LevelDataSO>();
-                ApplyCandidateData(validationAsset, activeEdgeSlotCount, columnCount, rowCount, demandConfigs, stacks, sequence);
+                ApplyCandidateData(validationAsset, activeEdgeSlotCount, columnCount, rowCount,
+                    demandConfigs, stacks, sequence, timedCustomers);
                 validationAsset.minStackSize = minStackSize;
                 validationAsset.maxStackSize = maxStackSize;
                 bool isSolvable = LevelValidator.ValidateLevel(validationAsset);
@@ -350,14 +373,16 @@ namespace RestaurantLoop.EditorTools
                 if (!isSolvable) continue;
 
                 Undo.RecordObject(targetLevel, "Generate Deterministic Level Data");
-                ApplyCandidateData(targetLevel, activeEdgeSlotCount, columnCount, rowCount, demandConfigs, stacks, sequence);
+                ApplyCandidateData(targetLevel, activeEdgeSlotCount, columnCount, rowCount,
+                    demandConfigs, stacks, sequence, timedCustomers);
                 targetLevel.minStackSize = minStackSize;
                 targetLevel.maxStackSize = maxStackSize;
                 EditorUtility.SetDirty(targetLevel);
                 AssetDatabase.SaveAssets();
                 SetValidationStatus(
                     ValidationStatus.SolvableWithoutPowerUps,
-                    $"Generated and validated {stacks.Count} queue stacks and {sequence.Count} fixed customers " +
+                    $"Generated and validated {stacks.Count} queue stacks, {sequence.Count} fixed customers, " +
+                    $"and {timedCustomers.Count} timed customers " +
                     $"with effective seed {effectiveSeed}.");
                 Repaint();
                 return;
@@ -381,6 +406,12 @@ namespace RestaurantLoop.EditorTools
                 !targetLevel.ValidateOrderedCustomerSequence(out string sequenceMessage))
             {
                 SetValidationStatus(ValidationStatus.InvalidOrUnsolvable, sequenceMessage);
+                return;
+            }
+
+            if (!targetLevel.ValidateTimedCustomers(out string timedMessage))
+            {
+                SetValidationStatus(ValidationStatus.InvalidOrUnsolvable, timedMessage);
                 return;
             }
 
@@ -549,6 +580,21 @@ namespace RestaurantLoop.EditorTools
                 // 5. Müşteri Sırasını Oluştur
                 List<ItemDataSO> sequence = LevelMathUtility.GenerateDeterministicCustomerSequence(demands, candidateSeed);
 
+                GetBatchTimedCustomerRange(levelNumber, out int minimumTimedCustomers, out int maximumTimedCustomers);
+                int timedCustomerCount = NextInclusive(random, minimumTimedCustomers, maximumTimedCustomers);
+                int levelTimedDuration = timedCustomerCount > 0
+                    ? NextInclusive(random, batchTimedCustomerMinDuration, batchTimedCustomerMaxDuration)
+                    : 0;
+                if (!TryBuildBatchTimedCustomers(
+                        stacks,
+                        columns,
+                        rows,
+                        sequence,
+                        timedCustomerCount,
+                        levelTimedDuration,
+                        random,
+                        out List<TimedCustomerConfig> timedCustomers)) continue;
+
                 // 6. Çözülebilirlik Simülasyonunu Çalıştır
                 LevelDataSO validationAsset = CreateInstance<LevelDataSO>();
                 ApplyCandidateData(
@@ -558,7 +604,8 @@ namespace RestaurantLoop.EditorTools
                     rows,
                     demands,
                     stacks,
-                    sequence);
+                    sequence,
+                    timedCustomers);
 
                 validationAsset.minStackSize = profile.MinStackSize;
                 validationAsset.maxStackSize = profile.MaxStackSize;
@@ -577,11 +624,154 @@ namespace RestaurantLoop.EditorTools
                     profile.MaxStackSize,
                     demands,
                     stacks,
-                    sequence);
+                    sequence,
+                    timedCustomers);
                 return true;
             }
 
             return false;
+        }
+
+        private static bool TryBuildSingleTimedCustomers(
+            IReadOnlyList<CustomerDemandConfig> demands,
+            IReadOnlyList<QueueStackConfig> stacks,
+            int columns,
+            int rows,
+            IReadOnlyList<ItemDataSO> sequence,
+            int seed,
+            out List<TimedCustomerConfig> timedCustomers,
+            out string error)
+        {
+            timedCustomers = new List<TimedCustomerConfig>();
+            HashSet<int> usedIndices = new HashSet<int>();
+            System.Random random = new System.Random(unchecked(seed ^ 0x5F3759DF));
+            int levelDuration = 0;
+
+            for (int demandIndex = 0; demandIndex < demands.Count; demandIndex++)
+            {
+                CustomerDemandConfig demand = demands[demandIndex];
+                if (!demand.includeTimedCustomers) continue;
+                levelDuration = Mathf.RoundToInt(demand.timedCustomerDuration);
+                break;
+            }
+
+            if (levelDuration <= 0)
+            {
+                bool hasTimedDemand = false;
+                for (int i = 0; i < demands.Count; i++) hasTimedDemand |= demands[i].includeTimedCustomers;
+                if (hasTimedDemand)
+                {
+                    error = "Timed customers require a whole-number duration of at least 1 second.";
+                    return false;
+                }
+            }
+
+            for (int demandIndex = 0; demandIndex < demands.Count; demandIndex++)
+            {
+                CustomerDemandConfig demand = demands[demandIndex];
+                if (!demand.includeTimedCustomers) continue;
+
+                if (demand.timedCustomerCount <= 0 || demand.timedCustomerCount > demand.totalCustomerCount)
+                {
+                    error = $"Timed count for demand #{demandIndex + 1} must be between 1 and " +
+                            $"{demand.totalCustomerCount}.";
+                    return false;
+                }
+
+                if (!LevelMathUtility.IsItemAccessibleInFirstRows(demand.itemData, stacks, columns, rows, 2))
+                {
+                    error = $"'{demand.itemData.ItemName}' cannot be timed because it does not appear in queue row 1 or 2.";
+                    return false;
+                }
+
+                List<int> candidates = new List<int>();
+                for (int sequenceIndex = 0; sequenceIndex < sequence.Count; sequenceIndex++)
+                {
+                    if (sequence[sequenceIndex] == demand.itemData && !usedIndices.Contains(sequenceIndex))
+                        candidates.Add(sequenceIndex);
+                }
+
+                if (candidates.Count < demand.timedCustomerCount)
+                {
+                    error = $"Demand #{demandIndex + 1} requests {demand.timedCustomerCount} timed customers, " +
+                            $"but only {candidates.Count} matching sequence entries remain.";
+                    return false;
+                }
+
+                Shuffle(candidates, random);
+                for (int i = 0; i < demand.timedCustomerCount; i++)
+                {
+                    int customerIndex = candidates[i];
+                    usedIndices.Add(customerIndex);
+                    timedCustomers.Add(new TimedCustomerConfig
+                    {
+                        customerIndex = customerIndex,
+                        timeLimitDuration = levelDuration
+                    });
+                }
+            }
+
+            timedCustomers.Sort((left, right) => left.customerIndex.CompareTo(right.customerIndex));
+            error = null;
+            return true;
+        }
+
+        private static bool TryBuildBatchTimedCustomers(
+            IReadOnlyList<QueueStackConfig> stacks,
+            int columns,
+            int rows,
+            IReadOnlyList<ItemDataSO> sequence,
+            int timedCustomerCount,
+            int levelDuration,
+            System.Random random,
+            out List<TimedCustomerConfig> timedCustomers)
+        {
+            timedCustomers = new List<TimedCustomerConfig>(Mathf.Max(0, timedCustomerCount));
+            if (timedCustomerCount <= 0) return true;
+            if (levelDuration <= 0) return false;
+
+            List<int> eligibleIndices = new List<int>();
+            for (int sequenceIndex = 0; sequenceIndex < sequence.Count; sequenceIndex++)
+            {
+                if (LevelMathUtility.IsItemAccessibleInFirstRows(
+                        sequence[sequenceIndex], stacks, columns, rows, 2))
+                    eligibleIndices.Add(sequenceIndex);
+            }
+
+            if (eligibleIndices.Count < timedCustomerCount) return false;
+
+            Shuffle(eligibleIndices, random);
+            for (int i = 0; i < timedCustomerCount; i++)
+            {
+                timedCustomers.Add(new TimedCustomerConfig
+                {
+                    customerIndex = eligibleIndices[i],
+                    timeLimitDuration = levelDuration
+                });
+            }
+
+            timedCustomers.Sort((left, right) => left.customerIndex.CompareTo(right.customerIndex));
+            return true;
+        }
+
+        private void GetBatchTimedCustomerRange(int levelNumber, out int minimum, out int maximum)
+        {
+            if (levelNumber <= 10)
+            {
+                minimum = 0;
+                maximum = 0;
+                return;
+            }
+
+            if (levelNumber <= 20)
+            {
+                minimum = batchMidMinTimedCustomers;
+                maximum = batchMidMaxTimedCustomers;
+                return;
+            }
+
+            minimum = batchLateMinTimedCustomers;
+            maximum = batchLateMaxTimedCustomers;
         }
 
         private static List<CustomerDemandConfig> CreateRandomDemandDistribution(
@@ -755,7 +945,8 @@ namespace RestaurantLoop.EditorTools
             int rows,
             List<CustomerDemandConfig> demands,
             List<QueueStackConfig> stacks,
-            List<ItemDataSO> sequence)
+            List<ItemDataSO> sequence,
+            List<TimedCustomerConfig> timedCustomers)
         {
             level.activeEdgeSlotCount = activeSlots;
             level.columnCount = columns;
@@ -763,6 +954,7 @@ namespace RestaurantLoop.EditorTools
             level.customerDemands = new List<CustomerDemandConfig>(demands);
             level.queueStackConfigs = new List<QueueStackConfig>(stacks);
             level.SetOrderedCustomerSequence(sequence);
+            level.SetTimedCustomers(timedCustomers);
         }
 
         private LevelDataSO SaveBatchCandidate(BatchLevelCandidate candidate, string assetPath)
@@ -788,7 +980,8 @@ namespace RestaurantLoop.EditorTools
                 candidate.Rows,
                 candidate.Demands,
                 candidate.Stacks,
-                candidate.Sequence);
+                candidate.Sequence,
+                candidate.TimedCustomers);
 
             if (isNewAsset)
             {
@@ -983,6 +1176,10 @@ namespace RestaurantLoop.EditorTools
 
             ClampRange(ref batchMinQueueColumns, ref batchMaxQueueColumns, 1, 8);
             ClampRange(ref batchMinQueueRows, ref batchMaxQueueRows, 1, 15);
+            ClampRange(ref batchMidMinTimedCustomers, ref batchMidMaxTimedCustomers, 0, 100);
+            ClampRange(ref batchLateMinTimedCustomers, ref batchLateMaxTimedCustomers, 0, 100);
+            batchTimedCustomerMinDuration = Mathf.Max(1, batchTimedCustomerMinDuration);
+            batchTimedCustomerMaxDuration = Mathf.Max(batchTimedCustomerMinDuration, batchTimedCustomerMaxDuration);
             SnapBatchStackSizes();
         }
 
@@ -1143,6 +1340,14 @@ namespace RestaurantLoop.EditorTools
                     EditorGUI.DrawRect(colorRect, itemColor);
                     EditorGUILayout.LabelField($"Customer #{i + 1}", GUILayout.Width(105f));
                     EditorGUILayout.LabelField(displayName);
+                    if (level.TryGetTimedCustomer(i, out float duration))
+                    {
+                        GUIStyle timerStyle = new GUIStyle(EditorStyles.miniBoldLabel)
+                        {
+                            normal = { textColor = new Color(0.9f, 0.25f, 0.2f) }
+                        };
+                        EditorGUILayout.LabelField($"⏱ {duration:0.#}s", timerStyle, GUILayout.Width(75f));
+                    }
                 }
             }
 
@@ -1196,9 +1401,24 @@ namespace RestaurantLoop.EditorTools
 
             for (int i = 0; i < demandConfigs.Count; i++)
             {
-                if (demandConfigs[i].itemData == null || demandConfigs[i].totalCustomerCount <= 0)
+                CustomerDemandConfig demand = demandConfigs[i];
+                if (demand.itemData == null || demand.totalCustomerCount <= 0)
                 {
                     error = $"Customer demand #{i + 1} requires an item and a positive count.";
+                    return false;
+                }
+
+                if (!demand.includeTimedCustomers) continue;
+                if (demand.timedCustomerCount <= 0 || demand.timedCustomerCount > demand.totalCustomerCount)
+                {
+                    error = $"Timed count for customer demand #{i + 1} must be between 1 and " +
+                            $"{demand.totalCustomerCount}.";
+                    return false;
+                }
+
+                if (demand.timedCustomerDuration <= 0f)
+                {
+                    error = $"Timed customer demand #{i + 1} requires a positive timer duration.";
                     return false;
                 }
             }
@@ -1349,6 +1569,7 @@ namespace RestaurantLoop.EditorTools
             public List<CustomerDemandConfig> Demands { get; }
             public List<QueueStackConfig> Stacks { get; }
             public List<ItemDataSO> Sequence { get; }
+            public List<TimedCustomerConfig> TimedCustomers { get; }
 
             public BatchLevelCandidate(
                 int levelNumber,
@@ -1360,7 +1581,8 @@ namespace RestaurantLoop.EditorTools
                 int maxStackSize,
                 List<CustomerDemandConfig> demands,
                 List<QueueStackConfig> stacks,
-                List<ItemDataSO> sequence)
+                List<ItemDataSO> sequence,
+                List<TimedCustomerConfig> timedCustomers)
             {
                 LevelNumber = levelNumber;
                 Seed = seed;
@@ -1372,6 +1594,7 @@ namespace RestaurantLoop.EditorTools
                 Demands = demands;
                 Stacks = stacks;
                 Sequence = sequence;
+                TimedCustomers = timedCustomers;
             }
         }
 

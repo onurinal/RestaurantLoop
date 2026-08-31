@@ -106,8 +106,9 @@ namespace RestaurantLoop.Core
             if (data == null || data.customerDemands == null || data.queueStackConfigs == null ||
                 data.TotalQueueItems < data.TotalCustomerDemand) return false;
 
-            return data.OrderedCustomerSequence.Count == 0 ||
-                   data.ValidateOrderedCustomerSequence(out _);
+            bool sequenceIsValid = data.OrderedCustomerSequence.Count == 0 ||
+                                   data.ValidateOrderedCustomerSequence(out _);
+            return sequenceIsValid && data.ValidateTimedCustomers(out _);
         }
 
         private static List<List<QueueStackConfig>> BuildQueueColumns(LevelDataSO data)

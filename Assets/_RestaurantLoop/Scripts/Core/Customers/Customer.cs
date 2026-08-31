@@ -40,6 +40,7 @@ namespace RestaurantLoop.Core
 
         private Vector3 authoredLocalScale;
         private OrderBalloon orderBalloon;
+        private TimedCustomerAgent timedCustomerAgent;
         private Transform ModelTransform => visualContainer != null ? visualContainer : (animator != null ? animator.transform : transform);
 
         private void Awake()
@@ -48,6 +49,7 @@ namespace RestaurantLoop.Core
             if (animator == null) animator = GetComponentInChildren<Animator>();
             if (customerRenderer == null) customerRenderer = GetComponentInChildren<SkinnedMeshRenderer>();
             if (balloonObject != null) orderBalloon = balloonObject.GetComponent<OrderBalloon>();
+            timedCustomerAgent = GetComponent<TimedCustomerAgent>();
 
             if (customerRenderer != null) baseSharedMaterial = customerRenderer.sharedMaterial;
 
@@ -76,7 +78,7 @@ namespace RestaurantLoop.Core
             ModelTransform.DOKill();
         }
 
-        public void Initialize(ItemDataSO data)
+        public void Initialize(ItemDataSO data, bool isTimed = false, float timeLimitDuration = 0f)
         {
             StopAllCoroutines();
             transform.DOKill();
@@ -92,6 +94,7 @@ namespace RestaurantLoop.Core
 
             SetBalloonActive(false, animate: false);
             SetDesaturation(1f, 0f);
+            timedCustomerAgent?.Configure(isTimed, timeLimitDuration);
         }
 
         public void SetDesaturation(float targetValue, float duration = 0.5f)
@@ -316,6 +319,7 @@ namespace RestaurantLoop.Core
 
         public void ReceiveItem(StackItem stack, Action<Customer> onComplete)
         {
+            timedCustomerAgent?.MarkServed();
             IsServed = true;
             SetEdgeStatus(false);
             SetBalloonActive(false);
@@ -329,6 +333,7 @@ namespace RestaurantLoop.Core
         public void ResolveByClearColor()
         {
             StopAllCoroutines();
+            timedCustomerAgent?.MarkServed();
             IsServed = true;
             SetEdgeStatus(false);
             SetBalloonActive(false);
@@ -336,6 +341,21 @@ namespace RestaurantLoop.Core
             transform.DOKill();
             ModelTransform.DOKill();
             StartCoroutine(ClearColorExitRoutine());
+        }
+
+        /// <summary>Plays a short procedural anger reaction before the level-fail UI takes control.</summary>
+        public void PlayTimedFailureReaction()
+        {
+            if (IsServed) return;
+
+            StopAllCoroutines();
+            transform.DOKill();
+            ModelTransform.DOKill();
+            if (animator != null) animator.SetBool(IsWalkingHash, false);
+
+            ModelTransform.DOShakeRotation(0.45f, new Vector3(0f, 0f, 14f), 18, 70f)
+                .SetUpdate(true)
+                .SetTarget(this);
         }
 
         private IEnumerator EatAndLeaveRoutine(Action<Customer> onComplete)

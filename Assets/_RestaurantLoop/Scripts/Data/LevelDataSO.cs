@@ -9,6 +9,11 @@ namespace RestaurantLoop.Core
     {
         public ItemDataSO itemData;
         public int totalCustomerCount;
+        [Tooltip("Enables timed-customer generation for this demand in the Single Level Generator.")]
+        public bool includeTimedCustomers;
+        [Min(0)] public int timedCustomerCount;
+        [Tooltip("The Single Generator rounds this to a whole second and applies the first enabled value level-wide.")]
+        [Min(1f)] public float timedCustomerDuration;
     }
 
     [Serializable]
@@ -16,6 +21,14 @@ namespace RestaurantLoop.Core
     {
         public ItemDataSO itemData;
         public int itemCount;
+    }
+
+    [Serializable]
+    public struct TimedCustomerConfig
+    {
+        [Tooltip("Zero-based index into Ordered Customer Sequence.")]
+        public int customerIndex;
+        [Min(0.1f)] public float timeLimitDuration;
     }
 
     [CreateAssetMenu(fileName = "Level_01", menuName = "RestaurantLoop/Level Data")]
@@ -48,11 +61,17 @@ namespace RestaurantLoop.Core
         [Tooltip("Exact runtime customer order. Leave empty to use customerDemands in Inspector order as a deterministic legacy fallback.")]
         [SerializeField] private List<ItemDataSO> orderedCustomerSequence = new List<ItemDataSO>();
 
+        [Header("Timed Customer Setup")]
+        [Tooltip("Sequence-indexed timers restricted to foods visible in queue rows 1 or 2.")]
+        [SerializeField] private List<TimedCustomerConfig> timedCustomers = new List<TimedCustomerConfig>();
+
         [Header("Queue Initial Stack Setup")]
         public List<QueueStackConfig> queueStackConfigs = new List<QueueStackConfig>();
 
         public IReadOnlyList<ItemDataSO> OrderedCustomerSequence =>
             orderedCustomerSequence ??= new List<ItemDataSO>();
+        public IReadOnlyList<TimedCustomerConfig> TimedCustomers =>
+            timedCustomers ??= new List<TimedCustomerConfig>();
 
         public int TotalCustomerDemand
         {
@@ -82,6 +101,77 @@ namespace RestaurantLoop.Core
             orderedCustomerSequence ??= new List<ItemDataSO>();
             orderedCustomerSequence.Clear();
             if (sequence != null) orderedCustomerSequence.AddRange(sequence);
+        }
+
+        public void SetTimedCustomers(IEnumerable<TimedCustomerConfig> configurations)
+        {
+            timedCustomers ??= new List<TimedCustomerConfig>();
+            timedCustomers.Clear();
+            if (configurations != null) timedCustomers.AddRange(configurations);
+        }
+
+        public bool TryGetTimedCustomer(int customerIndex, out float duration)
+        {
+            if (timedCustomers != null)
+            {
+                for (int i = 0; i < timedCustomers.Count; i++)
+                {
+                    if (timedCustomers[i].customerIndex != customerIndex) continue;
+                    duration = timedCustomers[i].timeLimitDuration;
+                    return duration > 0f;
+                }
+            }
+
+            duration = 0f;
+            return false;
+        }
+
+        public bool ValidateTimedCustomers(out string validationMessage)
+        {
+            if (timedCustomers == null || timedCustomers.Count == 0)
+            {
+                validationMessage = "No timed customers configured.";
+                return true;
+            }
+
+            List<ItemDataSO> resolvedSequence = new List<ItemDataSO>();
+            CopyResolvedCustomerSequenceTo(resolvedSequence);
+            HashSet<int> configuredIndices = new HashSet<int>();
+
+            for (int i = 0; i < timedCustomers.Count; i++)
+            {
+                TimedCustomerConfig timed = timedCustomers[i];
+                if (timed.customerIndex < 0 || timed.customerIndex >= resolvedSequence.Count)
+                {
+                    validationMessage = $"Timed customer #{i + 1} references index {timed.customerIndex}, " +
+                                        $"but the sequence contains {resolvedSequence.Count} customers.";
+                    return false;
+                }
+
+                if (timed.timeLimitDuration <= 0f)
+                {
+                    validationMessage = $"Timed customer at index {timed.customerIndex} requires a positive duration.";
+                    return false;
+                }
+
+                if (!configuredIndices.Add(timed.customerIndex))
+                {
+                    validationMessage = $"Sequence index {timed.customerIndex} has more than one timer definition.";
+                    return false;
+                }
+
+                ItemDataSO requiredItem = resolvedSequence[timed.customerIndex];
+                if (!LevelMathUtility.IsItemAccessibleInFirstRows(
+                        requiredItem, queueStackConfigs, columnCount, calculatedRowCount, 2))
+                {
+                    validationMessage = $"Timed customer #{timed.customerIndex + 1} requires " +
+                                        $"'{requiredItem?.ItemName}', which does not appear in queue row 1 or 2.";
+                    return false;
+                }
+            }
+
+            validationMessage = $"Validated {timedCustomers.Count} timed customers.";
+            return true;
         }
 
         /// <summary>

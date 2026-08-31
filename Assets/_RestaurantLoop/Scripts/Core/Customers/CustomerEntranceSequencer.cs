@@ -33,6 +33,7 @@ namespace RestaurantLoop.Core
         public IEnumerator Run(
             Func<ItemDataSO> popDemandFunc,
             Func<ItemDataSO, Customer> customerPrefabResolver,
+            Func<int, float> timedDurationResolver,
             Transform parent,
             Vector3 spawnPos,
             Vector3 gapCenter,
@@ -48,6 +49,7 @@ namespace RestaurantLoop.Core
             IsRunning = true;
             int pendingWalks = 0;
             int entranceSequenceIndex = 0;
+            int customerSequenceIndex = 0;
 
             // --- PLAY CUSTOMER ENTRANCE SOUND ---
             // Triggered exactly when the first customer starts moving into the restaurant
@@ -65,7 +67,9 @@ namespace RestaurantLoop.Core
                 if (customerData == null) break;
 
                 Customer customerPrefab = customerPrefabResolver?.Invoke(customerData);
-                Customer customer = SpawnCustomer(customerPrefab, customerData, spawnPos, parent);
+                int sequenceIndex = customerSequenceIndex++;
+                Customer customer = SpawnCustomer(
+                    customerPrefab, customerData, timedDurationResolver?.Invoke(sequenceIndex) ?? 0f, spawnPos, parent);
                 if (customer == null) continue;
                 edgeSlots.Occupy(slotIndex, customer);
 
@@ -95,7 +99,9 @@ namespace RestaurantLoop.Core
                 if (customerData == null) break;
 
                 Customer customerPrefab = customerPrefabResolver?.Invoke(customerData);
-                Customer customer = SpawnCustomer(customerPrefab, customerData, spawnPos, parent);
+                int sequenceIndex = customerSequenceIndex++;
+                Customer customer = SpawnCustomer(
+                    customerPrefab, customerData, timedDurationResolver?.Invoke(sequenceIndex) ?? 0f, spawnPos, parent);
                 if (customer == null) continue;
                 CentralCrowdSlot slot = centralCrowd.Slots[i];
                 slot.OccupyingCustomer = customer;
@@ -116,7 +122,9 @@ namespace RestaurantLoop.Core
 
                 CentralCrowdSlot slot = centralCrowd.Slots[i];
                 Customer customerPrefab = customerPrefabResolver?.Invoke(customerData);
-                Customer customer = SpawnCustomer(customerPrefab, customerData, slot.Position, parent);
+                int sequenceIndex = customerSequenceIndex++;
+                Customer customer = SpawnCustomer(
+                    customerPrefab, customerData, timedDurationResolver?.Invoke(sequenceIndex) ?? 0f, slot.Position, parent);
                 if (customer == null) continue;
 
                 customer.SetModelRotation(slot.YRotation);
@@ -133,7 +141,12 @@ namespace RestaurantLoop.Core
             IsRunning = false;
         }
 
-        private Customer SpawnCustomer(Customer prefab, ItemDataSO data, Vector3 position, Transform parent)
+        private Customer SpawnCustomer(
+            Customer prefab,
+            ItemDataSO data,
+            float timedDuration,
+            Vector3 position,
+            Transform parent)
         {
             if (prefab == null)
             {
@@ -143,7 +156,7 @@ namespace RestaurantLoop.Core
 
             GameObject obj = PoolManager.Instance.Spawn(prefab.gameObject, position, Quaternion.identity, parent);
             Customer customer = obj.GetComponent<Customer>();
-            customer.Initialize(data);
+            customer.Initialize(data, timedDuration > 0f, timedDuration);
             return customer;
         }
     }

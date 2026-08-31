@@ -165,18 +165,27 @@ namespace RestaurantLoop.Core
 
         public void ReportRackOverflow()
         {
+            FailLevel("Conveyor stack reached exit while Rack is full!");
+        }
+
+        /// <summary>Immediately fails the active level when a timed customer expires.</summary>
+        public void OnLevelFailed()
+        {
+            FailLevel("A timed customer ran out of patience!");
+        }
+
+        private void FailLevel(string reason)
+        {
             if (CurrentState != LevelState.Playing) return;
 
             CurrentState = LevelState.Lost;
-            
-            // --- PLAY LOSE SOUND ---
+
             if (AudioManager.Instance != null && AudioManager.Instance.levelLoseSound != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.levelLoseSound);
             }
-            // -----------------------
-            
-            Debug.LogWarning("<color=orange>[LEVEL FAILED]</color> Conveyor stack reached exit while Rack is full!");
+
+            Debug.LogWarning($"<color=orange>[LEVEL FAILED]</color> {reason}");
             OnLevelLost?.Invoke();
         }
 
