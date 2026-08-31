@@ -121,6 +121,12 @@ MonoBehaviour:
     timeLimitDuration: 13
   - customerIndex: 56
     timeLimitDuration: 13
+  - customerIndex: 56
+    timeLimitDuration: 13
+  - customerIndex: 56
+    timeLimitDuration: 13
+  - customerIndex: 56
+    timeLimitDuration: 13
   queueStackConfigs:
   - itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
     itemCount: 5
