@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.Serialization;
 using RestaurantLoop.Core;
 
 namespace RestaurantLoop.EditorTools
@@ -25,6 +24,10 @@ namespace RestaurantLoop.EditorTools
         [SerializeField] private LevelDataSO targetLevel;
         [SerializeField] private int randomSeed;
         [SerializeField] private List<CustomerDemandConfig> demandConfigs = new List<CustomerDemandConfig>();
+
+        [Header("Custom Sequence Settings")]
+        [SerializeField] private bool useCustomSequence;
+        [SerializeField] private List<ItemDataSO> customCustomerSequence = new List<ItemDataSO>();
 
         [SerializeField, Range(3, 20)] private int activeEdgeSlotCount = 6;
         [SerializeField, Range(1, 8)] private int columnCount = 3;
@@ -93,6 +96,8 @@ namespace RestaurantLoop.EditorTools
         private SerializedObject windowSerializedObject;
         private SerializedProperty demandConfigsProperty;
         private SerializedProperty availableItemsProperty;
+        private SerializedProperty customCustomerSequenceProperty;
+
         private Vector2 mainScrollPosition;
         private Vector2 batchScrollPosition;
         private Vector2 sequenceScrollPosition;
@@ -290,7 +295,31 @@ namespace RestaurantLoop.EditorTools
             EditorGUILayout.PropertyField(demandConfigsProperty, new GUIContent("Customer Demands"), true);
             windowSerializedObject.ApplyModifiedProperties();
 
-            EditorGUILayout.Space(4f);
+            EditorGUILayout.Space(6f);
+            useCustomSequence = EditorGUILayout.Toggle(
+                new GUIContent("Use Custom Sequence", "Preserves custom explicit customer sequence without randomizing."),
+                useCustomSequence);
+
+            if (useCustomSequence)
+            {
+                windowSerializedObject.Update();
+                EditorGUILayout.PropertyField(customCustomerSequenceProperty, new GUIContent("Deterministic Customer Order"), true);
+                windowSerializedObject.ApplyModifiedProperties();
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Populate Sequence From Demands"))
+                    {
+                        customCustomerSequence = LevelMathUtility.GenerateDeterministicCustomerSequence(demandConfigs, randomSeed);
+                    }
+                    if (GUILayout.Button("Sync Demands From Sequence"))
+                    {
+                        SyncDemandsFromCustomSequence();
+                    }
+                }
+            }
+
+            EditorGUILayout.Space(6f);
             activeEdgeSlotCount = EditorGUILayout.IntSlider("Active Edge Slots", activeEdgeSlotCount, 3, 20);
             columnCount = EditorGUILayout.IntSlider("Queue Columns", columnCount, 1, 8);
             rowCount = EditorGUILayout.IntSlider("Queue Rows", rowCount, 1, 15);
@@ -311,10 +340,11 @@ namespace RestaurantLoop.EditorTools
             EditorGUILayout.Space(10f);
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Generate Level Data", GUILayout.Height(34f))) GenerateLevelData();
+                if (GUILayout.Button("Generate Full Level", GUILayout.Height(34f))) GenerateLevelData();
 
                 using (new EditorGUI.DisabledScope(targetLevel == null))
                 {
+                    if (GUILayout.Button("Generate Stacks Only (Keep Order)", GUILayout.Height(34f))) GenerateQueueStacksOnly();
                     if (GUILayout.Button("Validate Solvability", GUILayout.Height(34f))) ValidateTargetLevel();
                 }
             }
@@ -330,34 +360,30 @@ namespace RestaurantLoop.EditorTools
 
             if (targetLevel == null && !CreateNewLevelAsset()) return;
 
-            if (!LevelMathUtility.TryPartitionDemandToGrid(
-                    demandConfigs,
-                    minStackSize,
-                    maxStackSize,
-                    columnCount,
-                    rowCount,
-                    randomSeed,
-                    out _,
-                    out error))
-            {
-                SetValidationStatus(ValidationStatus.InvalidOrUnsolvable, error);
-                return;
-            }
-
             for (int attempt = 0; attempt < MaxSolvabilityAttemptsPerLevel; attempt++)
             {
                 int effectiveSeed = unchecked(randomSeed + attempt * 1000);
-                LevelMathUtility.TryPartitionDemandToGrid(
-                    demandConfigs,
-                    minStackSize,
-                    maxStackSize,
-                    columnCount,
-                    rowCount,
-                    effectiveSeed,
-                    out List<QueueStackConfig> stacks,
-                    out _);
-                List<ItemDataSO> sequence =
-                    LevelMathUtility.GenerateDeterministicCustomerSequence(demandConfigs, effectiveSeed);
+                if (!LevelMathUtility.TryPartitionDemandToGrid(
+                        demandConfigs,
+                        minStackSize,
+                        maxStackSize,
+                        columnCount,
+                        rowCount,
+                        effectiveSeed,
+                        out List<QueueStackConfig> stacks,
+                        out error))
+                {
+                    if (attempt == 0)
+                    {
+                        SetValidationStatus(ValidationStatus.InvalidOrUnsolvable, error);
+                        return;
+                    }
+                    continue;
+                }
+
+                List<ItemDataSO> sequence = useCustomSequence && customCustomerSequence.Count > 0
+                    ? new List<ItemDataSO>(customCustomerSequence)
+                    : LevelMathUtility.GenerateDeterministicCustomerSequence(demandConfigs, effectiveSeed);
 
                 if (!TryBuildSingleTimedCustomers(
                         demandConfigs, stacks, columnCount, rowCount, sequence, effectiveSeed,
@@ -368,6 +394,7 @@ namespace RestaurantLoop.EditorTools
                     demandConfigs, stacks, sequence, timedCustomers);
                 validationAsset.minStackSize = minStackSize;
                 validationAsset.maxStackSize = maxStackSize;
+
                 bool isSolvable = LevelValidator.ValidateLevel(validationAsset);
                 DestroyImmediate(validationAsset);
                 if (!isSolvable) continue;
@@ -379,19 +406,122 @@ namespace RestaurantLoop.EditorTools
                 targetLevel.maxStackSize = maxStackSize;
                 EditorUtility.SetDirty(targetLevel);
                 AssetDatabase.SaveAssets();
+
                 SetValidationStatus(
                     ValidationStatus.SolvableWithoutPowerUps,
                     $"Generated and validated {stacks.Count} queue stacks, {sequence.Count} fixed customers, " +
-                    $"and {timedCustomers.Count} timed customers " +
-                    $"with effective seed {effectiveSeed}.");
+                    $"and {timedCustomers.Count} timed customers (Seed: {effectiveSeed}).");
                 Repaint();
                 return;
             }
 
             SetValidationStatus(
                 ValidationStatus.InvalidOrUnsolvable,
-                $"The fixed {columnCount}×{rowCount} layout could not produce a strict-solvable ordering after " +
-                $"{MaxSolvabilityAttemptsPerLevel:N0} deterministic attempts.");
+                $"The {columnCount}×{rowCount} layout could not produce a strict-solvable ordering after " +
+                $"{MaxSolvabilityAttemptsPerLevel:N0} attempts.");
+        }
+
+        private void GenerateQueueStacksOnly()
+        {
+            if (targetLevel == null)
+            {
+                SetValidationStatus(ValidationStatus.InvalidOrUnsolvable, "Assign or select a LevelDataSO asset first.");
+                return;
+            }
+
+            List<ItemDataSO> sequenceToUse = new List<ItemDataSO>();
+            if (useCustomSequence && customCustomerSequence.Count > 0)
+            {
+                sequenceToUse.AddRange(customCustomerSequence);
+            }
+            else
+            {
+                targetLevel.CopyResolvedCustomerSequenceTo(sequenceToUse);
+            }
+
+            if (sequenceToUse.Count == 0)
+            {
+                SetValidationStatus(ValidationStatus.InvalidOrUnsolvable, "No customer sequence available to partition stacks for.");
+                return;
+            }
+
+            SyncDemandsFromSequenceList(sequenceToUse);
+
+            for (int attempt = 0; attempt < MaxSolvabilityAttemptsPerLevel; attempt++)
+            {
+                int effectiveSeed = unchecked(randomSeed + attempt * 1000);
+                if (!LevelMathUtility.TryPartitionDemandToGrid(
+                        demandConfigs, minStackSize, maxStackSize, columnCount, rowCount, effectiveSeed,
+                        out List<QueueStackConfig> stacks, out string error))
+                {
+                    if (attempt == 0)
+                    {
+                        SetValidationStatus(ValidationStatus.InvalidOrUnsolvable, error);
+                        return;
+                    }
+                    continue;
+                }
+
+                if (!TryBuildSingleTimedCustomers(demandConfigs, stacks, columnCount, rowCount, sequenceToUse, effectiveSeed,
+                        out List<TimedCustomerConfig> timedCustomers, out _)) continue;
+
+                LevelDataSO validationAsset = CreateInstance<LevelDataSO>();
+                ApplyCandidateData(validationAsset, activeEdgeSlotCount, columnCount, rowCount,
+                    demandConfigs, stacks, sequenceToUse, timedCustomers);
+                validationAsset.minStackSize = minStackSize;
+                validationAsset.maxStackSize = maxStackSize;
+
+                bool isSolvable = LevelValidator.ValidateLevel(validationAsset);
+                DestroyImmediate(validationAsset);
+                if (!isSolvable) continue;
+
+                Undo.RecordObject(targetLevel, "Generate Queue Stacks Only");
+                ApplyCandidateData(targetLevel, activeEdgeSlotCount, columnCount, rowCount,
+                    demandConfigs, stacks, sequenceToUse, timedCustomers);
+                targetLevel.minStackSize = minStackSize;
+                targetLevel.maxStackSize = maxStackSize;
+                EditorUtility.SetDirty(targetLevel);
+                AssetDatabase.SaveAssets();
+
+                SetValidationStatus(
+                    ValidationStatus.SolvableWithoutPowerUps,
+                    $"Successfully updated Queue Stacks for preserved customer sequence ({sequenceToUse.Count} items, Seed: {effectiveSeed}).");
+                Repaint();
+                return;
+            }
+
+            SetValidationStatus(
+                ValidationStatus.InvalidOrUnsolvable,
+                $"Could not generate a solvable queue partition for the target customer sequence after {MaxSolvabilityAttemptsPerLevel:N0} attempts.");
+        }
+
+        private void SyncDemandsFromCustomSequence()
+        {
+            if (customCustomerSequence == null || customCustomerSequence.Count == 0) return;
+            SyncDemandsFromSequenceList(customCustomerSequence);
+            InitializeSerializedProperties(force: true);
+        }
+
+        private void SyncDemandsFromSequenceList(List<ItemDataSO> sequenceList)
+        {
+            Dictionary<ItemDataSO, int> counts = new Dictionary<ItemDataSO, int>();
+            for (int i = 0; i < sequenceList.Count; i++)
+            {
+                ItemDataSO item = sequenceList[i];
+                if (item == null) continue;
+                counts.TryGetValue(item, out int current);
+                counts[item] = current + 1;
+            }
+
+            demandConfigs.Clear();
+            foreach (var pair in counts)
+            {
+                demandConfigs.Add(new CustomerDemandConfig
+                {
+                    itemData = pair.Key,
+                    totalCustomerCount = pair.Value
+                });
+            }
         }
 
         private void ValidateTargetLevel()
@@ -540,20 +670,17 @@ namespace RestaurantLoop.EditorTools
                 int columns = NextInclusive(random, profile.MinColumns, profile.MaxColumns);
                 int desiredRows = NextInclusive(random, profile.MinRows, profile.MaxRows);
 
-                // 1. Müşteri Talebini Belirle
                 int minDemandStep = profile.MinDemand / LevelMathUtility.StackSizeStep;
                 int maxDemandStep = profile.MaxDemand / LevelMathUtility.StackSizeStep;
                 if (minDemandStep > maxDemandStep) minDemandStep = maxDemandStep;
                 int totalDemand = NextInclusive(random, minDemandStep, maxDemandStep) * LevelMathUtility.StackSizeStep;
 
-                // 2. Müşteri Talebini (totalDemand) belirlenen min/max stack sınırları içinde matematiksel olarak bölebilecek en uygun Satır Sayısını (Rows) bul
                 int rows = FindClosestFeasibleRowCount(
                     totalDemand, columns, desiredRows, profile.MinRows, profile.MaxRows, profile.MinStackSize, profile.MaxStackSize);
 
                 if (rows <= 0) continue;
                 int queueSlotCount = columns * rows;
 
-                // 3. Müşteri Siparişlerini Üret
                 List<CustomerDemandConfig> demands = CreateRandomDemandDistribution(
                     validItems,
                     totalDemand,
@@ -564,7 +691,6 @@ namespace RestaurantLoop.EditorTools
                     random);
                 if (demands == null) continue;
 
-                // 4. Müşteri Talebini Birebir (1:1) Bütün Slotlara Rastgele 5'in katları şeklinde Dağıt
                 if (!LevelMathUtility.TryPartitionDemandToGrid(
                         demands,
                         profile.MinStackSize,
@@ -577,7 +703,6 @@ namespace RestaurantLoop.EditorTools
 
                 if (!HasExactPerItemConservation(demands, stacks)) continue;
 
-                // 5. Müşteri Sırasını Oluştur
                 List<ItemDataSO> sequence = LevelMathUtility.GenerateDeterministicCustomerSequence(demands, candidateSeed);
 
                 GetBatchTimedCustomerRange(levelNumber, out int minimumTimedCustomers, out int maximumTimedCustomers);
@@ -595,7 +720,6 @@ namespace RestaurantLoop.EditorTools
                         random,
                         out List<TimedCustomerConfig> timedCustomers)) continue;
 
-                // 6. Çözülebilirlik Simülasyonunu Çalıştır
                 LevelDataSO validationAsset = CreateInstance<LevelDataSO>();
                 ApplyCandidateData(
                     validationAsset,
@@ -1175,7 +1299,9 @@ namespace RestaurantLoop.EditorTools
             ClampRange(ref batchLateMinStackSize, ref batchLateMaxStackSize, 5, 500);
 
             ClampRange(ref batchMinQueueColumns, ref batchMaxQueueColumns, 1, 8);
+            ClampRange(ref batchMaxQueueColumns, ref batchMaxQueueColumns, batchMinQueueColumns, 8);
             ClampRange(ref batchMinQueueRows, ref batchMaxQueueRows, 1, 15);
+            ClampRange(ref batchMaxQueueRows, ref batchMaxQueueRows, batchMinQueueRows, 15);
             ClampRange(ref batchMidMinTimedCustomers, ref batchMidMaxTimedCustomers, 0, 100);
             ClampRange(ref batchLateMinTimedCustomers, ref batchLateMaxTimedCustomers, 0, 100);
             batchTimedCustomerMinDuration = Mathf.Max(1, batchTimedCustomerMinDuration);
@@ -1386,6 +1512,12 @@ namespace RestaurantLoop.EditorTools
             demandConfigs = targetLevel.customerDemands != null
                 ? new List<CustomerDemandConfig>(targetLevel.customerDemands)
                 : new List<CustomerDemandConfig>();
+
+            if (targetLevel.OrderedCustomerSequence != null && targetLevel.OrderedCustomerSequence.Count > 0)
+            {
+                customCustomerSequence = new List<ItemDataSO>(targetLevel.OrderedCustomerSequence);
+            }
+
             InitializeSerializedProperties(force: true);
             validationStatus = ValidationStatus.NotValidated;
             validationMessage = "Loaded generation inputs from the selected asset.";
@@ -1447,10 +1579,11 @@ namespace RestaurantLoop.EditorTools
 
         private void InitializeSerializedProperties(bool force = false)
         {
-            if (!force && windowSerializedObject != null && demandConfigsProperty != null && availableItemsProperty != null) return;
+            if (!force && windowSerializedObject != null && demandConfigsProperty != null && availableItemsProperty != null && customCustomerSequenceProperty != null) return;
             windowSerializedObject = new SerializedObject(this);
             demandConfigsProperty = windowSerializedObject.FindProperty(nameof(demandConfigs));
             availableItemsProperty = windowSerializedObject.FindProperty(nameof(availableItems));
+            customCustomerSequenceProperty = windowSerializedObject.FindProperty(nameof(customCustomerSequence));
         }
 
         private static void DrawMinMaxInt(
