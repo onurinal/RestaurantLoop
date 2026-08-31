@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Serialization;
 using RestaurantLoop.Core;
 
 namespace RestaurantLoop.EditorTools
@@ -26,8 +27,8 @@ namespace RestaurantLoop.EditorTools
         [SerializeField] private List<CustomerDemandConfig> demandConfigs = new List<CustomerDemandConfig>();
 
         [SerializeField, Range(3, 20)] private int activeEdgeSlotCount = 6;
-        [SerializeField, Range(1, 10)] private int rackSlotCount = 5;
         [SerializeField, Range(1, 8)] private int columnCount = 3;
+        [SerializeField, Range(1, 15)] private int rowCount = 3;
         [SerializeField] private int minStackSize = 10;
         [SerializeField] private int maxStackSize = 40;
 
@@ -38,24 +39,45 @@ namespace RestaurantLoop.EditorTools
         [SerializeField] private int baseRandomSeed;
         [SerializeField] private List<ItemDataSO> availableItems = new List<ItemDataSO>();
         [SerializeField] private AnimationCurve batchDifficultyCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-        [SerializeField] private int batchStartDemand = 25;
-        [SerializeField] private int batchEndDemand = 120;
-        [SerializeField] private int batchStartMinFoodTypes = 2;
-        [SerializeField] private int batchStartMaxFoodTypes = 3;
-        [SerializeField] private int batchEndMinFoodTypes = 5;
-        [SerializeField] private int batchEndMaxFoodTypes = 6;
-        [SerializeField] private int batchStartActiveEdgeSlots = 6;
-        [SerializeField] private int batchEndActiveEdgeSlots = 10;
-        [SerializeField] private int batchStartRackSlots = 5;
-        [SerializeField] private int batchEndRackSlots = 5;
-        [SerializeField] private int batchStartQueueColumns = 3;
-        [SerializeField] private int batchEndQueueColumns = 3;
-        [SerializeField] private int batchStartMinStackSize = 5;
-        [SerializeField] private int batchStartMaxStackSize = 10;
-        [SerializeField] private int batchEndMinStackSize = 5;
-        [SerializeField] private int batchEndMaxStackSize = 20;
-        [SerializeField] private int batchMinQueueRows = 1;
-        [SerializeField] private int batchMaxQueueRows = 10;
+
+        // Demand (Min / Max per tier)
+        [SerializeField] private int batchEarlyMinDemand = 20;
+        [SerializeField] private int batchEarlyMaxDemand = 40;
+        [SerializeField] private int batchMidMinDemand = 45;
+        [SerializeField] private int batchMidMaxDemand = 75;
+        [SerializeField] private int batchLateMinDemand = 80;
+        [SerializeField] private int batchLateMaxDemand = 125;
+
+        // Active Edge Slots (Min / Max per tier)
+        [SerializeField] private int batchEarlyMinActiveEdgeSlots = 4;
+        [SerializeField] private int batchEarlyMaxActiveEdgeSlots = 6;
+        [SerializeField] private int batchMidMinActiveEdgeSlots = 6;
+        [SerializeField] private int batchMidMaxActiveEdgeSlots = 8;
+        [SerializeField] private int batchLateMinActiveEdgeSlots = 8;
+        [SerializeField] private int batchLateMaxActiveEdgeSlots = 12;
+
+        // Food Variety (Min / Max per tier)
+        [SerializeField] private int batchEarlyMinFoodTypes = 2;
+        [SerializeField] private int batchEarlyMaxFoodTypes = 3;
+        [SerializeField] private int batchMidMinFoodTypes = 3;
+        [SerializeField] private int batchMidMaxFoodTypes = 4;
+        [SerializeField] private int batchLateMinFoodTypes = 5;
+        [SerializeField] private int batchLateMaxFoodTypes = 6;
+
+        // Stack Sizes (Min / Max per tier)
+        [SerializeField] private int batchEarlyMinStackSize = 5;
+        [SerializeField] private int batchEarlyMaxStackSize = 10;
+        [SerializeField] private int batchMidMinStackSize = 5;
+        [SerializeField] private int batchMidMaxStackSize = 15;
+        [SerializeField] private int batchLateMinStackSize = 5;
+        [SerializeField] private int batchLateMaxStackSize = 20;
+
+        // Queue Layout Constraints (Global Min / Max)
+        [SerializeField] private int batchMinQueueColumns = 2;
+        [SerializeField] private int batchMaxQueueColumns = 4;
+        [SerializeField] private int batchMinQueueRows = 2;
+        [SerializeField] private int batchMaxQueueRows = 8;
+
         [SerializeField] private bool overwriteExistingAssets;
         [SerializeField] private bool assignToOpenLevelManager;
 
@@ -175,31 +197,45 @@ namespace RestaurantLoop.EditorTools
         private void DrawBatchProgressionSettings()
         {
             EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("Difficulty Progression", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Early / Mid / Late Difficulty Progression", EditorStyles.boldLabel);
             batchDifficultyCurve = EditorGUILayout.CurveField(
                 new GUIContent("Progression Curve", "Maps normalized batch progress to difficulty. Curve values are clamped to 0-1."),
                 batchDifficultyCurve);
 
-            DrawStartEndInt("Total Customer Demand", ref batchStartDemand, ref batchEndDemand, 1, 10000);
-            DrawStartEndInt("Active Edge Slots", ref batchStartActiveEdgeSlots, ref batchEndActiveEdgeSlots, 3, 20);
-            DrawStartEndInt("Rack Slots", ref batchStartRackSlots, ref batchEndRackSlots, 1, 10);
-            DrawStartEndInt("Queue Columns", ref batchStartQueueColumns, ref batchEndQueueColumns, 1, 8);
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField("Total Customer Demand Range", EditorStyles.miniBoldLabel);
+            DrawMinMaxInt("Early Level Demand", ref batchEarlyMinDemand, ref batchEarlyMaxDemand, 5, 10000);
+            DrawMinMaxInt("Mid Level Demand", ref batchMidMinDemand, ref batchMidMaxDemand, 5, 10000);
+            DrawMinMaxInt("Late Level Demand", ref batchLateMinDemand, ref batchLateMaxDemand, 5, 10000);
 
             EditorGUILayout.Space(4f);
-            EditorGUILayout.LabelField("Food Variety", EditorStyles.miniBoldLabel);
-            DrawMinMaxInt("Early Level Types", ref batchStartMinFoodTypes, ref batchStartMaxFoodTypes, 1, 50);
-            DrawMinMaxInt("Late Level Types", ref batchEndMinFoodTypes, ref batchEndMaxFoodTypes, 1, 50);
+            EditorGUILayout.LabelField("Active Edge Customer Slots", EditorStyles.miniBoldLabel);
+            DrawMinMaxInt("Early Active Slots", ref batchEarlyMinActiveEdgeSlots, ref batchEarlyMaxActiveEdgeSlots, 3, 20);
+            DrawMinMaxInt("Mid Active Slots", ref batchMidMinActiveEdgeSlots, ref batchMidMaxActiveEdgeSlots, 3, 20);
+            DrawMinMaxInt("Late Active Slots", ref batchLateMinActiveEdgeSlots, ref batchLateMaxActiveEdgeSlots, 3, 20);
+
+            EditorGUILayout.HelpBox($"Rack Slots are fixed globally at {LevelDataSO.FixedRackSlotCount}.", MessageType.Info);
 
             EditorGUILayout.Space(4f);
-            EditorGUILayout.LabelField("Queue Layout Constraints", EditorStyles.miniBoldLabel);
-            DrawMinMaxInt("Early Level Stack Size", ref batchStartMinStackSize, ref batchStartMaxStackSize, 5, 500);
-            DrawMinMaxInt("Late Level Stack Size", ref batchEndMinStackSize, ref batchEndMaxStackSize, 5, 500);
-            DrawMinMaxInt("Allowed Queue Rows", ref batchMinQueueRows, ref batchMaxQueueRows, 1, 15);
+            EditorGUILayout.LabelField("Food Variety Constraints", EditorStyles.miniBoldLabel);
+            DrawMinMaxInt("Early Level Types", ref batchEarlyMinFoodTypes, ref batchEarlyMaxFoodTypes, 1, 50);
+            DrawMinMaxInt("Mid Level Types", ref batchMidMinFoodTypes, ref batchMidMaxFoodTypes, 1, 50);
+            DrawMinMaxInt("Late Level Types", ref batchLateMinFoodTypes, ref batchLateMaxFoodTypes, 1, 50);
 
-            batchStartMinStackSize = SnapStackSize(batchStartMinStackSize);
-            batchStartMaxStackSize = Mathf.Max(batchStartMinStackSize, SnapStackSize(batchStartMaxStackSize));
-            batchEndMinStackSize = SnapStackSize(batchEndMinStackSize);
-            batchEndMaxStackSize = Mathf.Max(batchEndMinStackSize, SnapStackSize(batchEndMaxStackSize));
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField("Stack Size Constraints", EditorStyles.miniBoldLabel);
+            DrawMinMaxInt("Early Stack Size", ref batchEarlyMinStackSize, ref batchEarlyMaxStackSize, 5, 500);
+            DrawMinMaxInt("Mid Stack Size", ref batchMidMinStackSize, ref batchMidMaxStackSize, 5, 500);
+            DrawMinMaxInt("Late Stack Size", ref batchLateMinStackSize, ref batchLateMaxStackSize, 5, 500);
+
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField("Queue Layout Grid Constraints", EditorStyles.miniBoldLabel);
+            batchMinQueueColumns = EditorGUILayout.IntSlider("Min Queue Columns", batchMinQueueColumns, 1, 8);
+            batchMaxQueueColumns = EditorGUILayout.IntSlider("Max Queue Columns", batchMaxQueueColumns, batchMinQueueColumns, 8);
+            batchMinQueueRows = EditorGUILayout.IntSlider("Min Queue Rows", batchMinQueueRows, 1, 15);
+            batchMaxQueueRows = EditorGUILayout.IntSlider("Max Queue Rows", batchMaxQueueRows, batchMinQueueRows, 15);
+
+            SnapBatchStackSizes();
         }
 
         private void DrawTargetControls()
@@ -238,10 +274,15 @@ namespace RestaurantLoop.EditorTools
 
             EditorGUILayout.Space(4f);
             activeEdgeSlotCount = EditorGUILayout.IntSlider("Active Edge Slots", activeEdgeSlotCount, 3, 20);
-            rackSlotCount = EditorGUILayout.IntSlider("Rack Slots", rackSlotCount, 1, 10);
             columnCount = EditorGUILayout.IntSlider("Queue Columns", columnCount, 1, 8);
+            rowCount = EditorGUILayout.IntSlider("Queue Rows", rowCount, 1, 15);
             minStackSize = EditorGUILayout.IntField("Minimum Stack Size", minStackSize);
             maxStackSize = EditorGUILayout.IntField("Maximum Stack Size", maxStackSize);
+
+            EditorGUILayout.HelpBox(
+                $"Rack Slots are fixed at {LevelDataSO.FixedRackSlotCount}. The queue will contain exactly " +
+                $"{columnCount * rowCount} stacks.",
+                MessageType.Info);
 
             minStackSize = SnapStackSize(minStackSize);
             maxStackSize = Mathf.Max(minStackSize, SnapStackSize(maxStackSize));
@@ -271,29 +312,61 @@ namespace RestaurantLoop.EditorTools
 
             if (targetLevel == null && !CreateNewLevelAsset()) return;
 
-            Undo.RecordObject(targetLevel, "Generate Deterministic Level Data");
-            targetLevel.activeEdgeSlotCount = activeEdgeSlotCount;
-            targetLevel.rackSlotCount = rackSlotCount;
-            targetLevel.columnCount = columnCount;
-            targetLevel.minStackSize = minStackSize;
-            targetLevel.maxStackSize = maxStackSize;
-            targetLevel.customerDemands = new List<CustomerDemandConfig>(demandConfigs);
-            targetLevel.queueStackConfigs = LevelMathUtility.PartitionDemandToStacks(
-                targetLevel.customerDemands,
-                minStackSize,
-                maxStackSize,
-                columnCount,
-                out int calculatedRows,
-                randomSeed);
-            targetLevel.calculatedRowCount = calculatedRows;
-            targetLevel.SetOrderedCustomerSequence(
-                LevelMathUtility.GenerateDeterministicCustomerSequence(targetLevel.customerDemands, randomSeed));
+            if (!LevelMathUtility.TryPartitionDemandToGrid(
+                    demandConfigs,
+                    minStackSize,
+                    maxStackSize,
+                    columnCount,
+                    rowCount,
+                    randomSeed,
+                    out _,
+                    out error))
+            {
+                SetValidationStatus(ValidationStatus.InvalidOrUnsolvable, error);
+                return;
+            }
 
-            EditorUtility.SetDirty(targetLevel);
-            AssetDatabase.SaveAssets();
-            SetValidationStatus(ValidationStatus.NotValidated,
-                $"Generated {targetLevel.queueStackConfigs.Count} queue stacks and {targetLevel.OrderedCustomerSequence.Count} customers with seed {randomSeed}.");
-            Repaint();
+            for (int attempt = 0; attempt < MaxSolvabilityAttemptsPerLevel; attempt++)
+            {
+                int effectiveSeed = unchecked(randomSeed + attempt * 1000);
+                LevelMathUtility.TryPartitionDemandToGrid(
+                    demandConfigs,
+                    minStackSize,
+                    maxStackSize,
+                    columnCount,
+                    rowCount,
+                    effectiveSeed,
+                    out List<QueueStackConfig> stacks,
+                    out _);
+                List<ItemDataSO> sequence =
+                    LevelMathUtility.GenerateDeterministicCustomerSequence(demandConfigs, effectiveSeed);
+
+                LevelDataSO validationAsset = CreateInstance<LevelDataSO>();
+                ApplyCandidateData(validationAsset, activeEdgeSlotCount, columnCount, rowCount, demandConfigs, stacks, sequence);
+                validationAsset.minStackSize = minStackSize;
+                validationAsset.maxStackSize = maxStackSize;
+                bool isSolvable = LevelValidator.ValidateLevel(validationAsset);
+                DestroyImmediate(validationAsset);
+                if (!isSolvable) continue;
+
+                Undo.RecordObject(targetLevel, "Generate Deterministic Level Data");
+                ApplyCandidateData(targetLevel, activeEdgeSlotCount, columnCount, rowCount, demandConfigs, stacks, sequence);
+                targetLevel.minStackSize = minStackSize;
+                targetLevel.maxStackSize = maxStackSize;
+                EditorUtility.SetDirty(targetLevel);
+                AssetDatabase.SaveAssets();
+                SetValidationStatus(
+                    ValidationStatus.SolvableWithoutPowerUps,
+                    $"Generated and validated {stacks.Count} queue stacks and {sequence.Count} fixed customers " +
+                    $"with effective seed {effectiveSeed}.");
+                Repaint();
+                return;
+            }
+
+            SetValidationStatus(
+                ValidationStatus.InvalidOrUnsolvable,
+                $"The fixed {columnCount}×{rowCount} layout could not produce a strict-solvable ordering after " +
+                $"{MaxSolvabilityAttemptsPerLevel:N0} deterministic attempts.");
         }
 
         private void ValidateTargetLevel()
@@ -357,8 +430,7 @@ namespace RestaurantLoop.EditorTools
                     BatchDifficultyProfile profile = CreateDifficultyProfile(levelIndex, validItems.Count);
                     EditorUtility.DisplayProgressBar(
                         "Batch Level Generator",
-                        $"Level_{levelNumber:D2}: generating and validating demand {profile.TotalDemand}, " +
-                        $"variety {profile.MinFoodTypes}-{profile.MaxFoodTypes}...",
+                        $"Generating Level_{levelNumber:D2}...",
                         levelIndex / (float)totalLevelsToGenerate);
 
                     if (!TryCreateSolvableCandidate(
@@ -370,8 +442,7 @@ namespace RestaurantLoop.EditorTools
                             out BatchLevelCandidate candidate))
                     {
                         SetBatchMessage(
-                            $"Level_{levelNumber:D2} could not be made solvable after {MaxSolvabilityAttemptsPerLevel:N0} attempts. " +
-                            "Broaden the stack-size or food variety ranges.",
+                            $"Level_{levelNumber:D2} could not be made solvable after {MaxSolvabilityAttemptsPerLevel:N0} attempts.",
                             MessageType.Error);
                         return;
                     }
@@ -402,7 +473,7 @@ namespace RestaurantLoop.EditorTools
 
                 Selection.objects = generatedAssets.ToArray();
                 SetBatchMessage(
-                    $"Generated {generatedAssets.Count} validated levels in {batchOutputFolder}." + assignmentMessage,
+                    $"Generated {generatedAssets.Count} validated 1:1 demand levels in {batchOutputFolder}." + assignmentMessage,
                     MessageType.Info);
             }
             catch (Exception exception)
@@ -424,38 +495,65 @@ namespace RestaurantLoop.EditorTools
             HashSet<int> acceptedSeeds,
             out BatchLevelCandidate candidate)
         {
+            candidate = null;
+
             for (int attempt = 0; attempt < MaxSolvabilityAttemptsPerLevel; attempt++)
             {
                 int candidateSeed = unchecked(baseRandomSeed + levelIndex + attempt * 1000);
                 if (acceptedSeeds.Contains(candidateSeed)) continue;
 
                 System.Random random = new System.Random(candidateSeed);
-                int foodTypeCount = NextInclusive(random, profile.MinFoodTypes, profile.MaxFoodTypes);
-                int columns = profile.Columns;
 
+                int activeSlots = NextInclusive(random, profile.MinActiveSlots, profile.MaxActiveSlots);
+                int foodTypeCount = NextInclusive(random, profile.MinFoodTypes, profile.MaxFoodTypes);
+                int columns = NextInclusive(random, profile.MinColumns, profile.MaxColumns);
+                int desiredRows = NextInclusive(random, profile.MinRows, profile.MaxRows);
+
+                // 1. Müşteri Talebini Belirle
+                int minDemandStep = profile.MinDemand / LevelMathUtility.StackSizeStep;
+                int maxDemandStep = profile.MaxDemand / LevelMathUtility.StackSizeStep;
+                if (minDemandStep > maxDemandStep) minDemandStep = maxDemandStep;
+                int totalDemand = NextInclusive(random, minDemandStep, maxDemandStep) * LevelMathUtility.StackSizeStep;
+
+                // 2. Müşteri Talebini (totalDemand) belirlenen min/max stack sınırları içinde matematiksel olarak bölebilecek en uygun Satır Sayısını (Rows) bul
+                int rows = FindClosestFeasibleRowCount(
+                    totalDemand, columns, desiredRows, profile.MinRows, profile.MaxRows, profile.MinStackSize, profile.MaxStackSize);
+
+                if (rows <= 0) continue;
+                int queueSlotCount = columns * rows;
+
+                // 3. Müşteri Siparişlerini Üret
                 List<CustomerDemandConfig> demands = CreateRandomDemandDistribution(
                     validItems,
-                    profile.TotalDemand,
+                    totalDemand,
                     foodTypeCount,
-                    random);
-
-                List<QueueStackConfig> stacks = LevelMathUtility.PartitionDemandToStacks(
-                    demands,
+                    queueSlotCount,
                     profile.MinStackSize,
                     profile.MaxStackSize,
-                    columns,
-                    out int rows,
-                    candidateSeed);
+                    random);
+                if (demands == null) continue;
 
-                if (rows > batchMaxQueueRows) continue;
+                // 4. Müşteri Talebini Birebir (1:1) Bütün Slotlara Rastgele 5'in katları şeklinde Dağıt
+                if (!LevelMathUtility.TryPartitionDemandToGrid(
+                        demands,
+                        profile.MinStackSize,
+                        profile.MaxStackSize,
+                        columns,
+                        rows,
+                        candidateSeed,
+                        out List<QueueStackConfig> stacks,
+                        out _)) continue;
+
                 if (!HasExactPerItemConservation(demands, stacks)) continue;
 
+                // 5. Müşteri Sırasını Oluştur
                 List<ItemDataSO> sequence = LevelMathUtility.GenerateDeterministicCustomerSequence(demands, candidateSeed);
+
+                // 6. Çözülebilirlik Simülasyonunu Çalıştır
                 LevelDataSO validationAsset = CreateInstance<LevelDataSO>();
                 ApplyCandidateData(
                     validationAsset,
-                    profile.ActiveSlots,
-                    profile.RackSlots,
+                    activeSlots,
                     columns,
                     rows,
                     demands,
@@ -466,13 +564,13 @@ namespace RestaurantLoop.EditorTools
                 validationAsset.maxStackSize = profile.MaxStackSize;
                 LevelValidationReport report = LevelValidator.AnalyzeLevel(validationAsset);
                 DestroyImmediate(validationAsset);
+
                 if (!report.SolvableWithoutPowerUps) continue;
 
                 candidate = new BatchLevelCandidate(
                     levelNumber,
                     candidateSeed,
-                    profile.ActiveSlots,
-                    profile.RackSlots,
+                    activeSlots,
                     columns,
                     rows,
                     profile.MinStackSize,
@@ -483,7 +581,6 @@ namespace RestaurantLoop.EditorTools
                 return true;
             }
 
-            candidate = null;
             return false;
         }
 
@@ -491,18 +588,43 @@ namespace RestaurantLoop.EditorTools
             List<ItemDataSO> available,
             int totalDemand,
             int selectedItemCount,
+            int queueSlotCount,
+            int minStackSize,
+            int maxStackSize,
             System.Random random)
         {
+            if (totalDemand < queueSlotCount * minStackSize || totalDemand > queueSlotCount * maxStackSize ||
+                totalDemand % LevelMathUtility.StackSizeStep != 0)
+                return null;
+
             List<ItemDataSO> shuffledItems = new List<ItemDataSO>(available);
             Shuffle(shuffledItems, random);
 
-            selectedItemCount = Mathf.Clamp(selectedItemCount, 1, Mathf.Min(shuffledItems.Count, totalDemand));
-            int[] counts = new int[selectedItemCount];
-            int countPerItem = totalDemand / selectedItemCount;
-            int remainder = totalDemand % selectedItemCount;
-            for (int i = 0; i < selectedItemCount; i++)
+            selectedItemCount = Mathf.Clamp(selectedItemCount, 1, Mathf.Min(shuffledItems.Count, queueSlotCount));
+            int[] slotsPerItem = new int[selectedItemCount];
+            for (int i = 0; i < selectedItemCount; i++) slotsPerItem[i] = 1;
+            for (int slot = selectedItemCount; slot < queueSlotCount; slot++)
             {
-                counts[i] = countPerItem + (i < remainder ? 1 : 0);
+                slotsPerItem[random.Next(selectedItemCount)]++;
+            }
+
+            int[] counts = new int[selectedItemCount];
+            for (int i = 0; i < selectedItemCount; i++) counts[i] = slotsPerItem[i] * minStackSize;
+
+            int remainingDemand = totalDemand - queueSlotCount * minStackSize;
+            List<int> candidates = new List<int>(selectedItemCount);
+            while (remainingDemand > 0)
+            {
+                candidates.Clear();
+                for (int i = 0; i < selectedItemCount; i++)
+                {
+                    if (counts[i] < slotsPerItem[i] * maxStackSize) candidates.Add(i);
+                }
+
+                if (candidates.Count == 0) return null;
+                int selectedIndex = candidates[random.Next(candidates.Count)];
+                counts[selectedIndex] += LevelMathUtility.StackSizeStep;
+                remainingDemand -= LevelMathUtility.StackSizeStep;
             }
 
             List<CustomerDemandConfig> demands = new List<CustomerDemandConfig>(selectedItemCount);
@@ -518,39 +640,41 @@ namespace RestaurantLoop.EditorTools
             return demands;
         }
 
-        private BatchDifficultyProfile CreateDifficultyProfile(int levelIndex, int availableItemCount)
+        private static int FindClosestFeasibleRowCount(
+            int totalDemand,
+            int columns,
+            int desiredRows,
+            int minimumRows,
+            int maximumRows,
+            int minStackSize,
+            int maxStackSize)
         {
-            float normalizedProgress = totalLevelsToGenerate <= 1
-                ? 0f
-                : levelIndex / (float)(totalLevelsToGenerate - 1);
-            float curveProgress = Mathf.Clamp01(batchDifficultyCurve.Evaluate(normalizedProgress));
-            int activeSlots = LerpRounded(batchStartActiveEdgeSlots, batchEndActiveEdgeSlots, curveProgress);
-            int rackSlots = LerpRounded(batchStartRackSlots, batchEndRackSlots, curveProgress);
-            int columns = LerpRounded(batchStartQueueColumns, batchEndQueueColumns, curveProgress);
-            int totalDemand = LerpRounded(batchStartDemand, batchEndDemand, curveProgress);
-            int minFoodTypes = Mathf.Clamp(
-                LerpRounded(batchStartMinFoodTypes, batchEndMinFoodTypes, curveProgress),
-                1,
-                Mathf.Min(availableItemCount, totalDemand));
-            int maxFoodTypes = Mathf.Clamp(
-                LerpRounded(batchStartMaxFoodTypes, batchEndMaxFoodTypes, curveProgress),
-                minFoodTypes,
-                Mathf.Min(availableItemCount, totalDemand));
-            int minStackSize = SnapStackSize(
-                LerpRounded(batchStartMinStackSize, batchEndMinStackSize, curveProgress));
-            int maxStackSize = Mathf.Max(
-                minStackSize,
-                SnapStackSize(LerpRounded(batchStartMaxStackSize, batchEndMaxStackSize, curveProgress)));
+            for (int offset = 0; offset <= maximumRows - minimumRows; offset++)
+            {
+                int lower = desiredRows - offset;
+                if (IsGridCapacityFeasible(totalDemand, columns, lower, minimumRows, maximumRows,
+                        minStackSize, maxStackSize)) return lower;
 
-            return new BatchDifficultyProfile(
-                totalDemand,
-                minFoodTypes,
-                maxFoodTypes,
-                activeSlots,
-                rackSlots,
-                columns,
-                minStackSize,
-                maxStackSize);
+                int upper = desiredRows + offset;
+                if (upper != lower && IsGridCapacityFeasible(totalDemand, columns, upper, minimumRows, maximumRows,
+                        minStackSize, maxStackSize)) return upper;
+            }
+
+            return 0;
+        }
+
+        private static bool IsGridCapacityFeasible(
+            int totalDemand,
+            int columns,
+            int rows,
+            int minimumRows,
+            int maximumRows,
+            int minStackSize,
+            int maxStackSize)
+        {
+            if (rows < minimumRows || rows > maximumRows) return false;
+            int slotCount = columns * rows;
+            return totalDemand >= slotCount * minStackSize && totalDemand <= slotCount * maxStackSize;
         }
 
         private static bool HasExactPerItemConservation(
@@ -581,10 +705,52 @@ namespace RestaurantLoop.EditorTools
             return true;
         }
 
+        private BatchDifficultyProfile CreateDifficultyProfile(int levelIndex, int availableItemCount)
+        {
+            float normalizedProgress = totalLevelsToGenerate <= 1
+                ? 0f
+                : levelIndex / (float)(totalLevelsToGenerate - 1);
+            float curveProgress = Mathf.Clamp01(batchDifficultyCurve.Evaluate(normalizedProgress));
+
+            int minDemand = SnapStackSize(TierLerpRounded(batchEarlyMinDemand, batchMidMinDemand, batchLateMinDemand, curveProgress));
+            int maxDemand = SnapStackSize(TierLerpRounded(batchEarlyMaxDemand, batchMidMaxDemand, batchLateMaxDemand, curveProgress));
+            maxDemand = Mathf.Max(minDemand, maxDemand);
+
+            int minActiveSlots = TierLerpRounded(batchEarlyMinActiveEdgeSlots, batchMidMinActiveEdgeSlots, batchLateMinActiveEdgeSlots, curveProgress);
+            int maxActiveSlots = TierLerpRounded(batchEarlyMaxActiveEdgeSlots, batchMidMaxActiveEdgeSlots, batchLateMaxActiveEdgeSlots, curveProgress);
+            maxActiveSlots = Mathf.Max(minActiveSlots, maxActiveSlots);
+
+            int minStackSize = SnapStackSize(TierLerpRounded(batchEarlyMinStackSize, batchMidMinStackSize, batchLateMinStackSize, curveProgress));
+            int maxStackSize = Mathf.Max(minStackSize,
+                SnapStackSize(TierLerpRounded(batchEarlyMaxStackSize, batchMidMaxStackSize, batchLateMaxStackSize, curveProgress)));
+
+            int minFoodTypes = Mathf.Clamp(
+                TierLerpRounded(batchEarlyMinFoodTypes, batchMidMinFoodTypes, batchLateMinFoodTypes, curveProgress),
+                1,
+                availableItemCount);
+            int maxFoodTypes = Mathf.Clamp(
+                TierLerpRounded(batchEarlyMaxFoodTypes, batchMidMaxFoodTypes, batchLateMaxFoodTypes, curveProgress),
+                minFoodTypes,
+                availableItemCount);
+
+            return new BatchDifficultyProfile(
+                minDemand,
+                maxDemand,
+                minFoodTypes,
+                maxFoodTypes,
+                minActiveSlots,
+                maxActiveSlots,
+                batchMinQueueColumns,
+                batchMaxQueueColumns,
+                batchMinQueueRows,
+                batchMaxQueueRows,
+                minStackSize,
+                maxStackSize);
+        }
+
         private static void ApplyCandidateData(
             LevelDataSO level,
             int activeSlots,
-            int rackSlots,
             int columns,
             int rows,
             List<CustomerDemandConfig> demands,
@@ -592,7 +758,6 @@ namespace RestaurantLoop.EditorTools
             List<ItemDataSO> sequence)
         {
             level.activeEdgeSlotCount = activeSlots;
-            level.rackSlotCount = rackSlots;
             level.columnCount = columns;
             level.calculatedRowCount = rows;
             level.customerDemands = new List<CustomerDemandConfig>(demands);
@@ -619,7 +784,6 @@ namespace RestaurantLoop.EditorTools
             ApplyCandidateData(
                 level,
                 candidate.ActiveSlots,
-                candidate.RackSlots,
                 candidate.Columns,
                 candidate.Rows,
                 candidate.Demands,
@@ -710,7 +874,9 @@ namespace RestaurantLoop.EditorTools
                 return false;
             }
 
-            int requiredFoodTypes = Mathf.Max(batchStartMinFoodTypes, batchEndMinFoodTypes);
+            int requiredFoodTypes = Mathf.Max(
+                batchEarlyMinFoodTypes,
+                Mathf.Max(batchMidMinFoodTypes, batchLateMinFoodTypes));
             if (validItems.Count < requiredFoodTypes)
             {
                 error = $"The progression requires at least {requiredFoodTypes} unique food items, but only " +
@@ -797,23 +963,44 @@ namespace RestaurantLoop.EditorTools
             totalLevelsToGenerate = Mathf.Max(1, totalLevelsToGenerate);
             startingLevelNumber = Mathf.Max(1, startingLevelNumber);
             batchDifficultyCurve ??= AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-            ClampStartEnd(ref batchStartDemand, ref batchEndDemand, 1, 10000);
-            ClampStartEnd(ref batchStartActiveEdgeSlots, ref batchEndActiveEdgeSlots, 3, 20);
-            ClampStartEnd(ref batchStartRackSlots, ref batchEndRackSlots, 1, 10);
-            ClampStartEnd(ref batchStartQueueColumns, ref batchEndQueueColumns, 1, 8);
-            ClampRange(ref batchStartMinFoodTypes, ref batchStartMaxFoodTypes, 1, 50);
-            ClampRange(ref batchEndMinFoodTypes, ref batchEndMaxFoodTypes, 1, 50);
-            batchEndMinFoodTypes = Mathf.Max(batchStartMinFoodTypes, batchEndMinFoodTypes);
-            batchEndMaxFoodTypes = Mathf.Max(batchEndMinFoodTypes, batchEndMaxFoodTypes);
-            ClampRange(ref batchStartMinStackSize, ref batchStartMaxStackSize, 5, 500);
-            ClampRange(ref batchEndMinStackSize, ref batchEndMaxStackSize, 5, 500);
-            batchEndMinStackSize = Mathf.Max(batchStartMinStackSize, batchEndMinStackSize);
-            batchEndMaxStackSize = Mathf.Max(batchEndMinStackSize, batchEndMaxStackSize);
+
+            ClampMinMaxTier(ref batchEarlyMinDemand, ref batchEarlyMaxDemand, ref batchMidMinDemand, ref batchMidMaxDemand,
+                ref batchLateMinDemand, ref batchLateMaxDemand, 5, 10000);
+            ClampMinMaxTier(ref batchEarlyMinActiveEdgeSlots, ref batchEarlyMaxActiveEdgeSlots, ref batchMidMinActiveEdgeSlots, ref batchMidMaxActiveEdgeSlots,
+                ref batchLateMinActiveEdgeSlots, ref batchLateMaxActiveEdgeSlots, 3, 20);
+
+            ClampRange(ref batchEarlyMinFoodTypes, ref batchEarlyMaxFoodTypes, 1, 50);
+            ClampRange(ref batchMidMinFoodTypes, ref batchMidMaxFoodTypes, 1, 50);
+            ClampRange(ref batchLateMinFoodTypes, ref batchLateMaxFoodTypes, 1, 50);
+            batchMidMinFoodTypes = Mathf.Max(batchEarlyMinFoodTypes, batchMidMinFoodTypes);
+            batchMidMaxFoodTypes = Mathf.Max(batchMidMinFoodTypes, batchMidMaxFoodTypes);
+            batchLateMinFoodTypes = Mathf.Max(batchMidMinFoodTypes, batchLateMinFoodTypes);
+            batchLateMaxFoodTypes = Mathf.Max(batchLateMaxFoodTypes, batchLateMaxFoodTypes);
+
+            ClampRange(ref batchEarlyMinStackSize, ref batchEarlyMaxStackSize, 5, 500);
+            ClampRange(ref batchMidMinStackSize, ref batchMidMaxStackSize, 5, 500);
+            ClampRange(ref batchLateMinStackSize, ref batchLateMaxStackSize, 5, 500);
+
+            ClampRange(ref batchMinQueueColumns, ref batchMaxQueueColumns, 1, 8);
             ClampRange(ref batchMinQueueRows, ref batchMaxQueueRows, 1, 15);
-            batchStartMinStackSize = SnapStackSize(batchStartMinStackSize);
-            batchStartMaxStackSize = Mathf.Max(batchStartMinStackSize, SnapStackSize(batchStartMaxStackSize));
-            batchEndMinStackSize = SnapStackSize(batchEndMinStackSize);
-            batchEndMaxStackSize = Mathf.Max(batchEndMinStackSize, SnapStackSize(batchEndMaxStackSize));
+            SnapBatchStackSizes();
+        }
+
+        private void SnapBatchStackSizes()
+        {
+            batchEarlyMinDemand = SnapStackSize(batchEarlyMinDemand);
+            batchEarlyMaxDemand = Mathf.Max(batchEarlyMinDemand, SnapStackSize(batchEarlyMaxDemand));
+            batchMidMinDemand = SnapStackSize(batchMidMinDemand);
+            batchMidMaxDemand = Mathf.Max(batchMidMinDemand, SnapStackSize(batchMidMaxDemand));
+            batchLateMinDemand = SnapStackSize(batchLateMinDemand);
+            batchLateMaxDemand = Mathf.Max(batchLateMinDemand, SnapStackSize(batchLateMaxDemand));
+
+            batchEarlyMinStackSize = SnapStackSize(batchEarlyMinStackSize);
+            batchEarlyMaxStackSize = Mathf.Max(batchEarlyMinStackSize, SnapStackSize(batchEarlyMaxStackSize));
+            batchMidMinStackSize = SnapStackSize(batchMidMinStackSize);
+            batchMidMaxStackSize = Mathf.Max(batchMidMinStackSize, SnapStackSize(batchMidMaxStackSize));
+            batchLateMinStackSize = SnapStackSize(batchLateMinStackSize);
+            batchLateMaxStackSize = Mathf.Max(batchLateMinStackSize, SnapStackSize(batchLateMaxStackSize));
         }
 
         private void SetBatchMessage(string message, MessageType type)
@@ -987,8 +1174,8 @@ namespace RestaurantLoop.EditorTools
             if (targetLevel == null) return;
 
             activeEdgeSlotCount = targetLevel.activeEdgeSlotCount;
-            rackSlotCount = targetLevel.rackSlotCount;
             columnCount = targetLevel.columnCount;
+            rowCount = targetLevel.calculatedRowCount;
             minStackSize = targetLevel.minStackSize;
             maxStackSize = targetLevel.maxStackSize;
             demandConfigs = targetLevel.customerDemands != null
@@ -1015,6 +1202,17 @@ namespace RestaurantLoop.EditorTools
                     return false;
                 }
             }
+
+            if (!LevelMathUtility.TryPartitionDemandToGrid(
+                    demandConfigs,
+                    minStackSize,
+                    maxStackSize,
+                    columnCount,
+                    rowCount,
+                    randomSeed,
+                    out _,
+                    out error))
+                return false;
 
             error = null;
             return true;
@@ -1054,35 +1252,26 @@ namespace RestaurantLoop.EditorTools
             ClampRange(ref minimum, ref maximum, allowedMinimum, allowedMaximum);
         }
 
-        private static void DrawStartEndInt(
-            string label,
-            ref int start,
-            ref int end,
-            int allowedMinimum,
-            int allowedMaximum)
-        {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUILayout.PrefixLabel(label);
-                GUILayout.Label("Start", EditorStyles.miniLabel, GUILayout.Width(34f));
-                start = EditorGUILayout.IntField(start, GUILayout.MinWidth(45f));
-                GUILayout.Label("End", EditorStyles.miniLabel, GUILayout.Width(28f));
-                end = EditorGUILayout.IntField(end, GUILayout.MinWidth(45f));
-            }
-
-            ClampStartEnd(ref start, ref end, allowedMinimum, allowedMaximum);
-        }
-
         private static void ClampRange(ref int minimum, ref int maximum, int allowedMinimum, int allowedMaximum)
         {
             minimum = Mathf.Clamp(minimum, allowedMinimum, allowedMaximum);
             maximum = Mathf.Clamp(maximum, minimum, allowedMaximum);
         }
 
-        private static void ClampStartEnd(ref int start, ref int end, int allowedMinimum, int allowedMaximum)
+        private static void ClampMinMaxTier(
+            ref int earlyMin, ref int earlyMax,
+            ref int midMin, ref int midMax,
+            ref int lateMin, ref int lateMax,
+            int allowedMinimum, int allowedMaximum)
         {
-            start = Mathf.Clamp(start, allowedMinimum, allowedMaximum);
-            end = Mathf.Clamp(end, start, allowedMaximum);
+            ClampRange(ref earlyMin, ref earlyMax, allowedMinimum, allowedMaximum);
+            ClampRange(ref midMin, ref midMax, allowedMinimum, allowedMaximum);
+            ClampRange(ref lateMin, ref lateMax, allowedMinimum, allowedMaximum);
+
+            midMin = Mathf.Max(earlyMin, midMin);
+            midMax = Mathf.Max(earlyMax, midMax);
+            lateMin = Mathf.Max(midMin, lateMin);
+            lateMax = Mathf.Max(midMax, lateMax);
         }
 
         private static int LerpRounded(int start, int end, float progress)
@@ -1090,8 +1279,16 @@ namespace RestaurantLoop.EditorTools
             return Mathf.RoundToInt(Mathf.Lerp(start, end, progress));
         }
 
+        private static int TierLerpRounded(int early, int mid, int late, float progress)
+        {
+            return progress <= 0.5f
+                ? LerpRounded(early, mid, progress * 2f)
+                : LerpRounded(mid, late, (progress - 0.5f) * 2f);
+        }
+
         private static int NextInclusive(System.Random random, int minimum, int maximum)
         {
+            if (minimum >= maximum) return minimum;
             return random.Next(minimum, maximum + 1);
         }
 
@@ -1145,7 +1342,6 @@ namespace RestaurantLoop.EditorTools
             public int LevelNumber { get; }
             public int Seed { get; }
             public int ActiveSlots { get; }
-            public int RackSlots { get; }
             public int Columns { get; }
             public int Rows { get; }
             public int MinStackSize { get; }
@@ -1158,7 +1354,6 @@ namespace RestaurantLoop.EditorTools
                 int levelNumber,
                 int seed,
                 int activeSlots,
-                int rackSlots,
                 int columns,
                 int rows,
                 int minStackSize,
@@ -1170,7 +1365,6 @@ namespace RestaurantLoop.EditorTools
                 LevelNumber = levelNumber;
                 Seed = seed;
                 ActiveSlots = activeSlots;
-                RackSlots = rackSlots;
                 Columns = columns;
                 Rows = rows;
                 MinStackSize = minStackSize;
@@ -1183,31 +1377,43 @@ namespace RestaurantLoop.EditorTools
 
         private readonly struct BatchDifficultyProfile
         {
-            public int TotalDemand { get; }
+            public int MinDemand { get; }
+            public int MaxDemand { get; }
             public int MinFoodTypes { get; }
             public int MaxFoodTypes { get; }
-            public int ActiveSlots { get; }
-            public int RackSlots { get; }
-            public int Columns { get; }
+            public int MinActiveSlots { get; }
+            public int MaxActiveSlots { get; }
+            public int MinColumns { get; }
+            public int MaxColumns { get; }
+            public int MinRows { get; }
+            public int MaxRows { get; }
             public int MinStackSize { get; }
             public int MaxStackSize { get; }
 
             public BatchDifficultyProfile(
-                int totalDemand,
+                int minDemand,
+                int maxDemand,
                 int minFoodTypes,
                 int maxFoodTypes,
-                int activeSlots,
-                int rackSlots,
-                int columns,
+                int minActiveSlots,
+                int maxActiveSlots,
+                int minColumns,
+                int maxColumns,
+                int minRows,
+                int maxRows,
                 int minStackSize,
                 int maxStackSize)
             {
-                TotalDemand = totalDemand;
+                MinDemand = minDemand;
+                MaxDemand = maxDemand;
                 MinFoodTypes = minFoodTypes;
                 MaxFoodTypes = maxFoodTypes;
-                ActiveSlots = activeSlots;
-                RackSlots = rackSlots;
-                Columns = columns;
+                MinActiveSlots = minActiveSlots;
+                MaxActiveSlots = maxActiveSlots;
+                MinColumns = minColumns;
+                MaxColumns = maxColumns;
+                MinRows = minRows;
+                MaxRows = maxRows;
                 MinStackSize = minStackSize;
                 MaxStackSize = maxStackSize;
             }

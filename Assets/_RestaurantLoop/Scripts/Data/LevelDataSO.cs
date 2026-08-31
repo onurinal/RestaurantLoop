@@ -21,12 +21,14 @@ namespace RestaurantLoop.Core
     [CreateAssetMenu(fileName = "Level_01", menuName = "RestaurantLoop/Level Data")]
     public class LevelDataSO : ScriptableObject
     {
+        public const int FixedRackSlotCount = 5;
+
         [Header("Active Edge Setup")]
         [Tooltip("Active customer slots around the conveyor belt.")]
         [Range(3, 20)] public int activeEdgeSlotCount = 6;
 
-        [Header("Rack Setup")]
-        [Range(1, 10)] public int rackSlotCount = 5;
+        /// <summary>Rack capacity is a global gameplay rule and is not level-authored.</summary>
+        public int rackSlotCount => FixedRackSlotCount;
 
         [Header("Queue Layout Setup")]
         [Range(1, 8)] public int columnCount = 3;

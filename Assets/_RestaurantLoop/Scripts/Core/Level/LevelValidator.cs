@@ -104,10 +104,8 @@ namespace RestaurantLoop.Core
         private static bool HasConservedContent(LevelDataSO data)
         {
             if (data == null || data.customerDemands == null || data.queueStackConfigs == null ||
-                data.TotalCustomerDemand != data.TotalQueueItems) return false;
+                data.TotalQueueItems < data.TotalCustomerDemand) return false;
 
-            // Empty is a supported deterministic fallback for legacy assets. Once an explicit
-            // sequence exists, it must be internally consistent before simulation can proceed.
             return data.OrderedCustomerSequence.Count == 0 ||
                    data.ValidateOrderedCustomerSequence(out _);
         }
@@ -126,6 +124,7 @@ namespace RestaurantLoop.Core
                 {
                     column.Add(data.queueStackConfigs[stackIndex++]);
                 }
+
                 columns.Add(column);
             }
 
@@ -147,6 +146,7 @@ namespace RestaurantLoop.Core
                 edge.Add(unspawned[0]);
                 unspawned.RemoveAt(0);
             }
+
             return edge;
         }
 
@@ -188,6 +188,7 @@ namespace RestaurantLoop.Core
                 rack.RemoveAt(index);
                 return true;
             }
+
             return false;
         }
 
@@ -203,6 +204,7 @@ namespace RestaurantLoop.Core
                 column.RemoveAt(0);
                 return true;
             }
+
             return false;
         }
 
@@ -224,6 +226,7 @@ namespace RestaurantLoop.Core
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -246,6 +249,7 @@ namespace RestaurantLoop.Core
                     }
                 }
             }
+
             return false;
         }
 
@@ -261,6 +265,7 @@ namespace RestaurantLoop.Core
                 column.RemoveAt(0);
                 return true;
             }
+
             return false;
         }
 
@@ -279,9 +284,7 @@ namespace RestaurantLoop.Core
         private static bool IsComplete(List<List<QueueStackConfig>> columns, List<QueueStackConfig> rack,
             List<QueueStackConfig> belt, List<ItemDataSO> edge, List<ItemDataSO> unspawned)
         {
-            if (rack.Count > 0 || belt.Count > 0 || edge.Count > 0 || unspawned.Count > 0) return false;
-            for (int index = 0; index < columns.Count; index++) if (columns[index].Count > 0) return false;
-            return true;
+            return edge.Count == 0 && unspawned.Count == 0;
         }
 
         private static bool CanFulfillDemand(ItemDataSO data, List<ItemDataSO> edge) => edge.Contains(data);
@@ -303,6 +306,7 @@ namespace RestaurantLoop.Core
                     unspawned.RemoveAt(0);
                 }
             }
+
             return served;
         }
 
