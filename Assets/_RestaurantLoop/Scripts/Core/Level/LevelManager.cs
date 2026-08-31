@@ -23,7 +23,13 @@ namespace RestaurantLoop.Core
         [SerializeField] private List<LevelDataSO> levelSequence = new List<LevelDataSO>();
         [SerializeField] private int currentLevelIndex = 0;
 
-        public LevelDataSO CurrentLevel => levelSequence.Count > 0 ? levelSequence[currentLevelIndex % levelSequence.Count] : null;
+        // Modulo (%) kaldırıldı. Liste sınırları kontrol ediliyor.
+        public LevelDataSO CurrentLevel => (levelSequence.Count > 0 && currentLevelIndex < levelSequence.Count) 
+            ? levelSequence[currentLevelIndex] 
+            : null;
+
+        // Son seviyede olunup olunmadığını kontrol eder
+        public bool IsLastLevel => levelSequence.Count > 0 && currentLevelIndex >= levelSequence.Count - 1;
 
         public LevelState CurrentState { get; private set; } = LevelState.Playing;
         public bool IsGameActive => CurrentState == LevelState.Playing;
@@ -66,13 +72,11 @@ namespace RestaurantLoop.Core
             LevelDataSO data = CurrentLevel;
             if (data == null) return;
 
-            // Hide any active tutorial when loading a new level or restarting
             if (TutorialManager.Instance != null)
             {
                 TutorialManager.Instance.HideTutorial();
             }
 
-            // 1. Stop all active conveyor coroutines and kill all running DOTween animations in the scene
             if (ConveyorManager.Instance != null)
             {
                 ConveyorManager.Instance.StopAllCoroutines();
@@ -80,10 +84,8 @@ namespace RestaurantLoop.Core
 
             DOTween.KillAll();
 
-            // 2. Clear all active stacks across belt, rack, queue, and mid-air jumps
             StackItem.ClearAllActiveStacks();
 
-            // 3. Reset internal capacity counters for conveyor and rack
             if (ConveyorManager.Instance != null)
             {
                 ConveyorManager.Instance.ClearAllItems();
@@ -95,7 +97,6 @@ namespace RestaurantLoop.Core
                 RackManager.Instance.BuildRackLayout(data.rackSlotCount);
             }
 
-            // 4. Rebuild customer crowd and queue layouts
             if (CrowdManager.Instance != null)
             {
                 CrowdManager.Instance.OnDemandChanged -= HandleDemandChanged;
@@ -112,7 +113,6 @@ namespace RestaurantLoop.Core
 
             Debug.Log($"<color=cyan>[LEVEL START]</color> Loaded Level Index: {currentLevelIndex} (UI Level: {CurrentLevelNumber})");
 
-            // --- TUTORIAL SEQUENCE 1: TRIGGER ON LEVEL 1 ---
             if (CurrentLevelNumber == 1)
             {
                 StartCoroutine(ShowStartTutorialRoutine());
@@ -121,20 +121,17 @@ namespace RestaurantLoop.Core
 
         private IEnumerator ShowStartTutorialRoutine()
         {
-            // Wait briefly to ensure the queue and grid are fully instantiated before finding an item
             yield return new WaitForSeconds(0.6f);
 
             if (TutorialManager.Instance != null && CurrentState == LevelState.Playing)
             {
                 StackItem targetFood = null;
 
-                // Safely fetch strictly the front-row stack from QueueManager
                 if (QueueManager.Instance != null)
                 {
                     targetFood = QueueManager.Instance.GetFirstFrontRowStack();
                 }
 
-                // Fallback mechanism if queue is empty
                 if (targetFood == null)
                 {
                     StackItem[] allFoods = FindObjectsByType<StackItem>(FindObjectsSortMode.None);
@@ -150,10 +147,6 @@ namespace RestaurantLoop.Core
 
                 if (targetFood != null)
                 {
-                    // NOTE: Was ShowTutorialAtWorldPosition(...) before — that call never updates
-                    // TutorialManager.CurrentStep, so ConveyorManager's step-1->step-2 check
-                    // (CurrentStep == TapFoodToConveyor) never passed. StartLevel1Tutorial sends
-                    // the exact same message but also correctly sets CurrentStep.
                     TutorialManager.Instance.StartLevel1Tutorial(targetFood.transform);
                 }
                 else
@@ -168,7 +161,6 @@ namespace RestaurantLoop.Core
             FailLevel("Conveyor stack reached exit while Rack is full!");
         }
 
-        /// <summary>Immediately fails the active level when a timed customer expires.</summary>
         public void OnLevelFailed()
         {
             FailLevel("A timed customer ran out of patience!");
@@ -205,18 +197,15 @@ namespace RestaurantLoop.Core
 
             CurrentState = LevelState.Won;
             
-            // Hide tutorial just in case it's still active when winning
             if (TutorialManager.Instance != null)
             {
                 TutorialManager.Instance.HideTutorial();
             }
             
-            // --- PLAY WIN SOUND ---
             if (AudioManager.Instance != null && AudioManager.Instance.levelWinSound != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.levelWinSound);
             }
-            // ----------------------
             
             Debug.Log("<color=green>[LEVEL COMPLETED]</color> All customer demands fulfilled!");
             OnLevelWon?.Invoke();
@@ -224,6 +213,13 @@ namespace RestaurantLoop.Core
 
         public void CompleteLevel()
         {
+            // Son seviyedeysek index artırma ve yeni level yükleme
+            if (IsLastLevel)
+            {
+                Debug.Log("<color=yellow>[LEVEL MANAGER]</color> Reached the final level. No more levels to load.");
+                return;
+            }
+
             currentLevelIndex++;
             LoadCurrentLevel();
         }

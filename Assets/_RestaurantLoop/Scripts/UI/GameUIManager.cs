@@ -76,35 +76,28 @@ namespace RestaurantLoop.UI
             winPanel.SetActive(false);
             losePanel.SetActive(false);
 
-            // Determine initial audio states based on saved volume (0 means off, >0 means on)
             float savedMusicVol = PlayerPrefs.GetFloat("MusicVolume", 1f);
             float savedSfxVol = PlayerPrefs.GetFloat("SfxVolume", 1f);
             isMusicOn = savedMusicVol > 0f;
             isSfxOn = savedSfxVol > 0f;
 
-            // Update sliders just in case they are active in the hierarchy
             if (musicSlider != null) musicSlider.value = savedMusicVol;
             if (sfxSlider != null) sfxSlider.value = savedSfxVol;
 
-            // Set initial button visuals
             UpdateMusicButtonVisual();
             UpdateSfxButtonVisual();
 
-            // Bind UI Events
             gameSettingsButton.onClick.AddListener(OpenSettings);
             gameSettingsButton.onClick.AddListener(PlayTapSound);
             closeSettingsButton.onClick.AddListener(CloseSettings);
             closeSettingsButton.onClick.AddListener(PlayTapSound);
 
-            // Bind Toggle Button Events
             if (musicToggleButton != null) musicToggleButton.onClick.AddListener(ToggleMusic);
             if (sfxToggleButton != null) sfxToggleButton.onClick.AddListener(ToggleSFX);
 
-            // Bind Legacy Slider Events
             if (musicSlider != null) musicSlider.onValueChanged.AddListener(UpdateMusicVolume);
             if (sfxSlider != null) sfxSlider.onValueChanged.AddListener(UpdateSfxVolume);
 
-            // Subscribe to LevelManager events
             if (LevelManager.Instance != null)
             {
                 LevelManager.Instance.OnLevelWon += ShowWinPanel;
@@ -113,7 +106,6 @@ namespace RestaurantLoop.UI
                 UpdateTopLevelText(LevelManager.Instance.CurrentLevelNumber);
             }
 
-            // Bind Game State Buttons
             nextLevelButton.onClick.AddListener(OnNextLevelClicked);
             nextLevelButton.onClick.AddListener(PlayTapSound);
             retryButton.onClick.AddListener(OnRetryClicked);
@@ -123,7 +115,6 @@ namespace RestaurantLoop.UI
             loseMainMenuButton.onClick.AddListener(OnMainMenuClicked);
             loseMainMenuButton.onClick.AddListener(PlayTapSound);
 
-            // Bind Custom Power-Up Audio Events
             if (powerUp1Button != null) powerUp1Button.onClick.AddListener(PlayPowerUp1Sound);
             if (powerUp2Button != null) powerUp2Button.onClick.AddListener(PlayPowerUp2Sound);
             if (powerUp3Button != null) powerUp3Button.onClick.AddListener(PlayPowerUp3Sound);
@@ -138,7 +129,6 @@ namespace RestaurantLoop.UI
             }
         }
 
-        // --- Custom Power-Up Sounds ---
         private void PlayPowerUp1Sound()
         {
             if (AudioManager.Instance != null && AudioManager.Instance.powerUp1Sound != null)
@@ -171,7 +161,6 @@ namespace RestaurantLoop.UI
         private void OpenSettings() => ShowPanel(settingsPanel, settingsPanelBaseScale);
         private void CloseSettings() => HidePanel(settingsPanel, settingsPanelBaseScale);
 
-        // --- New Toggle Logic ---
         private void ToggleMusic()
         {
             isMusicOn = !isMusicOn;
@@ -206,7 +195,6 @@ namespace RestaurantLoop.UI
                 sfxToggleImage.sprite = isSfxOn ? sfxOnSprite : sfxOffSprite;
         }
 
-        // --- Legacy Slider Logic ---
         private void UpdateMusicVolume(float value)
         {
             PlayerPrefs.SetFloat("MusicVolume", value);
@@ -222,7 +210,17 @@ namespace RestaurantLoop.UI
             }
         }
 
-        private void ShowWinPanel() => ShowPanel(winPanel, winPanelBaseScale);
+        private void ShowWinPanel()
+        {
+            // Son seviye geçildiyse Next Level butonunu gizle
+            if (LevelManager.Instance != null && nextLevelButton != null)
+            {
+                nextLevelButton.gameObject.SetActive(!LevelManager.Instance.IsLastLevel);
+            }
+
+            ShowPanel(winPanel, winPanelBaseScale);
+        }
+
         private void ShowLosePanel() => ShowPanel(losePanel, losePanelBaseScale);
 
         private void OnNextLevelClicked()
@@ -241,7 +239,6 @@ namespace RestaurantLoop.UI
 
             HidePanel(losePanel, losePanelBaseScale, () =>
             {
-                // Restart current level without reloading the Unity scene
                 if (LevelManager.Instance != null)
                 {
                     LevelManager.Instance.LoadCurrentLevel();
@@ -333,7 +330,6 @@ namespace RestaurantLoop.UI
             winMainMenuButton.onClick.RemoveAllListeners();
             loseMainMenuButton.onClick.RemoveAllListeners();
 
-            // Unbind Power-Up Buttons
             if (powerUp1Button != null) powerUp1Button.onClick.RemoveAllListeners();
             if (powerUp2Button != null) powerUp2Button.onClick.RemoveAllListeners();
             if (powerUp3Button != null) powerUp3Button.onClick.RemoveAllListeners();
