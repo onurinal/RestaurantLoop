@@ -302,8 +302,8 @@ namespace RestaurantLoop.Core
             {
                 if (column == null) continue;
 
-                QueueSlot[] childSlots = column.GetComponentsInChildren<QueueSlot>(true);
-                for (int i = 0; i < childSlots.Length; i++)
+                IReadOnlyList<QueueSlot> childSlots = column.Slots;
+                for (int i = 0; i < childSlots.Count; i++)
                 {
                     QueueSlot slot = childSlots[i];
                     if (slot != null && slot.CurrentStack == stack)
@@ -404,34 +404,7 @@ namespace RestaurantLoop.Core
             foreach (QueueColumn column in columns)
             {
                 if (column == null) continue;
-
-                QueueSlot[] slots = column.GetComponentsInChildren<QueueSlot>(true);
-                List<StackItem> survivors = new List<StackItem>();
-
-                for (int i = 0; i < slots.Length; i++)
-                {
-                    StackItem stack = slots[i] != null ? slots[i].CurrentStack : null;
-                    if (slots[i] != null) slots[i].ClearSlot();
-                    if (stack == null) continue;
-
-                    if (stack.Data == data)
-                    {
-                        removedCount++;
-                        StackItem.ReleaseToPool(stack);
-                    }
-                    else
-                    {
-                        survivors.Add(stack);
-                    }
-                }
-
-                for (int i = 0; i < survivors.Count && i < slots.Length; i++)
-                {
-                    StackItem stack = survivors[i];
-                    slots[i].PlaceStack(stack);
-                    stack.transform.DOKill();
-                    stack.transform.DOLocalMove(Vector3.zero, 0.25f).SetEase(Ease.OutQuad).SetUpdate(true);
-                }
+                removedCount += column.RemoveStacksByData(data);
             }
 
             if (removedCount > 0) NotifyQueueChanged();

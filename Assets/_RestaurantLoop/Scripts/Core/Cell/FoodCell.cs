@@ -36,11 +36,13 @@ namespace RestaurantLoop.Core
 
         public void SetFood(ItemDataSO itemData)
         {
+            if (this == null) return;
             SetMaterial(itemData != null ? itemData.CellMaterial : null);
         }
 
         public void SetMaterial(Material material)
         {
+            if (this == null) return;
             CacheRenderers();
 
             if (material == null)
@@ -67,6 +69,7 @@ namespace RestaurantLoop.Core
 
         public void Clear()
         {
+            if (this == null) return;
             CacheRenderers();
 
             for (int i = 0; i < targetRenderers.Length; i++)
