@@ -13,17 +13,12 @@ MonoBehaviour:
   m_Name: Level_06
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.LevelDataSO
   activeEdgeSlotCount: 6
-  columnCount: 3
-  calculatedRowCount: 2
+  columnCount: 2
+  calculatedRowCount: 4
   minStackSize: 5
   maxStackSize: 10
   conveyorSpeedMultiplier: 1
   customerDemands:
-  - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-    totalCustomerCount: 20
-    includeTimedCustomers: 0
-    timedCustomerCount: 0
-    timedCustomerDuration: 0
   - itemData: {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
     totalCustomerCount: 10
     includeTimedCustomers: 0
@@ -34,33 +29,38 @@ MonoBehaviour:
     includeTimedCustomers: 0
     timedCustomerCount: 0
     timedCustomerDuration: 0
+  - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
+    totalCustomerCount: 20
+    includeTimedCustomers: 0
+    timedCustomerCount: 0
+    timedCustomerDuration: 0
   orderedCustomerSequence:
-  - {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
-  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
-  - {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
-  - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
-  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   - {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
   - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
   - {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
   - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
-  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   - {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
-  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-  - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
-  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
   - {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
   - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
   - {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
-  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   - {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
   - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
+  - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
+  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
+  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
+  - {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
+  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
+  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
+  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
+  - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
+  - {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
+  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   - {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
   - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
   - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
@@ -77,15 +77,19 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   timedCustomers: []
   queueStackConfigs:
-  - itemData: {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
+  - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
     itemCount: 5
   - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
     itemCount: 5
   - itemData: {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
-    itemCount: 10
+    itemCount: 5
+  - itemData: {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
+    itemCount: 5
+  - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
+    itemCount: 5
   - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
     itemCount: 5
   - itemData: {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
     itemCount: 5
-  - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-    itemCount: 10
+  - itemData: {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
+    itemCount: 5

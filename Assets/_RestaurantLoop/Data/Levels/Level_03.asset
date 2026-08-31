@@ -83,9 +83,9 @@ MonoBehaviour:
     itemCount: 5
   - itemData: {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
     itemCount: 5
-  - itemData: {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
-    itemCount: 10
   - itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
     itemCount: 5
+  - itemData: {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
+    itemCount: 10
   - itemData: {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
     itemCount: 5
