@@ -213,6 +213,46 @@ namespace RestaurantLoop.Core
             return false;
         }
 
+        /// <summary>
+        /// Gets the world-space bounds of every occupied queue stack. This is intentionally
+        /// calculated on demand because selection framing is entered only when a power-up is
+        /// activated, not every frame.
+        /// </summary>
+        public bool TryGetOccupiedStackBounds(out Bounds bounds)
+        {
+            bounds = default;
+            bool hasBounds = false;
+
+            foreach (QueueColumn column in columns)
+            {
+                if (column == null) continue;
+
+                IReadOnlyList<QueueSlot> slots = column.Slots;
+                for (int i = 0; i < slots.Count; i++)
+                {
+                    StackItem stack = slots[i] != null ? slots[i].CurrentStack : null;
+                    if (stack == null) continue;
+
+                    // Include the root position even when a stack has no renderers, then grow
+                    // the bounds to its visible meshes so framing also accounts for stack size.
+                    EncapsulateBounds(ref bounds, ref hasBounds,
+                        new Bounds(stack.transform.position, Vector3.zero));
+
+                    Renderer[] renderers = stack.GetComponentsInChildren<Renderer>(true);
+                    for (int rendererIndex = 0; rendererIndex < renderers.Length; rendererIndex++)
+                    {
+                        Renderer renderer = renderers[rendererIndex];
+                        if (renderer != null && renderer.enabled && renderer.gameObject.activeInHierarchy)
+                        {
+                            EncapsulateBounds(ref bounds, ref hasBounds, renderer.bounds);
+                        }
+                    }
+                }
+            }
+
+            return hasBounds;
+        }
+
         public bool HasClearColorSelectableStack
         {
             get
@@ -437,6 +477,18 @@ namespace RestaurantLoop.Core
             }
 
             RefreshQueueCountTextOpacity();
+        }
+
+        private static void EncapsulateBounds(ref Bounds aggregate, ref bool hasBounds, Bounds next)
+        {
+            if (!hasBounds)
+            {
+                aggregate = next;
+                hasBounds = true;
+                return;
+            }
+
+            aggregate.Encapsulate(next);
         }
 
         private void RefreshQueueCountTextOpacity(bool? selectionModeActive = null)

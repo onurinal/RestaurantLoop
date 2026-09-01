@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 using DG.Tweening;
+using RestaurantLoop.Infrastructure;
 
 namespace RestaurantLoop.Core
 {
@@ -35,8 +36,10 @@ namespace RestaurantLoop.Core
         [SerializeField, Min(0f)] private float clearColorResolutionDuration = 1.3f;
 
         [Header("Selection Camera")]
-        [Tooltip("Signed distance applied along Camera.main's local Y axis during selection. Use a negative value to lower the camera.")]
+        [Tooltip("Legacy fallback distance applied along Camera.main's local Y axis only when the queue bounds cannot be read. Use a negative value to lower the camera.")]
         [SerializeField] private float selectionCameraLocalYOffset = -12f;
+        [Tooltip("Clear space reserved at the bottom of the viewport while selecting a queue stack. This keeps the deepest stack clear of the power-up UI.")]
+        [SerializeField, Range(0f, 0.45f)] private float selectionCameraBottomViewportPadding = 0.1f;
         [SerializeField, Min(0f)] private float selectionCameraMoveDuration = 0.45f;
 
         private Transform selectionCameraTransform;
@@ -328,12 +331,61 @@ namespace RestaurantLoop.Core
             }
 
             selectionCameraTween?.Kill();
+            float localYOffset = isSelecting ? GetSelectionCameraLocalYOffset() : 0f;
             Vector3 targetPosition = selectionCameraBaseWorldPosition +
-                (isSelecting ? selectionCameraTransform.up * selectionCameraLocalYOffset : Vector3.zero);
+                (isSelecting ? selectionCameraTransform.up * localYOffset : Vector3.zero);
             selectionCameraTween = selectionCameraTransform.DOMove(targetPosition, selectionCameraMoveDuration)
                 .SetEase(Ease.OutQuad)
                 .SetUpdate(true);
             isSelectionCameraOffsetApplied = isSelecting;
+        }
+
+        private float GetSelectionCameraLocalYOffset()
+        {
+            Camera mainCamera = selectionCameraTransform != null
+                ? selectionCameraTransform.GetComponent<Camera>()
+                : null;
+            QueueManager queueManager = QueueManager.Instance;
+            if (mainCamera == null || !mainCamera.orthographic || queueManager == null ||
+                !queueManager.TryGetOccupiedStackBounds(out Bounds queueBounds))
+            {
+                return selectionCameraLocalYOffset;
+            }
+
+            // OrthographicCameraScaler makes the visible world height aspect-dependent. Refresh
+            // it before measuring so the selection offset always uses the active device framing.
+            OrthographicCameraScaler scaler = mainCamera.GetComponent<OrthographicCameraScaler>();
+            scaler?.RecalculateCameraBounds();
+
+            float queueBottomInCameraSpace = GetLowestCameraLocalY(queueBounds, selectionCameraTransform);
+            float visibleBottomInCameraSpace = -mainCamera.orthographicSize +
+                (mainCamera.orthographicSize * 2f * selectionCameraBottomViewportPadding);
+
+            // Moving the camera down (negative local Y) raises the queue on screen. Do not move
+            // up when the whole occupied queue already clears the reserved viewport area.
+            return Mathf.Min(0f, queueBottomInCameraSpace - visibleBottomInCameraSpace);
+        }
+
+        private float GetLowestCameraLocalY(Bounds bounds, Transform cameraTransform)
+        {
+            Vector3 center = bounds.center;
+            Vector3 extents = bounds.extents;
+            float lowest = float.PositiveInfinity;
+
+            for (int x = -1; x <= 1; x += 2)
+            {
+                for (int y = -1; y <= 1; y += 2)
+                {
+                    for (int z = -1; z <= 1; z += 2)
+                    {
+                        Vector3 corner = center + Vector3.Scale(extents, new Vector3(x, y, z));
+                        float localY = Vector3.Dot(corner - selectionCameraBaseWorldPosition, cameraTransform.up);
+                        lowest = Mathf.Min(lowest, localY);
+                    }
+                }
+            }
+
+            return lowest;
         }
 
         private void RestoreSelectionCameraImmediate()
