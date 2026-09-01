@@ -848,13 +848,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5024282179418879260}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
-  m_LocalPosition: {x: 1.4, y: 3, z: 0}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
-  m_ConstrainProportionsScale: 0
+  m_LocalRotation: {x: 0.5, y: 0, z: 0, w: 0.8660254}
+  m_LocalPosition: {x: 0.79, y: 2.36, z: 0}
+  m_LocalScale: {x: 1.2, y: 1.2, z: 1.2}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 2155238790238927989}
-  m_LocalEulerAnglesHint: {x: 30, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 60, y: 0, z: 0}
 --- !u!212 &303596665531546752
 SpriteRenderer:
   serializedVersion: 2
@@ -904,7 +904,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 5f07a4351c446ea4fb6c25d47d09ab60, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 59e1b88b59aa9164994b76e27beb339d, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -928,8 +928,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.OrderBalloon
   bgRenderer: {fileID: 303596665531546752}
   foodDisplayPrefab: {fileID: 5072569572663151450, guid: a2e3799dcb22e8444876c146766c87a2, type: 3}
-  foodLocalPosition: {x: 0.19197, y: -0.25667, z: -0.31299}
-  foodScale: 1.17
+  foodLocalPosition: {x: 0.001, y: -0.152, z: -0.126}
+  foodLocalRotation: {x: -30, y: 0, z: 0}
+  overrideFoodScale: 0.5
   rotationSpeed: 20
   animateScale: 1
   showStartScale: 0.45
