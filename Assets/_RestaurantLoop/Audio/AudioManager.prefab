@@ -81,6 +81,12 @@ MonoBehaviour:
   powerUp3SoundVolume: 1
   powerUp4Sound: {fileID: 8300000, guid: 6ff6a3815c55fb7419e541f5fd246356, type: 3}
   powerUp4SoundVolume: 1
+  beefSound: {fileID: 8300000, guid: 7e42f7bae9bbd784dad61f9fdf0ab97b, type: 3}
+  burgerSound: {fileID: 8300000, guid: b759b61b0928b974ea1d837d84203647, type: 3}
+  cakeSound: {fileID: 8300000, guid: 7e42f7bae9bbd784dad61f9fdf0ab97b, type: 3}
+  drinkSound: {fileID: 8300000, guid: b759b61b0928b974ea1d837d84203647, type: 3}
+  friesSound: {fileID: 8300000, guid: 4323b3397609b9549a28ba2c56440ad5, type: 3}
+  sushiSound: {fileID: 8300000, guid: e418101092c6d434d838ba6646c96a7c, type: 3}
   maxSimultaneousSounds: 2
 --- !u!82 &3898750725045401640
 AudioSource:
