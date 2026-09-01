@@ -6,6 +6,9 @@ namespace RestaurantLoop.Audio
 {
     public class CrowdAudioGenerator : MonoBehaviour
     {
+        // ADDED: Singleton instance for easy access from GameUIManager
+        public static CrowdAudioGenerator Instance { get; private set; }
+
         [Header("Crowd Settings")]
         [Tooltip("The single voice audio clip to be used")]
         public AudioClip singleVoiceClip;
@@ -25,6 +28,19 @@ namespace RestaurantLoop.Audio
         private List<AudioSource> activeSources = new List<AudioSource>();
         private int initialCrowdSize = 0;
         private float currentCrowdRatio = 1f;
+
+        // ADDED: Awake method to initialize the Singleton
+        private void Awake()
+        {
+            if (Instance == null)
+            {
+                Instance = this;
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
+        }
 
         private void Start()
         {
@@ -98,9 +114,6 @@ namespace RestaurantLoop.Audio
         private void Update()
         {
             // Get the global SFX volume from the UI Options Toggle (1 is ON, 0 is OFF).
-            // Read from AudioManager's cache rather than hitting PlayerPrefs every frame;
-            // the preference is only ever written by the settings sliders, which are 0..1,
-            // so the cache's Clamp01 cannot change the value.
             float globalSfxVolume = AudioManager.Instance != null
                 ? AudioManager.Instance.SfxVolume
                 : PlayerPrefs.GetFloat("SfxVolume", 1f);
@@ -114,6 +127,30 @@ namespace RestaurantLoop.Audio
                 if (source != null && source.volume != finalVolume)
                 {
                     source.volume = finalVolume;
+                }
+            }
+        }
+
+        // ADDED: Pause all active crowd voices
+        public void PauseCrowdAudio()
+        {
+            foreach (var source in activeSources)
+            {
+                if (source != null && source.isPlaying)
+                {
+                    source.Pause();
+                }
+            }
+        }
+
+        // ADDED: Resume all active crowd voices
+        public void ResumeCrowdAudio()
+        {
+            foreach (var source in activeSources)
+            {
+                if (source != null)
+                {
+                    source.UnPause();
                 }
             }
         }

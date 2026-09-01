@@ -157,12 +157,46 @@ namespace RestaurantLoop.UI
         {
             if (topLevelText != null)
             {
+                // Format text to display "TUTORIAL" for level 0.
                 topLevelText.text = levelNumber == 0 ? "TUTORIAL" : $"LEVEL {levelNumber}";
             }
         }
 
-        private void OpenSettings() => ShowPanel(settingsPanel, settingsPanelBaseScale);
-        private void CloseSettings() => HidePanel(settingsPanel, settingsPanelBaseScale);
+        private void OpenSettings()
+        {
+            // Pause the game and looping audio sources.
+            Time.timeScale = 0f; 
+            
+            if (AudioManager.Instance != null) 
+            {
+                AudioManager.Instance.PauseGameSounds();
+            }
+
+            if (CrowdAudioGenerator.Instance != null)
+            {
+                CrowdAudioGenerator.Instance.PauseCrowdAudio();
+            }
+
+            ShowPanel(settingsPanel, settingsPanelBaseScale);
+        }
+
+        private void CloseSettings()
+        {
+            // Resume the game and audio sources.
+            Time.timeScale = 1f; 
+            
+            if (AudioManager.Instance != null) 
+            {
+                AudioManager.Instance.ResumeGameSounds();
+            }
+
+            if (CrowdAudioGenerator.Instance != null)
+            {
+                CrowdAudioGenerator.Instance.ResumeCrowdAudio();
+            }
+
+            HidePanel(settingsPanel, settingsPanelBaseScale);
+        }
 
         private void ToggleMusic()
         {
@@ -215,7 +249,7 @@ namespace RestaurantLoop.UI
 
         private void ShowWinPanel()
         {
-            // Son seviye geçildiyse Next Level butonunu gizle
+            // Hide Next Level button if the last level is completed.
             if (LevelManager.Instance != null && nextLevelButton != null)
             {
                 nextLevelButton.gameObject.SetActive(!LevelManager.Instance.IsLastLevel);
@@ -276,6 +310,8 @@ namespace RestaurantLoop.UI
             panelTransform.DOKill();
             panel.SetActive(true);
             panelTransform.localScale = Vector3.Scale(baseScale, Vector3.one * panelPopInStartScale);
+            
+            // DOTween's SetUpdate(true) allows the animation to play independently of Time.timeScale.
             panelTransform
                 .DOScale(baseScale, panelPopInDuration)
                 .SetEase(panelPopInEase)
@@ -311,7 +347,24 @@ namespace RestaurantLoop.UI
             return panel != null ? panel.transform.localScale : Vector3.one;
         }
 
-        private void LoadMainMenu() => SceneManager.LoadScene("MainMenu");
+        private void LoadMainMenu()
+        {
+            // Reset time scale to normal before scene transition.
+            Time.timeScale = 1f; 
+            
+            // Resume audio sources to ensure correct state initialization in the main menu.
+            if (AudioManager.Instance != null) 
+            {
+                AudioManager.Instance.ResumeGameSounds();
+            }
+
+            if (CrowdAudioGenerator.Instance != null)
+            {
+                CrowdAudioGenerator.Instance.ResumeCrowdAudio();
+            }
+
+            SceneManager.LoadScene("MainMenu");
+        }
 
         private void OnDestroy()
         {

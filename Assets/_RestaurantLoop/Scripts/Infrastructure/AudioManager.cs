@@ -334,5 +334,23 @@ namespace RestaurantLoop.Audio
                 PlaySFX(boardClickSound);
             }
         }
+
+        // ADDED: Pause looping game sounds (like the timed warning) when the game is paused
+        public void PauseGameSounds()
+        {
+            if (timedWarningSource != null && timedWarningSource.isPlaying)
+            {
+                timedWarningSource.Pause();
+            }
+        }
+
+        // ADDED: Resume paused looping game sounds
+        public void ResumeGameSounds()
+        {
+            if (timedWarningSource != null)
+            {
+                timedWarningSource.UnPause();
+            }
+        }
     }
 }
