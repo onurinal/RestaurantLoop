@@ -34,7 +34,9 @@ namespace RestaurantLoop.Core
         public LevelState CurrentState { get; private set; } = LevelState.Playing;
         public bool IsGameActive => CurrentState == LevelState.Playing;
 
-        public int CurrentLevelNumber => currentLevelIndex + 1;
+        /// <summary>Sequence index doubles as the player-facing level number; index 0 is the tutorial.</summary>
+        public int CurrentLevelNumber => currentLevelIndex;
+        public bool IsTutorialLevel => currentLevelIndex == 0;
 
         public event Action OnLevelWon;
         public event Action OnLevelLost;
@@ -113,7 +115,7 @@ namespace RestaurantLoop.Core
 
             Debug.Log($"<color=cyan>[LEVEL START]</color> Loaded Level Index: {currentLevelIndex} (UI Level: {CurrentLevelNumber})");
 
-            if (CurrentLevelNumber == 1)
+            if (IsTutorialLevel)
             {
                 StartCoroutine(ShowStartTutorialRoutine());
             }
@@ -147,7 +149,7 @@ namespace RestaurantLoop.Core
 
                 if (targetFood != null)
                 {
-                    TutorialManager.Instance.StartLevel1Tutorial(targetFood.transform);
+                    TutorialManager.Instance.StartTutorial(targetFood.transform);
                 }
                 else
                 {

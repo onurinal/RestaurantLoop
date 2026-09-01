@@ -131,8 +131,8 @@ namespace RestaurantLoop.Core
 
             StackAssignedToRack?.Invoke(stack, emptySlot);
 
-            // --- TUTORIAL STEP 3 TRIGGER: ITEM ARRIVED IN RACK (LEVEL 1) ---
-            if (LevelManager.Instance != null && LevelManager.Instance.CurrentLevelNumber == 1
+            // --- TUTORIAL STEP 3 TRIGGER: ITEM ARRIVED IN RACK ---
+            if (LevelManager.Instance != null && LevelManager.Instance.IsTutorialLevel
                 && TutorialManager.Instance != null
                 && TutorialManager.Instance.CurrentStep == TutorialManager.TutorialStep.WaitUntilInRack)
             {

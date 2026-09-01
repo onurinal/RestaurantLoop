@@ -45,6 +45,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.LevelManager
   levelSequence:
+  - {fileID: 11400000, guid: b84f27effb74f8347b2b83b401cb5e7b, type: 2}
   - {fileID: 11400000, guid: 99a3c35fd3589814bb81e1499055d070, type: 2}
   - {fileID: 11400000, guid: cc65ee73940cb63449cd46c1c477931b, type: 2}
   - {fileID: 11400000, guid: 31efce84dee3f0a4eb57c1c8e37c2ece, type: 2}

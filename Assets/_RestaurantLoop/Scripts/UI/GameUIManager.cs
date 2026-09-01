@@ -155,7 +155,10 @@ namespace RestaurantLoop.UI
 
         private void UpdateTopLevelText(int levelNumber)
         {
-            if (topLevelText != null) topLevelText.text = $"LEVEL {levelNumber}";
+            if (topLevelText != null)
+            {
+                topLevelText.text = levelNumber == 0 ? "TUTORIAL" : $"LEVEL {levelNumber}";
+            }
         }
 
         private void OpenSettings() => ShowPanel(settingsPanel, settingsPanelBaseScale);

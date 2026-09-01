@@ -65,7 +65,7 @@ namespace RestaurantLoop.UI
         /// <summary>
         /// Step 1: Starts the tutorial pointing at the initial board food.
         /// </summary>
-        public void StartLevel1Tutorial(Transform targetFoodTransform)
+        public void StartTutorial(Transform targetFoodTransform)
         {
             CurrentStep = TutorialStep.TapFoodToConveyor;
             CurrentAllowedTarget = targetFoodTransform;

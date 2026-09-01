@@ -435,8 +435,8 @@ namespace RestaurantLoop.Core
                 ReleaseCapacity();
             }
 
-            // --- TUTORIAL STEP 2 TRIGGER: ITEM SUCCESSFULLY LANDED ON CONVEYOR IN LEVEL 1 ---
-            if (LevelManager.Instance != null && LevelManager.Instance.CurrentLevelNumber == 1 &&
+            // --- TUTORIAL STEP 2 TRIGGER: ITEM SUCCESSFULLY LANDED ON CONVEYOR ---
+            if (LevelManager.Instance != null && LevelManager.Instance.IsTutorialLevel &&
                 TutorialManager.Instance != null &&
                 TutorialManager.Instance.CurrentStep == TutorialManager.TutorialStep.TapFoodToConveyor)
             {

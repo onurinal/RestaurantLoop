@@ -38,7 +38,7 @@ namespace RestaurantLoop.Core
 
         [Header("Active Edge Setup")]
         [Tooltip("Active customer slots around the conveyor belt.")]
-        [Range(3, 20)] public int activeEdgeSlotCount = 6;
+        [Range(1, 20)] public int activeEdgeSlotCount = 6;
 
         /// <summary>Rack capacity is a global gameplay rule and is not level-authored.</summary>
         public int rackSlotCount => FixedRackSlotCount;
