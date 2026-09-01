@@ -150,6 +150,37 @@ namespace RestaurantLoop.Core
                 .SetUpdate(true);
         }
 
+        /// <summary>Plays one food-size pulse without leaving a persistent selection highlight.</summary>
+        public void PlaySelectionRejectionFeedback()
+        {
+            if (visuals != null)
+            {
+                visuals.PulseSelectionHighlightOnce();
+                return;
+            }
+
+            handSelectionTween?.Kill();
+            handSelectionTween = null;
+
+            if (!hasSelectionBaseScale)
+            {
+                selectionBaseLocalScale = transform.localScale;
+                hasSelectionBaseScale = true;
+            }
+
+            transform.localScale = selectionBaseLocalScale;
+            handSelectionTween = transform.DOScale(selectionBaseLocalScale * 1.08f, 0.15f)
+                .SetLoops(2, LoopType.Yoyo)
+                .SetEase(Ease.InOutSine)
+                .SetUpdate(true)
+                .OnComplete(() =>
+            {
+                handSelectionTween = null;
+                transform.localScale = selectionBaseLocalScale;
+                hasSelectionBaseScale = false;
+            });
+        }
+
         public void SetCountTextOpacity(float opacity)
         {
             visuals?.SetCountTextOpacity(opacity);

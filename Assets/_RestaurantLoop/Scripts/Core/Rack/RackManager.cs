@@ -244,8 +244,9 @@ namespace RestaurantLoop.Core
             {
                 RackSlot slot = rackSlots[i];
                 StackItem stack = slot != null ? slot.CurrentStack : null;
-                if (stack != null) stack.SetHandSelectionHighlight(false);
-                slot?.SetInteractionOutlineGuidance(active && IsClearColorSelectableStack(stack),
+                bool selectable = active && IsClearColorSelectableStack(stack);
+                if (stack != null) stack.SetHandSelectionHighlight(selectable);
+                slot?.SetInteractionOutlineGuidance(selectable,
                     InteractionOutlineColor, InteractionOutlineAnimationSettings);
             }
         }
@@ -259,6 +260,7 @@ namespace RestaurantLoop.Core
                 if (stack != null && !stack.IsJumping)
                 {
                     slot.PulseInteractionOutline(outlineColor, animationSettings);
+                    stack.PlaySelectionRejectionFeedback();
                 }
             }
         }

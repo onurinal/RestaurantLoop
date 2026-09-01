@@ -233,6 +233,7 @@ namespace RestaurantLoop.Core
                 if (stack != null && !stack.IsJumping)
                 {
                     frontSlot.PulseInteractionOutline(InteractionOutlineColor, InteractionOutlineAnimationSettings);
+                    stack.PlaySelectionRejectionFeedback();
                 }
             }
 
@@ -403,7 +404,7 @@ namespace RestaurantLoop.Core
                     if (stack == null) continue;
 
                     bool eligible = active && column.IsDeeperSlot(slot) && !stack.IsJumping;
-                    stack.SetHandSelectionHighlight(false);
+                    stack.SetHandSelectionHighlight(eligible);
                     slot.SetInteractionOutlineGuidance(eligible, InteractionOutlineColor, InteractionOutlineAnimationSettings);
                 }
             }
@@ -464,8 +465,9 @@ namespace RestaurantLoop.Core
                 {
                     QueueSlot slot = childSlots[i];
                     StackItem stack = slot != null ? slot.CurrentStack : null;
-                    if (stack != null) stack.SetHandSelectionHighlight(false);
-                    slot?.SetInteractionOutlineGuidance(active && IsClearColorSelectableStack(stack),
+                    bool selectable = active && IsClearColorSelectableStack(stack);
+                    if (stack != null) stack.SetHandSelectionHighlight(selectable);
+                    slot?.SetInteractionOutlineGuidance(selectable,
                         InteractionOutlineColor, InteractionOutlineAnimationSettings);
                 }
             }

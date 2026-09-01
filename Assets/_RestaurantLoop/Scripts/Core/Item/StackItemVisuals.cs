@@ -89,6 +89,34 @@ namespace RestaurantLoop.Core
                 .SetUpdate(true);
         }
 
+        /// <summary>Plays one size-up/size-down cycle for a rejected tap.</summary>
+        public void PulseSelectionHighlightOnce()
+        {
+            Transform target = GetSelectionHighlightTarget();
+            if (target == null) return;
+
+            selectionHighlightTween?.Kill();
+            selectionHighlightTween = null;
+
+            if (!hasSelectionBaseScale)
+            {
+                selectionBaseLocalScale = target.localScale;
+                hasSelectionBaseScale = true;
+            }
+
+            target.localScale = selectionBaseLocalScale;
+            selectionHighlightTween = target.DOScale(selectionBaseLocalScale * 1.08f, 0.15f)
+                .SetLoops(2, LoopType.Yoyo)
+                .SetEase(Ease.InOutSine)
+                .SetUpdate(true)
+                .OnComplete(() =>
+            {
+                selectionHighlightTween = null;
+                target.localScale = selectionBaseLocalScale;
+                hasSelectionBaseScale = false;
+            });
+        }
+
         /// <summary>
         /// Applies a multiplier to the authored count-label alpha. The original
         /// color is retained so returning to full opacity is lossless.
@@ -348,6 +376,8 @@ namespace RestaurantLoop.Core
         {
             selectionHighlightTween?.Kill();
             selectionHighlightTween = null;
+            Transform target = GetSelectionHighlightTarget();
+            if (target != null && hasSelectionBaseScale) target.localScale = selectionBaseLocalScale;
             hasSelectionBaseScale = false;
             ClearStackedVisuals();
         }
