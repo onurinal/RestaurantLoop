@@ -54,7 +54,7 @@ namespace RestaurantLoop.Core
             for (int rendererIndex = 0; rendererIndex < targetRenderers.Length; rendererIndex++)
             {
                 Renderer targetRenderer = targetRenderers[rendererIndex];
-                if (targetRenderer == null) continue;
+                if (targetRenderer == null || IsInteractionOutlineRenderer(targetRenderer)) continue;
 
                 Material[] newMaterials = GetMaterialBuffer(rendererIndex);
                 for (int i = 0; i < newMaterials.Length; i++)
@@ -75,7 +75,7 @@ namespace RestaurantLoop.Core
             for (int i = 0; i < targetRenderers.Length; i++)
             {
                 Renderer targetRenderer = targetRenderers[i];
-                if (targetRenderer == null) continue;
+                if (targetRenderer == null || IsInteractionOutlineRenderer(targetRenderer)) continue;
 
                 if (neutralMaterial != null)
                 {
@@ -138,6 +138,18 @@ namespace RestaurantLoop.Core
                     ? targetRenderers[i].sharedMaterials
                     : System.Array.Empty<Material>();
             }
+        }
+
+        private bool IsInteractionOutlineRenderer(Renderer renderer)
+        {
+            Transform current = renderer.transform;
+            while (current != null && current != transform)
+            {
+                if (current.name == BaseSlot.InteractionOutlineChildName) return true;
+                current = current.parent;
+            }
+
+            return false;
         }
     }
 }

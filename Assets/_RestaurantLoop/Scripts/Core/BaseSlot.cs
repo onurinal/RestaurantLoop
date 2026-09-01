@@ -4,8 +4,12 @@ namespace RestaurantLoop.Core
 {
     public abstract class BaseSlot : MonoBehaviour
     {
+        public const string InteractionOutlineChildName = "InteractionOutline";
+
         [Header("Cell Visual")]
         [SerializeField] private FoodCell cellVisual;
+
+        private SlotOutlineFeedback interactionOutline;
 
         public bool IsOccupied { get; protected set; }
         public StackItem CurrentStack { get; protected set; }
@@ -13,6 +17,9 @@ namespace RestaurantLoop.Core
 
         protected virtual void Awake()
         {
+            interactionOutline = SlotOutlineFeedback.Create(transform);
+            interactionOutline?.HideImmediate();
+
             if (cellVisual == null)
             {
                 cellVisual = GetComponentInChildren<FoodCell>(true);
@@ -20,6 +27,20 @@ namespace RestaurantLoop.Core
 
             cellVisual?.Clear();
         }
+
+        protected virtual void OnDisable()
+        {
+            interactionOutline?.Dispose();
+        }
+
+        public void PulseInteractionOutline(Color color, SlotOutlineAnimationSettings settings) =>
+            interactionOutline?.PulseTwice(color, settings);
+
+        public void SetInteractionOutlineGuidance(bool active, Color color, SlotOutlineAnimationSettings settings) =>
+            interactionOutline?.SetGuidanceActive(active, color, settings);
+
+        public bool IsInteractionOutlineRenderer(Renderer renderer) =>
+            interactionOutline != null && interactionOutline.ContainsRenderer(renderer);
 
         public virtual void PlaceStack(StackItem stack)
         {

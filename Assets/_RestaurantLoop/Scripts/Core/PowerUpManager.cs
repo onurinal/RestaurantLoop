@@ -42,6 +42,23 @@ namespace RestaurantLoop.Core
         [SerializeField, Range(0f, 0.45f)] private float selectionCameraBottomViewportPadding = 0.1f;
         [SerializeField, Min(0f)] private float selectionCameraMoveDuration = 0.45f;
 
+        [Header("Slot Outline Feedback")]
+        [Tooltip("Shared color for blocked-tap pulses and Hand/Clear Color slot guidance.")]
+        [SerializeField] private Color interactionOutlineColor = new Color(141f / 255f, 242f / 255f, 122f / 255f, 1f);
+
+        [Tooltip("Lowest opacity reached by the looping Hand/Clear Color guidance pulse.")]
+        [SerializeField, Range(0f, 1f)] private float interactionOutlineGuidanceMinimumAlpha = 0.3f;
+        [Tooltip("Seconds for each bright-to-dim or dim-to-bright guidance transition.")]
+        [SerializeField, Min(0.01f)] private float interactionOutlineGuidanceHalfCycleDuration = 0.7f;
+        [Tooltip("Seconds for a blocked-tap outline flash to brighten.")]
+        [SerializeField, Min(0.01f)] private float interactionOutlineRejectionFadeInDuration = 0.5f;
+        [Tooltip("Seconds for a blocked-tap outline flash to fade out.")]
+        [SerializeField, Min(0.01f)] private float interactionOutlineRejectionFadeOutDuration = 1.25f;
+        [Tooltip("Seconds between repeated blocked-tap flashes.")]
+        [SerializeField, Min(0f)] private float interactionOutlineRejectionGapDuration = 0.25f;
+        [Tooltip("Number of flashes shown after tapping a locked deeper queue stack.")]
+        [SerializeField, Min(1)] private int interactionOutlineRejectionFlashCount = 1;
+
         private Transform selectionCameraTransform;
         private Vector3 selectionCameraBaseWorldPosition;
         private Tween selectionCameraTween;
@@ -52,6 +69,15 @@ namespace RestaurantLoop.Core
         public bool IsHandSelectionActive { get; private set; }
         public bool IsClearColorSelectionActive { get; private set; }
         public bool IsClearColorResolving { get; private set; }
+        public Color InteractionOutlineColor => interactionOutlineColor;
+        public SlotOutlineAnimationSettings InteractionOutlineAnimationSettings =>
+            new SlotOutlineAnimationSettings(
+                interactionOutlineGuidanceMinimumAlpha,
+                interactionOutlineGuidanceHalfCycleDuration,
+                interactionOutlineRejectionFadeInDuration,
+                interactionOutlineRejectionFadeOutDuration,
+                interactionOutlineRejectionGapDuration,
+                interactionOutlineRejectionFlashCount);
 
         public event Action StateChanged;
         public event Action<bool> HandSelectionChanged;

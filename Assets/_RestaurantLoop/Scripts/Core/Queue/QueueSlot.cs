@@ -46,7 +46,7 @@ namespace RestaurantLoop.Core
                 for (int i = 0; i < renderers.Length; i++)
                 {
                     Renderer r = renderers[i];
-                    if (r == null || r.GetComponent<TMP_Text>() != null) continue;
+                    if (r == null || r.GetComponent<TMP_Text>() != null || IsInteractionOutlineRenderer(r)) continue;
 
                     r.SetPropertyBlock(null);
 
@@ -98,7 +98,7 @@ namespace RestaurantLoop.Core
             for (int rendererIndex = 0; rendererIndex < renderers.Length; rendererIndex++)
             {
                 Renderer renderer = renderers[rendererIndex];
-                if (renderer == null || renderer.GetComponent<TMP_Text>() != null) continue;
+                if (renderer == null || renderer.GetComponent<TMP_Text>() != null || IsInteractionOutlineRenderer(renderer)) continue;
 
                 // Clear temporary overrides first so we read pure un-dimmed material colors
                 renderer.SetPropertyBlock(null);
@@ -152,6 +152,7 @@ namespace RestaurantLoop.Core
 
             // Deeper queue rows stay locked unless Hand selection is active
             stack?.Shake();
+            QueueManager.Instance?.PulseAvailableMoveTargets();
         }
     }
 }

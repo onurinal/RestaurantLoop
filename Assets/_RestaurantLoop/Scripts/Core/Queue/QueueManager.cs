@@ -25,6 +25,13 @@ namespace RestaurantLoop.Core
         private bool spawnLockVisualInitialized;
         private bool isSpawnVisualLocked;
 
+        private Color InteractionOutlineColor => PowerUpManager.Instance != null
+            ? PowerUpManager.Instance.InteractionOutlineColor
+            : Color.white;
+        private SlotOutlineAnimationSettings InteractionOutlineAnimationSettings => PowerUpManager.Instance != null
+            ? PowerUpManager.Instance.InteractionOutlineAnimationSettings
+            : SlotOutlineAnimationSettings.Default;
+
         public event Action QueueChanged;
 
         public int RemainingStackCount
@@ -214,6 +221,25 @@ namespace RestaurantLoop.Core
         }
 
         /// <summary>
+        /// Briefly points the player to every normal-play source after they tap a locked deeper
+        /// queue stack: occupied front-row queue slots and occupied rack slots.
+        /// </summary>
+        public void PulseAvailableMoveTargets()
+        {
+            foreach (QueueColumn column in columns)
+            {
+                QueueSlot frontSlot = column != null ? column.FrontSlot : null;
+                StackItem stack = frontSlot != null ? frontSlot.CurrentStack : null;
+                if (stack != null && !stack.IsJumping)
+                {
+                    frontSlot.PulseInteractionOutline(InteractionOutlineColor, InteractionOutlineAnimationSettings);
+                }
+            }
+
+            RackManager.Instance?.PulseOccupiedSlots(InteractionOutlineColor, InteractionOutlineAnimationSettings);
+        }
+
+        /// <summary>
         /// Gets the world-space bounds of every occupied queue stack. This is intentionally
         /// calculated on demand because selection framing is entered only when a power-up is
         /// activated, not every frame.
@@ -377,7 +403,8 @@ namespace RestaurantLoop.Core
                     if (stack == null) continue;
 
                     bool eligible = active && column.IsDeeperSlot(slot) && !stack.IsJumping;
-                    stack.SetHandSelectionHighlight(eligible);
+                    stack.SetHandSelectionHighlight(false);
+                    slot.SetInteractionOutlineGuidance(eligible, InteractionOutlineColor, InteractionOutlineAnimationSettings);
                 }
             }
 
@@ -394,6 +421,13 @@ namespace RestaurantLoop.Core
                 for (int i = 0; i < stacks.Length; i++)
                 {
                     stacks[i].SetHandSelectionHighlight(false);
+                }
+
+                IReadOnlyList<QueueSlot> slots = column.Slots;
+                for (int i = 0; i < slots.Count; i++)
+                {
+                    slots[i]?.SetInteractionOutlineGuidance(false, InteractionOutlineColor,
+                        InteractionOutlineAnimationSettings);
                 }
             }
         }
@@ -428,8 +462,11 @@ namespace RestaurantLoop.Core
                 QueueSlot[] childSlots = column.GetComponentsInChildren<QueueSlot>(true);
                 for (int i = 0; i < childSlots.Length; i++)
                 {
-                    StackItem stack = childSlots[i] != null ? childSlots[i].CurrentStack : null;
-                    if (stack != null) stack.SetHandSelectionHighlight(active && IsClearColorSelectableStack(stack));
+                    QueueSlot slot = childSlots[i];
+                    StackItem stack = slot != null ? slot.CurrentStack : null;
+                    if (stack != null) stack.SetHandSelectionHighlight(false);
+                    slot?.SetInteractionOutlineGuidance(active && IsClearColorSelectableStack(stack),
+                        InteractionOutlineColor, InteractionOutlineAnimationSettings);
                 }
             }
 

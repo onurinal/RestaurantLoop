@@ -23,6 +23,13 @@ namespace RestaurantLoop.Core
 
         private readonly List<RackSlot> rackSlots = new List<RackSlot>();
 
+        private Color InteractionOutlineColor => PowerUpManager.Instance != null
+            ? PowerUpManager.Instance.InteractionOutlineColor
+            : Color.white;
+        private SlotOutlineAnimationSettings InteractionOutlineAnimationSettings => PowerUpManager.Instance != null
+            ? PowerUpManager.Instance.InteractionOutlineAnimationSettings
+            : SlotOutlineAnimationSettings.Default;
+
         public Vector3 CenterPosition => GetCalculatedCenterPosition();
         public bool HasAvailableSlot => GetFirstEmptySlot() != null;
 
@@ -235,8 +242,24 @@ namespace RestaurantLoop.Core
         {
             for (int i = 0; i < rackSlots.Count; i++)
             {
-                StackItem stack = rackSlots[i] != null ? rackSlots[i].CurrentStack : null;
-                if (stack != null) stack.SetHandSelectionHighlight(active && IsClearColorSelectableStack(stack));
+                RackSlot slot = rackSlots[i];
+                StackItem stack = slot != null ? slot.CurrentStack : null;
+                if (stack != null) stack.SetHandSelectionHighlight(false);
+                slot?.SetInteractionOutlineGuidance(active && IsClearColorSelectableStack(stack),
+                    InteractionOutlineColor, InteractionOutlineAnimationSettings);
+            }
+        }
+
+        public void PulseOccupiedSlots(Color outlineColor, SlotOutlineAnimationSettings animationSettings)
+        {
+            for (int i = 0; i < rackSlots.Count; i++)
+            {
+                RackSlot slot = rackSlots[i];
+                StackItem stack = slot != null ? slot.CurrentStack : null;
+                if (stack != null && !stack.IsJumping)
+                {
+                    slot.PulseInteractionOutline(outlineColor, animationSettings);
+                }
             }
         }
 
