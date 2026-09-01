@@ -342,9 +342,10 @@ namespace RestaurantLoop.Core
 
         private void HandleConveyorJumpCompleted()
         {
-            if (AudioManager.Instance != null && AudioManager.Instance.boardClickSound != null)
+            // BİZİM EKLEDİĞİMİZ KISIM: Özel yemek sesi kontrolü
+            if (AudioManager.Instance != null && itemData != null)
             {
-                AudioManager.Instance.PlaySFX(AudioManager.Instance.boardClickSound);
+                AudioManager.Instance.PlayFoodSpawnSound(itemData.name); 
             }
 
             Action completion = pendingConveyorJumpCompletion;

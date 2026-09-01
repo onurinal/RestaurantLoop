@@ -79,6 +79,14 @@ namespace RestaurantLoop.Audio
         public AudioClip powerUp4Sound;
         [Range(0f, 1f)] public float powerUp4SoundVolume = 1f;
 
+        [Header("Food Specific Spawn Sounds")]
+        public AudioClip beefSound;
+        public AudioClip burgerSound;
+        public AudioClip cakeSound;
+        public AudioClip drinkSound;
+        public AudioClip friesSound;
+        public AudioClip sushiSound;
+
         [Header("Audio Limiter Settings")]
         [Tooltip("Maximum number of times the SAME audio clip can play simultaneously.")]
         public int maxSimultaneousSounds = 4;
@@ -152,13 +160,13 @@ namespace RestaurantLoop.Audio
 
                 if (activeCriticalCount > 0)
                 {
-                    timedWarningSource.volume = baseVolume; // Kırmızı: Tam ses
-                    timedWarningSource.pitch = 1.25f; // Kırmızı: Panik hissi için daha hızlı ritim
+                    timedWarningSource.volume = baseVolume; 
+                    timedWarningSource.pitch = 1.25f; 
                 }
                 else
                 {
-                    timedWarningSource.volume = baseVolume * 0.85f; // Sarı: Duyulabilir ama kafa şişirmeyen net seviye
-                    timedWarningSource.pitch = 1.0f; // Sarı: Normal ritim
+                    timedWarningSource.volume = baseVolume * 0.85f; 
+                    timedWarningSource.pitch = 1.0f; 
                 }
             }
         }
@@ -300,6 +308,30 @@ namespace RestaurantLoop.Audio
             if (timedWarningSource != null && timedWarningSource.isPlaying)
             {
                 timedWarningSource.volume = cachedSfxVolume * timedCustomerWarningSoundVolume;
+            }
+        }
+
+        public void PlayFoodSpawnSound(string foodName)
+        {
+            if (string.IsNullOrEmpty(foodName)) return;
+            
+            AudioClip clipToPlay = null;
+            string lowerName = foodName.ToLower();
+
+            if (lowerName.Contains("beef")) clipToPlay = beefSound;
+            else if (lowerName.Contains("burger")) clipToPlay = burgerSound;
+            else if (lowerName.Contains("cake")) clipToPlay = cakeSound;
+            else if (lowerName.Contains("drink")) clipToPlay = drinkSound;
+            else if (lowerName.Contains("fries")) clipToPlay = friesSound;
+            else if (lowerName.Contains("sushi")) clipToPlay = sushiSound;
+
+            if (clipToPlay != null) 
+            {
+                PlaySFX(clipToPlay);
+            }
+            else if (boardClickSound != null) 
+            {
+                PlaySFX(boardClickSound);
             }
         }
     }
