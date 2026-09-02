@@ -1359,6 +1359,10 @@ MonoBehaviour:
   powerUp2Button: {fileID: 7074614442700401465}
   powerUp3Button: {fileID: 126379300783380918}
   powerUp4Button: {fileID: 5022735418890280893}
+  flyingPlatePrefab: {fileID: 2009973755196430559, guid: 9408de4da7d216747b74a52740a9396c, type: 3}
+  conveyorCounterPanel: {fileID: 0}
+  vfxContainer: {fileID: 3454695813999627192}
+  flyDuration: 0.5
 --- !u!114 &6565215986747430128
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1375,6 +1379,13 @@ MonoBehaviour:
   selectionCameraLocalYOffset: -8
   selectionCameraBottomViewportPadding: 0.1
   selectionCameraMoveDuration: 0.45
+  interactionOutlineColor: {r: 0.5529412, g: 0.9490196, b: 0.47843137, a: 1}
+  interactionOutlineGuidanceMinimumAlpha: 0.3
+  interactionOutlineGuidanceHalfCycleDuration: 0.7
+  interactionOutlineRejectionFadeInDuration: 0.5
+  interactionOutlineRejectionFadeOutDuration: 1.25
+  interactionOutlineRejectionGapDuration: 0.25
+  interactionOutlineRejectionFlashCount: 1
 --- !u!114 &1468792172751793714
 MonoBehaviour:
   m_ObjectHideFlags: 0

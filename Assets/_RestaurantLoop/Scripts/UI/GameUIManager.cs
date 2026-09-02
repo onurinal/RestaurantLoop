@@ -56,6 +56,13 @@ namespace RestaurantLoop.UI
         [SerializeField] private Button powerUp3Button;
         [SerializeField] private Button powerUp4Button;
 
+        [Header("Power-Up VFX (Juice)")]
+        [SerializeField] private GameObject flyingPlatePrefab; 
+        [SerializeField] private Transform conveyorCounterPanel; 
+        [SerializeField] private float flyDuration = 0.5f;
+        [SerializeField] private float spawnDepthFromCamera = 5f;
+        [SerializeField] private float arcHeight = 2f; // Height of the arc during flight
+
         private bool isMusicOn = true;
         private bool isSfxOn = true;
         private bool isPanelTransitioning;
@@ -115,10 +122,57 @@ namespace RestaurantLoop.UI
             loseMainMenuButton.onClick.AddListener(OnMainMenuClicked);
             loseMainMenuButton.onClick.AddListener(PlayTapSound);
 
-            if (powerUp1Button != null) powerUp1Button.onClick.AddListener(PlayPowerUp1Sound);
+            if (powerUp1Button != null) powerUp1Button.onClick.AddListener(TriggerPowerUp1Effect);
+            
             if (powerUp2Button != null) powerUp2Button.onClick.AddListener(PlayPowerUp2Sound);
             if (powerUp3Button != null) powerUp3Button.onClick.AddListener(PlayPowerUp3Sound);
             if (powerUp4Button != null) powerUp4Button.onClick.AddListener(PlayPowerUp4Sound);
+        }
+
+        private void TriggerPowerUp1Effect()
+        {
+            PlayPowerUp1Sound();
+
+            if (flyingPlatePrefab == null || conveyorCounterPanel == null || powerUp1Button == null) return;
+
+            // Instantiate the 3D plate prefab in world space (not in the UI Canvas)
+            GameObject flying3DPlate = Instantiate(flyingPlatePrefab);
+
+            // Convert the UI button's 2D screen coordinate to a 3D world coordinate
+            Vector3 buttonScreenPos = powerUp1Button.GetComponent<RectTransform>().position;
+            buttonScreenPos.z = spawnDepthFromCamera; 
+            
+            Vector3 startWorldPos = Camera.main.ScreenToWorldPoint(buttonScreenPos);
+
+            flying3DPlate.transform.position = startWorldPos;
+            flying3DPlate.transform.localScale = Vector3.zero;
+
+            // Initialize DOTween Sequence for World Space to World Space flight
+            Sequence seq = DOTween.Sequence();
+
+            // Spawn pop-up effect
+            seq.Append(flying3DPlate.transform.DOScale(Vector3.one, 0.2f).SetEase(Ease.OutBack));
+            
+            // Move towards the 3D counter in an arc (jump trajectory)
+            seq.Append(flying3DPlate.transform.DOJump(conveyorCounterPanel.position, arcHeight, 1, flyDuration).SetEase(Ease.InOutQuad));
+            
+            // Scale down slightly while flying
+            seq.Join(flying3DPlate.transform.DOScale(Vector3.one * 0.7f, flyDuration));
+
+            // Apply rotation juice during the flight
+            seq.Join(flying3DPlate.transform.DORotate(new Vector3(0, 360, 0), flyDuration, RotateMode.FastBeyond360).SetRelative());
+
+            // Target reached callback
+            seq.OnComplete(() =>
+            {
+                Destroy(flying3DPlate);
+
+                // Punch scale the 3D counter text for impact juice
+                conveyorCounterPanel.DOPunchScale(Vector3.one * 0.2f, 0.3f, 5, 1f);
+
+                // TODO: Add logic to increase plates in the main game system
+                // Example: ConveyorManager.Instance.AddExtraPlates(5);
+            });
         }
 
         private void PlayTapSound()
@@ -168,14 +222,10 @@ namespace RestaurantLoop.UI
             Time.timeScale = 0f; 
             
             if (AudioManager.Instance != null) 
-            {
                 AudioManager.Instance.PauseGameSounds();
-            }
 
             if (CrowdAudioGenerator.Instance != null)
-            {
                 CrowdAudioGenerator.Instance.PauseCrowdAudio();
-            }
 
             ShowPanel(settingsPanel, settingsPanelBaseScale);
         }
@@ -186,14 +236,10 @@ namespace RestaurantLoop.UI
             Time.timeScale = 1f; 
             
             if (AudioManager.Instance != null) 
-            {
                 AudioManager.Instance.ResumeGameSounds();
-            }
 
             if (CrowdAudioGenerator.Instance != null)
-            {
                 CrowdAudioGenerator.Instance.ResumeCrowdAudio();
-            }
 
             HidePanel(settingsPanel, settingsPanelBaseScale);
         }
@@ -254,7 +300,6 @@ namespace RestaurantLoop.UI
             {
                 nextLevelButton.gameObject.SetActive(!LevelManager.Instance.IsLastLevel);
             }
-
             ShowPanel(winPanel, winPanelBaseScale);
         }
 
@@ -263,7 +308,6 @@ namespace RestaurantLoop.UI
         private void OnNextLevelClicked()
         {
             if (isPanelTransitioning) return;
-
             HidePanel(winPanel, winPanelBaseScale, () =>
             {
                 if (LevelManager.Instance != null) LevelManager.Instance.CompleteLevel();
@@ -273,13 +317,9 @@ namespace RestaurantLoop.UI
         private void OnRetryClicked()
         {
             if (isPanelTransitioning) return;
-
             HidePanel(losePanel, losePanelBaseScale, () =>
             {
-                if (LevelManager.Instance != null)
-                {
-                    LevelManager.Instance.LoadCurrentLevel();
-                }
+                if (LevelManager.Instance != null) LevelManager.Instance.LoadCurrentLevel();
             });
         }
 
@@ -287,18 +327,9 @@ namespace RestaurantLoop.UI
         {
             if (isPanelTransitioning) return;
 
-            if (winPanel.activeSelf)
-            {
-                HidePanel(winPanel, winPanelBaseScale, LoadMainMenu);
-            }
-            else if (losePanel.activeSelf)
-            {
-                HidePanel(losePanel, losePanelBaseScale, LoadMainMenu);
-            }
-            else
-            {
-                LoadMainMenu();
-            }
+            if (winPanel.activeSelf) HidePanel(winPanel, winPanelBaseScale, LoadMainMenu);
+            else if (losePanel.activeSelf) HidePanel(losePanel, losePanelBaseScale, LoadMainMenu);
+            else LoadMainMenu();
         }
 
         private void ShowPanel(GameObject panel, Vector3 baseScale)
@@ -312,10 +343,7 @@ namespace RestaurantLoop.UI
             panelTransform.localScale = Vector3.Scale(baseScale, Vector3.one * panelPopInStartScale);
             
             // DOTween's SetUpdate(true) allows the animation to play independently of Time.timeScale.
-            panelTransform
-                .DOScale(baseScale, panelPopInDuration)
-                .SetEase(panelPopInEase)
-                .SetUpdate(true);
+            panelTransform.DOScale(baseScale, panelPopInDuration).SetEase(panelPopInEase).SetUpdate(true);
         }
 
         private void HidePanel(GameObject panel, Vector3 baseScale, System.Action onComplete = null)
@@ -353,15 +381,8 @@ namespace RestaurantLoop.UI
             Time.timeScale = 1f; 
             
             // Resume audio sources to ensure correct state initialization in the main menu.
-            if (AudioManager.Instance != null) 
-            {
-                AudioManager.Instance.ResumeGameSounds();
-            }
-
-            if (CrowdAudioGenerator.Instance != null)
-            {
-                CrowdAudioGenerator.Instance.ResumeCrowdAudio();
-            }
+            if (AudioManager.Instance != null) AudioManager.Instance.ResumeGameSounds();
+            if (CrowdAudioGenerator.Instance != null) CrowdAudioGenerator.Instance.ResumeCrowdAudio();
 
             SceneManager.LoadScene("MainMenu");
         }
