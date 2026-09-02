@@ -41,6 +41,7 @@ namespace RestaurantLoop.Core
         private Vector3 authoredLocalScale;
         private OrderBalloon orderBalloon;
         private TimedCustomerAgent timedCustomerAgent;
+        private Quaternion balloonAuthoredLocalRotation = Quaternion.identity;
         private Transform ModelTransform => visualContainer != null ? visualContainer : (animator != null ? animator.transform : transform);
 
         private void Awake()
@@ -49,6 +50,7 @@ namespace RestaurantLoop.Core
             if (animator == null) animator = GetComponentInChildren<Animator>();
             if (customerRenderer == null) customerRenderer = GetComponentInChildren<SkinnedMeshRenderer>();
             if (balloonObject != null) orderBalloon = balloonObject.GetComponent<OrderBalloon>();
+            if (balloonObject != null) balloonAuthoredLocalRotation = balloonObject.transform.localRotation;
             timedCustomerAgent = GetComponent<TimedCustomerAgent>();
 
             if (customerRenderer != null) baseSharedMaterial = customerRenderer.sharedMaterial;
@@ -333,6 +335,20 @@ namespace RestaurantLoop.Core
             ModelTransform.DOShakeRotation(0.45f, new Vector3(0f, 0f, 14f), 18, 70f)
                 .SetUpdate(true)
                 .SetTarget(this);
+        }
+
+        public void PlayCountdownUrgency(float tiltAngle, float duration)
+        {
+            Transform target = balloonObject != null ? balloonObject.transform : ModelTransform;
+            if (target == null || target == transform) return;
+
+            target.DOKill();
+            target.localRotation = target == balloonObject?.transform
+                ? balloonAuthoredLocalRotation
+                : target.localRotation;
+            target.DOPunchRotation(new Vector3(0f, 0f, tiltAngle), Mathf.Max(0.01f, duration), 5, 0.55f)
+                .SetUpdate(true)
+                .SetTarget(target);
         }
 
         private IEnumerator EatAndLeaveRoutine(Action<Customer> onComplete)

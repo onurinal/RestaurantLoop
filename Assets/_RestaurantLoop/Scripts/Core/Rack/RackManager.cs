@@ -21,7 +21,13 @@ namespace RestaurantLoop.Core
         [SerializeField] private float slotSpacing = 1.1f;
         [SerializeField] private float shiftAnimationDuration = 0.25f;
 
+        [Header("Full Rack Warning")]
+        [SerializeField] private Color fullRackWarningColor = new Color(1f, 0.05f, 0.05f, 1f);
+        [SerializeField, Range(0f, 1f)] private float fullRackWarningMinimumAlpha = 0.22f;
+        [SerializeField, Min(0.01f)] private float fullRackWarningHalfCycleDuration = 0.32f;
+
         private readonly List<RackSlot> rackSlots = new List<RackSlot>();
+        private bool fullRackWarningActive;
 
         private Color InteractionOutlineColor => PowerUpManager.Instance != null
             ? PowerUpManager.Instance.InteractionOutlineColor
@@ -32,6 +38,7 @@ namespace RestaurantLoop.Core
 
         public Vector3 CenterPosition => GetCalculatedCenterPosition();
         public bool HasAvailableSlot => GetFirstEmptySlot() != null;
+        public bool IsCompletelyFull => rackSlots.Count > 0 && OccupiedSlotCount == rackSlots.Count;
 
         public int OccupiedSlotCount
         {
@@ -73,6 +80,14 @@ namespace RestaurantLoop.Core
         private void Start()
         {
             BuildRackLayout(initialSlotCount);
+            SubscribeToStateEvents();
+        }
+
+        private void OnDestroy()
+        {
+            UnsubscribeFromStateEvents();
+            StopFullRackWarning(clearVisuals: true);
+            if (Instance == this) Instance = null;
         }
 
         public Vector3 GetCalculatedCenterPosition()
@@ -108,9 +123,12 @@ namespace RestaurantLoop.Core
                 RackSlot newSlot = slotObj.GetComponent<RackSlot>();
                 newSlot.gameObject.name = $"RackSlot_{i + 1}";
                 newSlot.ClearSlot();
+                newSlot.OccupancyChanged += HandleSlotOccupancyChanged;
 
                 rackSlots.Add(newSlot);
             }
+
+            RefreshFullRackWarning();
         }
 
         public bool TryAddStackToRack(StackItem stack)
@@ -130,6 +148,7 @@ namespace RestaurantLoop.Core
             stack.JumpToSlot(emptySlot.transform);
 
             StackAssignedToRack?.Invoke(stack, emptySlot);
+            RefreshFullRackWarning();
 
             // --- TUTORIAL STEP 3 TRIGGER: ITEM ARRIVED IN RACK ---
             if (LevelManager.Instance != null && LevelManager.Instance.IsTutorialLevel
@@ -163,6 +182,7 @@ namespace RestaurantLoop.Core
                 targetSlot.ClearSlot();
                 RackStackRedeploymentStarted?.Invoke(stack, targetSlot);
                 ShiftItemsLeft();
+                RefreshFullRackWarning();
 
                 // --- TUTORIAL STEP 3 COMPLETE: PLAYER TAPPED RACK ITEM BACK TO BELT ---
                 if (TutorialManager.Instance != null
@@ -228,6 +248,8 @@ namespace RestaurantLoop.Core
                     rackSlots[i].ClearSlot();
                 }
             }
+
+            RefreshFullRackWarning();
         }
 
         public bool IsClearColorSelectableStack(StackItem stack)
@@ -240,6 +262,8 @@ namespace RestaurantLoop.Core
 
         public void SetClearColorSelectionVisuals(bool active)
         {
+            if (active) StopFullRackWarning(clearVisuals: false);
+
             for (int i = 0; i < rackSlots.Count; i++)
             {
                 RackSlot slot = rackSlots[i];
@@ -249,6 +273,8 @@ namespace RestaurantLoop.Core
                 slot?.SetInteractionOutlineGuidance(selectable,
                     InteractionOutlineColor, InteractionOutlineAnimationSettings);
             }
+
+            if (!active) RefreshFullRackWarning();
         }
 
         public void PulseOccupiedSlots(Color outlineColor, SlotOutlineAnimationSettings animationSettings)
@@ -282,6 +308,7 @@ namespace RestaurantLoop.Core
             }
 
             if (removedCount > 0) ShiftItemsLeft(ignoreTimeScale: true);
+            RefreshFullRackWarning();
             return removedCount;
         }
 
@@ -320,9 +347,12 @@ namespace RestaurantLoop.Core
 
         private void ClearExistingSlots()
         {
+            StopFullRackWarning(clearVisuals: true);
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
                 Transform child = transform.GetChild(i);
+                RackSlot slot = child.GetComponent<RackSlot>();
+                if (slot != null) slot.OccupancyChanged -= HandleSlotOccupancyChanged;
                 StackItem[] childStacks = child.GetComponentsInChildren<StackItem>(true);
                 for (int stackIndex = 0; stackIndex < childStacks.Length; stackIndex++)
                 {
@@ -333,6 +363,88 @@ namespace RestaurantLoop.Core
             }
 
             rackSlots.Clear();
+        }
+
+        public void RefreshFullRackWarning()
+        {
+            bool gameActive = LevelManager.Instance == null || LevelManager.Instance.IsGameActive;
+            bool powerUpHasPriority = PowerUpManager.Instance != null &&
+                                      PowerUpManager.Instance.HasRackOutlinePriority;
+            bool shouldWarn = gameActive && IsCompletelyFull && !powerUpHasPriority;
+
+            if (shouldWarn)
+            {
+                if (fullRackWarningActive) return;
+
+                fullRackWarningActive = true;
+                SlotOutlineAnimationSettings settings = new SlotOutlineAnimationSettings(
+                    fullRackWarningMinimumAlpha,
+                    fullRackWarningHalfCycleDuration,
+                    fullRackWarningHalfCycleDuration,
+                    fullRackWarningHalfCycleDuration,
+                    0f,
+                    1);
+
+                for (int i = 0; i < rackSlots.Count; i++)
+                {
+                    RackSlot slot = rackSlots[i];
+                    if (slot != null && slot.IsOccupied)
+                    {
+                        slot.SetFullRackWarning(true, fullRackWarningColor, settings);
+                    }
+                }
+                return;
+            }
+
+            StopFullRackWarning(clearVisuals: !powerUpHasPriority);
+        }
+
+        private void StopFullRackWarning(bool clearVisuals)
+        {
+            if (!fullRackWarningActive && !clearVisuals) return;
+
+            fullRackWarningActive = false;
+            if (!clearVisuals) return;
+
+            SlotOutlineAnimationSettings settings = SlotOutlineAnimationSettings.Default;
+            for (int i = 0; i < rackSlots.Count; i++)
+            {
+                rackSlots[i]?.SetFullRackWarning(false, fullRackWarningColor, settings);
+            }
+        }
+
+        private void HandleSlotOccupancyChanged(RackSlot _, bool __) => RefreshFullRackWarning();
+
+        private void HandlePowerUpStateChanged() => RefreshFullRackWarning();
+
+        private void HandleLevelEnded() => RefreshFullRackWarning();
+
+        private void SubscribeToStateEvents()
+        {
+            if (PowerUpManager.Instance != null)
+            {
+                PowerUpManager.Instance.StateChanged += HandlePowerUpStateChanged;
+            }
+
+            if (LevelManager.Instance != null)
+            {
+                LevelManager.Instance.OnLevelWon += HandleLevelEnded;
+                LevelManager.Instance.OnLevelLost += HandleLevelEnded;
+            }
+        }
+
+        private void UnsubscribeFromStateEvents()
+        {
+            if (PowerUpManager.Instance != null)
+            {
+                PowerUpManager.Instance.StateChanged -= HandlePowerUpStateChanged;
+            }
+
+            if (LevelManager.Instance != null)
+            {
+                LevelManager.Instance.OnLevelWon -= HandleLevelEnded;
+                LevelManager.Instance.OnLevelLost -= HandleLevelEnded;
+            }
         }
 
         private void OnDrawGizmosSelected()

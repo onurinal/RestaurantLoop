@@ -69,6 +69,7 @@ namespace RestaurantLoop.Core
         public bool IsHandSelectionActive { get; private set; }
         public bool IsClearColorSelectionActive { get; private set; }
         public bool IsClearColorResolving { get; private set; }
+        public bool HasRackOutlinePriority => IsClearColorSelectionActive || IsClearColorResolving;
         public Color InteractionOutlineColor => interactionOutlineColor;
         public SlotOutlineAnimationSettings InteractionOutlineAnimationSettings =>
             new SlotOutlineAnimationSettings(

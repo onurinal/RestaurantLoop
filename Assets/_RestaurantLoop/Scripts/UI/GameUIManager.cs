@@ -14,6 +14,7 @@ namespace RestaurantLoop.UI
         [SerializeField] private GameObject settingsPanel;
         [SerializeField] private GameObject winPanel;
         [SerializeField] private GameObject losePanel;
+        [SerializeField] private GameStateTransitionController stateTransitionController;
 
         [Header("Panel Pop Animation")]
         [SerializeField, Min(0f)] private float panelPopInDuration = 0.25f;
@@ -72,6 +73,11 @@ namespace RestaurantLoop.UI
 
         private void Awake()
         {
+            if (stateTransitionController == null)
+            {
+                stateTransitionController = GetComponent<GameStateTransitionController>();
+            }
+
             settingsPanelBaseScale = GetPanelScale(settingsPanel);
             winPanelBaseScale = GetPanelScale(winPanel);
             losePanelBaseScale = GetPanelScale(losePanel);
@@ -79,6 +85,7 @@ namespace RestaurantLoop.UI
 
         private void Start()
         {
+            stateTransitionController?.Initialize(GetComponentInChildren<Canvas>(true));
             settingsPanel.SetActive(false);
             winPanel.SetActive(false);
             losePanel.SetActive(false);
@@ -209,6 +216,7 @@ namespace RestaurantLoop.UI
 
         private void UpdateTopLevelText(int levelNumber)
         {
+            stateTransitionController?.ResetImmediate();
             if (topLevelText != null)
             {
                 // Format text to display "TUTORIAL" for level 0.
@@ -300,10 +308,33 @@ namespace RestaurantLoop.UI
             {
                 nextLevelButton.gameObject.SetActive(!LevelManager.Instance.IsLastLevel);
             }
-            ShowPanel(winPanel, winPanelBaseScale);
+            if (stateTransitionController != null)
+            {
+                stateTransitionController.PlayWinSequence(() => ShowPanel(winPanel, winPanelBaseScale));
+            }
+            else
+            {
+                ShowPanel(winPanel, winPanelBaseScale);
+            }
         }
 
-        private void ShowLosePanel() => ShowPanel(losePanel, losePanelBaseScale);
+        private void ShowLosePanel()
+        {
+            string failureText = LevelManager.Instance != null &&
+                                 LevelManager.Instance.LastFailureReason == LevelFailureReason.RackOverflow
+                ? "OUT OF SPACE!"
+                : "TIME'S UP!";
+
+            if (stateTransitionController != null)
+            {
+                stateTransitionController.PlayFailureBanner(failureText,
+                    () => ShowPanel(losePanel, losePanelBaseScale));
+            }
+            else
+            {
+                ShowPanel(losePanel, losePanelBaseScale);
+            }
+        }
 
         private void OnNextLevelClicked()
         {

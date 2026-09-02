@@ -15,6 +15,12 @@ namespace RestaurantLoop.Core
         Lost
     }
 
+    public enum LevelFailureReason
+    {
+        TimedCustomerExpired,
+        RackOverflow
+    }
+
     public class LevelManager : MonoBehaviour
     {
         public static LevelManager Instance { get; private set; }
@@ -33,6 +39,7 @@ namespace RestaurantLoop.Core
 
         public LevelState CurrentState { get; private set; } = LevelState.Playing;
         public bool IsGameActive => CurrentState == LevelState.Playing;
+        public LevelFailureReason LastFailureReason { get; private set; } = LevelFailureReason.TimedCustomerExpired;
 
         /// <summary>Sequence index doubles as the player-facing level number; index 0 is the tutorial.</summary>
         public int CurrentLevelNumber => currentLevelIndex;
@@ -160,19 +167,20 @@ namespace RestaurantLoop.Core
 
         public void ReportRackOverflow()
         {
-            FailLevel("Conveyor stack reached exit while Rack is full!");
+            FailLevel("Conveyor stack reached exit while Rack is full!", LevelFailureReason.RackOverflow);
         }
 
         public void OnLevelFailed()
         {
-            FailLevel("A timed customer ran out of patience!");
+            FailLevel("A timed customer ran out of patience!", LevelFailureReason.TimedCustomerExpired);
         }
 
-        private void FailLevel(string reason)
+        private void FailLevel(string reason, LevelFailureReason failureReason)
         {
             if (CurrentState != LevelState.Playing) return;
 
             CurrentState = LevelState.Lost;
+            LastFailureReason = failureReason;
 
             if (AudioManager.Instance != null && AudioManager.Instance.levelLoseSound != null)
             {
