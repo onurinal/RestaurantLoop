@@ -33,6 +33,7 @@ namespace RestaurantLoop.Core
         private StackItemAnimator animator;
         private StackItemMovement movement;
         private StackItemWobbler wobbler;
+
         private Tween handSelectionTween;
         private Vector3 selectionBaseLocalScale;
         private bool hasSelectionBaseScale;
@@ -72,6 +73,7 @@ namespace RestaurantLoop.Core
             animator = GetComponent<StackItemAnimator>();
             movement = GetComponent<StackItemMovement>();
             wobbler = GetComponent<StackItemWobbler>();
+
             conveyorJumpCompletedCallback = HandleConveyorJumpCompleted;
             conveyorMoveCompletedCallback = HandleConveyorMoveCompleted;
             slotJumpCompletedCallback = HandleSlotJumpCompleted;
@@ -97,6 +99,27 @@ namespace RestaurantLoop.Core
             visuals.CollapseToSingle();
             visuals.RefreshVisuals(currentMode, remainingCount);
             wobbler?.ResetState(remainingCount);
+
+            SetTrailActive(false); 
+        }
+
+        private void SetTrailActive(bool isActive)
+        {
+            // Find all TrailRenderers within the food meshes currently in this object
+            TrailRenderer[] allTrails = GetComponentsInChildren<TrailRenderer>(true);
+            
+            foreach (TrailRenderer trail in allTrails)
+            {
+                if (isActive)
+                {
+                    trail.enabled = true; // Completely enable the component
+                }
+                else
+                {
+                    trail.Clear(); // First, clear any lingering trails in the air
+                    trail.enabled = false; // Then completely disable the component
+                }
+            }
         }
 
         public void SetItemCount(int newCount)
@@ -150,7 +173,6 @@ namespace RestaurantLoop.Core
                 .SetUpdate(true);
         }
 
-        /// <summary>Plays one food-size pulse without leaving a persistent selection highlight.</summary>
         public void PlaySelectionRejectionFeedback()
         {
             if (visuals != null)
@@ -189,6 +211,7 @@ namespace RestaurantLoop.Core
         public void PlayClearColorThrow(Vector3 targetCustomerPosition)
         {
             if (visuals == null || animator == null) return;
+            // Removed SetTrailActive(true) here. Trail will not activate while flying to the customer.
             animator.AnimateItemThrowToCustomer(visuals.SingleMeshModel, targetCustomerPosition, ignoreTimeScale: true);
         }
 
@@ -225,6 +248,7 @@ namespace RestaurantLoop.Core
                 visuals.TransitionToStacked(remainingCount);
             }
 
+            SetTrailActive(false); 
             movement.InitializeOnBelt(path, startDistance, totalDistanceToExit);
             wobbler?.SetStackCount(remainingCount);
             wobbler?.SetWobbleActive(true);
@@ -259,6 +283,7 @@ namespace RestaurantLoop.Core
                 visuals.TransitionToStacked(remainingCount);
             }
 
+            SetTrailActive(true); 
             animator.JumpToConveyor(targetPosition, conveyorJumpCompletedCallback);
         }
 
@@ -266,6 +291,7 @@ namespace RestaurantLoop.Core
         {
             wobbler?.SetWobbleActive(false);
             pendingConveyorMoveCompletion = onComplete;
+            SetTrailActive(true); 
             animator.MoveToConveyor(targetPosition, duration, conveyorMoveCompletedCallback);
         }
 
@@ -275,6 +301,7 @@ namespace RestaurantLoop.Core
             currentMode = StackVisualMode.SingleWithUI;
             visuals.CollapseToSingle();
             pendingSlotJumpCompletion = onComplete;
+            SetTrailActive(true); 
             animator.JumpToSlot(slotTransform, slotJumpCompletedCallback);
         }
 
@@ -338,11 +365,13 @@ namespace RestaurantLoop.Core
             wobbler?.ResetImmediately();
             visuals?.ResetForPoolRelease();
             SetWaitingForRack(false);
+            SetTrailActive(false); 
         }
 
         private void HandleConveyorJumpCompleted()
         {
-            // BİZİM EKLEDİĞİMİZ KISIM: Özel yemek sesi kontrolü
+            SetTrailActive(false); 
+
             if (AudioManager.Instance != null && itemData != null)
             {
                 AudioManager.Instance.PlayFoodSpawnSound(itemData.name); 
@@ -355,6 +384,7 @@ namespace RestaurantLoop.Core
 
         private void HandleConveyorMoveCompleted()
         {
+            SetTrailActive(false); 
             Action completion = pendingConveyorMoveCompletion;
             pendingConveyorMoveCompletion = null;
             completion?.Invoke();
@@ -362,6 +392,8 @@ namespace RestaurantLoop.Core
 
         private void HandleSlotJumpCompleted()
         {
+            SetTrailActive(false); 
+            
             if (AudioManager.Instance != null && AudioManager.Instance.rackDropSound != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.rackDropSound);
@@ -400,6 +432,7 @@ namespace RestaurantLoop.Core
             if (AudioManager.Instance != null && AudioManager.Instance.throwSound != null)
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.throwSound);
 
+            // Removed SetTrailActive(true) here. Prevents accidentally activating trails for remaining stacked plates.
             animator.AnimateItemThrowToCustomer(visuals.SingleMeshModel, targetCustomer.transform.position);
 
             SetItemCount(remainingCount);
