@@ -11,14 +11,12 @@ namespace RestaurantLoop.Core
         [Tooltip("Presentation-only food prefab.")]
         [SerializeField] private GameObject foodDisplayPrefab;
         [SerializeField] private Vector3 foodLocalPosition = new Vector3(0f, 0f, -0.35f);
-
-        [Tooltip("3D görselin balondaki başlangıç açı offset'i (Örn: X açısına -15 vererek tabağı öne yatırabilirsin).")]
         [SerializeField] private Vector3 foodLocalRotation = Vector3.zero;
 
-        [Tooltip("Prefab'ın kendi varsayılan Transform scale değerini kullanmak için 0 bırakın.")]
+        [Tooltip("Leave at 0 to use the prefab's default Transform scale.")]
         [SerializeField, Min(0f)] private float overrideFoodScale = 0f;
 
-        [Tooltip("Yiyeceğin kendi Y ekseninde dönme hızı.")]
+        [Tooltip("Rotation speed of the food along its local Y-axis.")]
         [SerializeField, Min(0f)] private float rotationSpeed = 25f;
 
         [Header("Scale Animation")]
@@ -63,7 +61,6 @@ namespace RestaurantLoop.Core
         {
             if (foodDisplayTransform == null) return;
 
-            // Space.Self sayesinde verdiğin localRotation ne olursa olsun kendi dikey ekseninde döner
             if (rotationSpeed > 0f)
             {
                 foodDisplayTransform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime, Space.Self);
