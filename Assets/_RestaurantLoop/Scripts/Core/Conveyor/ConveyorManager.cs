@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using RestaurantLoop.Infrastructure;
-using RestaurantLoop.UI; 
+using RestaurantLoop.UI;
 
 namespace RestaurantLoop.Core
 {
@@ -211,6 +211,11 @@ namespace RestaurantLoop.Core
 
         public bool ShouldKeepLoopingOnBelt()
         {
+            if (LevelManager.Instance != null && LevelManager.Instance.IsTutorialLevel)
+            {
+                return false;
+            }
+
             return StackItem.TotalActiveStackCount <= MaxCapacity;
         }
 
