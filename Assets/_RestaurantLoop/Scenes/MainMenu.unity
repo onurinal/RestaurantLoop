@@ -326,6 +326,7 @@ GameObject:
   - component: {fileID: 532749120}
   - component: {fileID: 532749119}
   - component: {fileID: 532749122}
+  - component: {fileID: 532749123}
   m_Layer: 5
   m_Name: Level_1_Button
   m_TagString: Untagged
@@ -452,6 +453,23 @@ MonoBehaviour:
   releaseDuration: 0.2
   pressEase: 6
   releaseEase: 27
+--- !u!114 &532749123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 532749117}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fb04baa6a25a8a47b62427ab1795152, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.UI.ButtonShineFeedback
+  repeatDelay: 4.4
+  sweepDuration: 1.4
+  peakAlpha: 0.28
+  shineWidth: 90
+  shineAngle: -20
 --- !u!1 &856471265
 GameObject:
   m_ObjectHideFlags: 0
