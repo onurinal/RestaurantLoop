@@ -41,11 +41,9 @@ namespace RestaurantLoop.Core
 
         [Header("Gizmo Settings")]
         [SerializeField] private bool showCrowdGizmos = true;
-        [SerializeField] private bool showToleranceGizmos = true;
         [Tooltip("Preview customer count for Scene View")]
         [SerializeField] private int previewCrowdCount = 25;
         [SerializeField] private Color crowdAreaGizmoColor = new Color(1f, 0f, 1f, 0.8f);
-        [SerializeField] private Color activeEdgeCellColor = new Color(0f, 1f, 0.3f, 0.9f);
 
         [Header("References")]
         [SerializeField] private Customer customerPrefab;
@@ -67,10 +65,6 @@ namespace RestaurantLoop.Core
         public float AlignmentTolerance => alignmentTolerance;
         public float EdgeInwardOffset => edgeInwardOffset;
 
-        /// <summary>
-        /// True until all visible customers are seated and the entrance gate is fully closed.
-        /// Gameplay input uses this as the authoritative entrance lock.
-        /// </summary>
         public bool IsSpawningCustomers => isEntranceSequenceActive;
         public int TotalRemainingDemand { get; private set; }
 
@@ -211,7 +205,6 @@ namespace RestaurantLoop.Core
         {
             if (customer == null || !edgeSlots.TryGetSlotIndex(customer, out int slotIndex)) return;
 
-            // Decrement remaining level demand strictly by 1 when customer finishes eating
             DecrementDemandForType(customer.RequiredData);
 
             edgeSlots.Release(slotIndex);
@@ -225,10 +218,6 @@ namespace RestaurantLoop.Core
             return data != null && remainingDemandPerType.TryGetValue(data, out int count) && count > 0;
         }
 
-        /// <summary>
-        /// Removes every remaining customer of a food type without broadcasting demand changes yet.
-        /// The caller performs the broadcast after Clear Color's presentation has completed.
-        /// </summary>
         public bool ResolveFoodTypeForClearColor(ItemDataSO data, StackItem visualSource)
         {
             if (!HasRemainingDemand(data)) return false;
@@ -271,7 +260,6 @@ namespace RestaurantLoop.Core
                 PoolManager.Instance.Despawn(hiddenCustomers[i].gameObject);
             }
 
-            // Matching inner-crowd slots were cleared first, so promotions cannot select the resolved food type.
             for (int i = 0; i < freedEdgeSlots.Count; i++)
             {
                 PromoteCrowdToEdgeSlot(freedEdgeSlots[i]);
@@ -405,11 +393,13 @@ namespace RestaurantLoop.Core
         }
 
         private Customer GetCustomerPrefab(ItemDataSO data) => data != null && data.CustomerPrefab != null ? data.CustomerPrefab : customerPrefab;
+
         private float GetTimedCustomerDuration(int sequenceIndex) =>
             timedDurationBySequenceIndex.TryGetValue(sequenceIndex, out float duration) ? duration : 0f;
+
         private ConveyorManager GetConveyor() => ConveyorManager.Instance != null ? ConveyorManager.Instance : FindFirstObjectByType<ConveyorManager>();
 
-        private Vector3 GetRoomCenter()
+        public Vector3 GetRoomCenter()
         {
             EnsureBuilderReference();
             Vector3 center = conveyorBuilder != null ? conveyorBuilder.CenterPosition : transform.position;
@@ -420,6 +410,8 @@ namespace RestaurantLoop.Core
 #if UNITY_EDITOR
         private void OnDrawGizmos()
         {
+            Vector3 center = GetRoomCenter();
+
             if (showCrowdGizmos)
             {
                 CentralCrowdService gizmoService = centralCrowd;
@@ -429,7 +421,7 @@ namespace RestaurantLoop.Core
                     gizmoService.SetupLayout(
                         CrowdLayoutType.Rectangular,
                         previewCrowdCount,
-                        GetRoomCenter(),
+                        center,
                         crowdCenterOffset,
                         innerCrowdArea,
                         0f,
@@ -439,36 +431,11 @@ namespace RestaurantLoop.Core
 
                 gizmoService.DrawGizmos(
                     CrowdLayoutType.Rectangular,
-                    GetRoomCenter(),
+                    center,
                     crowdCenterOffset,
                     innerCrowdArea,
                     0f
                 );
-            }
-
-            if (showToleranceGizmos)
-            {
-                EnsureBuilderReference();
-                if (boardGrid == null) boardGrid = GetComponent<DiningBoardGrid>();
-
-                if (!Application.isPlaying || edgeSlots == null)
-                {
-                    InitializeGridSplineMapping();
-                }
-
-                Vector2 cellSize = boardGrid != null ? boardGrid.GetBoardCellSize() : new Vector2(1.2f, 1.2f);
-                Vector3 visualCellSize = new Vector3(cellSize.x * 0.82f, 0.04f, cellSize.y * 0.82f);
-
-                for (int i = 0; i < TOTAL_EDGE_SLOTS; i++)
-                {
-                    Vector3 slotPos = GetEdgeSlotWorldPosition(i);
-
-                    Gizmos.color = activeEdgeCellColor;
-                    Gizmos.DrawWireCube(slotPos + Vector3.up * 0.02f, visualCellSize);
-
-                    Gizmos.color = new Color(activeEdgeCellColor.r, activeEdgeCellColor.g, activeEdgeCellColor.b, 0.25f);
-                    Gizmos.DrawCube(slotPos + Vector3.up * 0.02f, visualCellSize);
-                }
             }
         }
 #endif

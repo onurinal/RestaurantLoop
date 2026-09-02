@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cfdb8c1eedbf45d8b7a445b938b8e144, type: 3}
   m_Name: Level_28
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.LevelDataSO
-  activeEdgeSlotCount: 19
+  activeEdgeSlotCount: 20
   columnCount: 3
   calculatedRowCount: 4
   minStackSize: 5

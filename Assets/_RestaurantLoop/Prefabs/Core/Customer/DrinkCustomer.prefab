@@ -1242,9 +1242,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.OrderBalloon
   bgRenderer: {fileID: 7324514239991689004}
   foodDisplayPrefab: {fileID: 1207237471426720268, guid: 06d20245a60f30e439929655e30cb2e6, type: 3}
-  foodLocalPosition: {x: -0.018, y: -0.502, z: -0.187}
+  foodLocalPosition: {x: -0.018, y: -0.569, z: -0.07}
   foodLocalRotation: {x: -30, y: 0, z: 0}
-  overrideFoodScale: 0.5
+  overrideFoodScale: 0.55
   rotationSpeed: 20
   animateScale: 1
   showStartScale: 0.45

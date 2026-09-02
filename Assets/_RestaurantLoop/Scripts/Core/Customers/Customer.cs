@@ -292,29 +292,7 @@ namespace RestaurantLoop.Core
 
         public void AlignBalloonToCenter(Vector3 roomCenter)
         {
-            if (balloonObject == null) return;
-
-            bool isRightSide = transform.position.x > roomCenter.x;
-
-            Vector3 localPos = balloonObject.transform.localPosition;
-            Vector3 localScale = balloonObject.transform.localScale;
-
-            float absX = Mathf.Abs(localPos.x != 0 ? localPos.x : 1.4f);
-            float absScaleX = Mathf.Abs(localScale.x != 0 ? localScale.x : 1.0f);
-
-            if (isRightSide)
-            {
-                localPos.x = -absX;
-                localScale.x = -absScaleX;
-            }
-            else
-            {
-                localPos.x = absX;
-                localScale.x = absScaleX;
-            }
-
-            balloonObject.transform.localPosition = localPos;
-            balloonObject.transform.localScale = localScale;
+            // Position and scale inversions removed. Balloon maintains its exact authored prefab transform.
         }
 
         public void ReceiveItem(StackItem stack, Action<Customer> onComplete)
@@ -343,7 +321,6 @@ namespace RestaurantLoop.Core
             StartCoroutine(ClearColorExitRoutine());
         }
 
-        /// <summary>Plays a short procedural anger reaction before the level-fail UI takes control.</summary>
         public void PlayTimedFailureReaction()
         {
             if (IsServed) return;

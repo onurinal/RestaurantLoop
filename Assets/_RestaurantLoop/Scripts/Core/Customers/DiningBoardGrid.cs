@@ -20,6 +20,11 @@ namespace RestaurantLoop.Core
         [Range(0.1f, 1f)] [SerializeField] private float cellFill = 0.82f;
         [SerializeField] private float gridCellYOffset = 0f;
 
+        [Header("Gizmo Settings")]
+        [SerializeField] private bool showGridGizmos = true;
+        [SerializeField] private Color activeEdgeCellColor = new Color(0f, 1f, 0.3f, 0.9f);
+        [SerializeField] private Color cellWireGizmoColor = new Color(0f, 0.8f, 1f, 0.8f);
+
         private readonly List<FoodCell> activeEdgeCells = new List<FoodCell>();
         private readonly List<Vector3> boardCellPositions = new List<Vector3>();
         private readonly List<int> edgeSlotCellIndices = new List<int>();
@@ -113,11 +118,7 @@ namespace RestaurantLoop.Core
 
             if (getSplinePosition == null) return;
 
-            List<int> perimeter = new List<int>();
-            for (int r = 0; r < boardRows; r++)
-            for (int c = 0; c < boardColumns; c++)
-                if (r == 0 || r == boardRows - 1 || c == 0 || c == boardColumns - 1)
-                    perimeter.Add(r * boardColumns + c);
+            List<int> perimeter = GetPerimeterIndices();
 
             for (int slot = 0; slot < edgeSlotCount; slot++)
             {
@@ -126,6 +127,16 @@ namespace RestaurantLoop.Core
                 edgeSlotCellIndices.Add(nearestIdx >= 0 ? perimeter[nearestIdx] : -1);
                 if (nearestIdx >= 0) perimeter.RemoveAt(nearestIdx);
             }
+        }
+
+        private List<int> GetPerimeterIndices()
+        {
+            List<int> perimeter = new List<int>();
+            for (int r = 0; r < boardRows; r++)
+            for (int c = 0; c < boardColumns; c++)
+                if (r == 0 || r == boardRows - 1 || c == 0 || c == boardColumns - 1)
+                    perimeter.Add(r * boardColumns + c);
+            return perimeter;
         }
 
         private int FindNearestCandidate(Vector3 target, List<int> candidates)
@@ -169,5 +180,41 @@ namespace RestaurantLoop.Core
                 activeEdgeCells.Add(cell);
             }
         }
+
+#if UNITY_EDITOR
+        private void OnDrawGizmos()
+        {
+            if (!showGridGizmos) return;
+
+            EnsureConveyorReference();
+
+            Vector3 center = conveyorBuilder != null ? conveyorBuilder.CenterPosition : transform.position;
+            center.y = 0f;
+
+            Vector2 boardSize = GetBoardAreaSize();
+            Vector2 cellSize = GetBoardCellSize();
+            Vector3 bottomLeft = center - new Vector3(boardSize.x * 0.5f, 0f, boardSize.y * 0.5f);
+
+            Vector2 filledCellSize = cellSize * cellFill;
+            Vector3 visualCellSize = new Vector3(filledCellSize.x, 0.04f, filledCellSize.y);
+
+            List<int> perimeter = GetPerimeterIndices();
+
+            for (int i = 0; i < perimeter.Count; i++)
+            {
+                int boardIndex = perimeter[i];
+                int r = boardIndex / boardColumns;
+                int c = boardIndex % boardColumns;
+
+                Vector3 pos = bottomLeft + new Vector3((c + 0.5f) * cellSize.x, gridCellYOffset, (r + 0.5f) * cellSize.y);
+
+                Gizmos.color = activeEdgeCellColor;
+                Gizmos.DrawCube(pos, visualCellSize);
+
+                Gizmos.color = cellWireGizmoColor;
+                Gizmos.DrawWireCube(pos, visualCellSize);
+            }
+        }
+#endif
     }
 }

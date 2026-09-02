@@ -1191,7 +1191,7 @@ MonoBehaviour:
   foodDisplayPrefab: {fileID: 4526761396763239933, guid: faa5b0991cd811540a0aa106435e0c96, type: 3}
   foodLocalPosition: {x: -0.007, y: -0.04, z: -0.165}
   foodLocalRotation: {x: -30, y: 0, z: 0}
-  overrideFoodScale: 0.5
+  overrideFoodScale: 0.6
   rotationSpeed: 20
   animateScale: 1
   showStartScale: 0.45
