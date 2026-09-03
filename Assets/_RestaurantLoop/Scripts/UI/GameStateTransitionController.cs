@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -9,21 +10,14 @@ namespace RestaurantLoop.UI
     [Serializable]
     public class WinBannerSettings
     {
-        [Header("Pop In Animation")]
-        [Min(0.01f)] public float popInDuration = 0.35f;
-        public Ease popInEase = Ease.OutBack;
-
-        [Header("Idle Pulse (While Confetti Plays)")]
-        [Tooltip("Subtle breathing scale factor while confetti effect is active.")]
-        [Range(1.01f, 1.25f)] public float idlePulseScale = 1.05f;
-        [Min(0.1f)] public float idlePulseDuration = 0.55f;
-
-        [Header("Exit Animation")]
-        [Min(0.01f)] public float exitDuration = 0.3f;
-        public Ease exitEase = Ease.InBack;
-
-        [Tooltip("Fallback hold duration if no firework controller is assigned.")]
-        [Min(0f)] public float fallbackHoldDuration = 1.5f;
+        [Min(0f)] public float letterStaggerDelay = 0.055f;
+        [Min(0.01f)] public float letterScaleDuration = 0.18f;
+        [Tooltip("If no fireworks controller assigned, it will wait this long before exiting.")]
+        [Min(0f)] public float holdDuration = 1.2f;
+        [Min(1f)] public float exitSpiralSpeed = 720f;
+        [Tooltip("Duration of the spiral/vortex exit animation in seconds.")]
+        [Min(0.01f)] public float exitDuration = 0.8f;
+        public Ease exitScaleEase = Ease.InBack;
     }
 
     [Serializable]
@@ -42,18 +36,44 @@ namespace RestaurantLoop.UI
         [SerializeField] private Canvas targetCanvas;
         [SerializeField] private TMP_FontAsset bannerFont;
 
-        [Tooltip("Assign the WinFireworkFXController here. Banner will stay pulsing while confetti plays and exit when confetti finishes.")]
+        [Tooltip("Assign the WinFireworkFXController here. It will trigger after letters appear, and wait until it finishes before letters exit.")]
         [SerializeField] private WinFireworkFXController fireworkController;
 
         [Header("Win Sequence Settings")]
         [SerializeField] private WinBannerSettings winSequence = new WinBannerSettings();
         [SerializeField] private Color winOverlayColor = new Color(0.11f, 0.06f, 0.18f, 0.52f);
 
-        [Header("Win Single Banner Sprite")]
-        [Tooltip("Assign the unified RESTAURANT LOOP graphic sprite here.")]
-        [SerializeField] private Sprite winBannerSprite;
-        [SerializeField] private Vector2 winBannerSize = new Vector2(750f, 380f);
-        [SerializeField] private float winBannerOffsetY = 200f;
+        [Header("Win Letter Sprites")]
+        [Tooltip("Assign letter sprites in order (R, E, S, T, A, U, R, A, N, T, L, O, O, P).")]
+        [SerializeField] private List<Sprite> winLetterSprites = new List<Sprite>();
+        [Tooltip("0-based index to break line (9 = after 10th letter 'T' of RESTAURANT).")]
+        [SerializeField] private int lineBreakIndex = 9;
+
+        [Header("Typography & Spacing Engine")]
+        [Tooltip("Automatically adjusts spacing based on letter shape (pushes U/R away, pulls A/T closer).")]
+        [SerializeField] private bool useOpticalKerning = true;
+
+        [Header("Line 1 Setup (RESTAURANT)")]
+        [SerializeField] private Vector2 line1LetterSize = new Vector2(100f, 100f);
+        [Tooltip("Kerning factor based on sprite width. Lower = tighter, Higher = loose.")]
+        [SerializeField, Range(0.4f, 1.2f)] private float line1KerningFactor = 0.88f;
+        [SerializeField] private float line1ArcHeightY = 24f;
+        [SerializeField, Range(0f, 30f)] private float line1MaxEdgeRotation = 5f;
+        [Tooltip("Check this if you want left letters (like N) to render on top of right letters (like T).")]
+        [SerializeField] private bool line1ReverseRenderOrder = true;
+
+        [Header("Line 2 Setup (LOOP - Main Menu Style)")]
+        [SerializeField] private Vector2 line2LetterSize = new Vector2(150f, 150f);
+        [Tooltip("Kerning factor based on sprite width for line 2.")]
+        [SerializeField, Range(0.4f, 1.2f)] private float line2KerningFactor = 0.88f;
+        [SerializeField] private float line2ArcHeightY = 12f;
+        [SerializeField] private float line2OffsetY = -108f;
+        [SerializeField, Range(0f, 30f)] private float line2MaxEdgeRotation = 2f;
+        [SerializeField] private bool line2ReverseRenderOrder = true;
+
+        [Header("Global Layout Settings")]
+        [SerializeField] private float winTextCenterOffsetY = 200f;
+        [SerializeField, Range(0.5f, 0.98f)] private float maxScreenWidthPercent = 0.90f;
 
         [Header("Failure Sequence Settings")]
         [SerializeField] private FailureBannerSettings failureSequence = new FailureBannerSettings();
@@ -69,17 +89,16 @@ namespace RestaurantLoop.UI
         [SerializeField, Min(10f)] private float failureFontSize = 110f;
         [SerializeField] private Color failureTextColor = Color.white;
 
+        private readonly List<RectTransform> letters = new List<RectTransform>();
         private RectTransform overlayRoot;
         private Image overlayBlocker;
-        private RectTransform winBannerRect;
-        private Image winBannerImage;
+        private RectTransform winContentRoot;
         private RectTransform failureBanner;
         private Image failureBannerBackgroundImage;
         private TMP_Text failureText;
 
-        private Tween activeScaleTween;
-        private Tween activePulseTween;
-        private Sequence activeFailureSequence;
+        private Sequence activeIntroSequence;
+        private Sequence activeOutroSequence;
 
         public void Initialize(Canvas canvas)
         {
@@ -99,60 +118,60 @@ namespace RestaurantLoop.UI
             overlayRoot.gameObject.SetActive(true);
             overlayRoot.SetAsLastSibling();
             overlayBlocker.color = winOverlayColor;
+            winContentRoot.gameObject.SetActive(true);
+            failureBanner.gameObject.SetActive(false);
 
-            if (winBannerRect != null)
+            activeIntroSequence = DOTween.Sequence().SetUpdate(true).SetTarget(this);
+
+            for (int i = 0; i < letters.Count; i++)
             {
-                winBannerRect.gameObject.SetActive(true);
-                winBannerRect.localScale = Vector3.zero;
+                RectTransform letter = letters[i];
+                float revealAt = i * winSequence.letterStaggerDelay;
+                activeIntroSequence.Insert(revealAt,
+                    letter.DOScale(Vector3.one, winSequence.letterScaleDuration).SetEase(Ease.OutBack));
             }
 
-            if (failureBanner != null) failureBanner.gameObject.SetActive(false);
+            activeIntroSequence.OnComplete(() =>
+            {
+                activeIntroSequence = null;
 
-            activeScaleTween = winBannerRect.DOScale(Vector3.one, winSequence.popInDuration)
-                .SetEase(winSequence.popInEase)
-                .SetUpdate(true)
-                .OnComplete(() =>
+                if (fireworkController != null)
                 {
-                    activeScaleTween = null;
-
-                    activePulseTween = winBannerRect.DOScale(Vector3.one * winSequence.idlePulseScale, winSequence.idlePulseDuration)
-                        .SetEase(Ease.InOutSine)
-                        .SetLoops(-1, LoopType.Yoyo)
-                        .SetUpdate(true);
-
-                    if (fireworkController != null)
-                    {
-                        fireworkController.PlayFireworks(() => PlayWinOutroSequence(onFinalComplete));
-                    }
-                    else
-                    {
-                        DOVirtual.DelayedCall(winSequence.fallbackHoldDuration, () => PlayWinOutroSequence(onFinalComplete), ignoreTimeScale: true);
-                    }
-                });
+                    fireworkController.PlayFireworks(() => PlayWinOutroSequence(onFinalComplete));
+                }
+                else
+                {
+                    DOVirtual.DelayedCall(winSequence.holdDuration, () => PlayWinOutroSequence(onFinalComplete), ignoreTimeScale: true);
+                }
+            });
         }
 
         private void PlayWinOutroSequence(Action onFinalComplete)
         {
-            activePulseTween?.Kill();
-            activePulseTween = null;
+            activeOutroSequence = DOTween.Sequence().SetUpdate(true).SetTarget(this);
 
-            if (winBannerRect == null)
+            for (int i = 0; i < letters.Count; i++)
             {
-                overlayRoot.gameObject.SetActive(false);
-                onFinalComplete?.Invoke();
-                return;
+                RectTransform letter = letters[i];
+                float exitAt = i * winSequence.letterStaggerDelay * 0.22f;
+                float rotation = winSequence.exitSpiralSpeed * winSequence.exitDuration;
+
+                activeOutroSequence.Insert(exitAt,
+                    letter.DOAnchorPos(Vector2.zero, winSequence.exitDuration).SetEase(Ease.InCubic));
+                activeOutroSequence.Insert(exitAt,
+                    letter.DORotate(new Vector3(0f, 0f, rotation), winSequence.exitDuration,
+                        RotateMode.FastBeyond360).SetRelative().SetEase(Ease.InQuad));
+                activeOutroSequence.Insert(exitAt,
+                    letter.DOScale(Vector3.zero, winSequence.exitDuration).SetEase(winSequence.exitScaleEase));
             }
 
-            activeScaleTween = winBannerRect.DOScale(Vector3.zero, winSequence.exitDuration)
-                .SetEase(winSequence.exitEase)
-                .SetUpdate(true)
-                .OnComplete(() =>
-                {
-                    activeScaleTween = null;
-                    overlayRoot.gameObject.SetActive(false);
+            activeOutroSequence.OnComplete(() =>
+            {
+                activeOutroSequence = null;
+                overlayRoot.gameObject.SetActive(false);
 
-                    onFinalComplete?.Invoke();
-                });
+                onFinalComplete?.Invoke();
+            });
         }
 
         public void PlayFailureBanner(string failureTextValue, Action onComplete)
@@ -169,8 +188,7 @@ namespace RestaurantLoop.UI
             overlayRoot.gameObject.SetActive(true);
             overlayRoot.SetAsLastSibling();
             overlayBlocker.color = failureOverlayColor;
-
-            if (winBannerRect != null) winBannerRect.gameObject.SetActive(false);
+            winContentRoot.gameObject.SetActive(false);
             failureBanner.gameObject.SetActive(true);
             failureText.text = failureTextValue;
 
@@ -178,13 +196,13 @@ namespace RestaurantLoop.UI
             float offscreenY = canvasHeight * 0.5f + failureBannerSize.y;
             failureBanner.anchoredPosition = new Vector2(0f, offscreenY);
 
-            activeFailureSequence = DOTween.Sequence().SetUpdate(true).SetTarget(this)
+            activeIntroSequence = DOTween.Sequence().SetUpdate(true).SetTarget(this)
                 .Append(failureBanner.DOAnchorPosY(0f, failureSequence.slideInDuration).SetEase(Ease.OutCubic))
                 .AppendInterval(failureSequence.holdDuration)
                 .Append(failureBanner.DOAnchorPosY(-offscreenY, failureSequence.slideOutDuration).SetEase(Ease.InCubic))
                 .OnComplete(() =>
                 {
-                    activeFailureSequence = null;
+                    activeIntroSequence = null;
                     overlayRoot.gameObject.SetActive(false);
                     onComplete?.Invoke();
                 });
@@ -192,46 +210,26 @@ namespace RestaurantLoop.UI
 
         public void ResetImmediate()
         {
-            activeScaleTween?.Kill();
-            activePulseTween?.Kill();
-            activeFailureSequence?.Kill();
-
-            activeScaleTween = null;
-            activePulseTween = null;
-            activeFailureSequence = null;
-
+            activeIntroSequence?.Kill();
+            activeOutroSequence?.Kill();
+            activeIntroSequence = null;
+            activeOutroSequence = null;
             if (overlayRoot != null) overlayRoot.gameObject.SetActive(false);
         }
 
         private bool EnsureOverlay()
         {
-            if (overlayRoot != null && winBannerRect != null) return true;
+            if (overlayRoot != null) return true;
             if (targetCanvas == null) targetCanvas = GetComponentInChildren<Canvas>(true);
             if (targetCanvas == null) targetCanvas = GetComponentInParent<Canvas>();
             if (targetCanvas == null) return false;
 
             Transform existingOverlay = targetCanvas.transform.Find("GameStateTransitionOverlay");
-
-            // Eski sistemden kalan uyumsuz overlay varsa sahneden otomatik sil
-            if (existingOverlay != null && existingOverlay.Find("WinBannerImage") == null)
-            {
-                if (Application.isPlaying) Destroy(existingOverlay.gameObject);
-                else DestroyImmediate(existingOverlay.gameObject);
-                existingOverlay = null;
-            }
-
             if (existingOverlay != null)
             {
                 overlayRoot = existingOverlay.GetComponent<RectTransform>();
                 overlayBlocker = overlayRoot.GetComponent<Image>();
-
-                Transform winContent = overlayRoot.Find("WinBannerImage");
-                if (winContent != null)
-                {
-                    winBannerRect = winContent as RectTransform;
-                    winBannerImage = winContent.GetComponent<Image>();
-                }
-
+                winContentRoot = overlayRoot.Find("WinBannerContent") as RectTransform;
                 failureBanner = overlayRoot.Find("FailureBanner") as RectTransform;
                 if (failureBanner != null)
                 {
@@ -239,51 +237,40 @@ namespace RestaurantLoop.UI
                     failureText = failureBanner.GetComponentInChildren<TMP_Text>();
                 }
 
-                UpdateWinBannerVisuals();
                 return true;
             }
 
-            // Temiz Overlay Oluştur
-            GameObject rootObject = new GameObject("GameStateTransitionOverlay", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            GameObject rootObject = new GameObject("GameStateTransitionOverlay", typeof(RectTransform),
+                typeof(CanvasRenderer), typeof(Image));
             rootObject.transform.SetParent(targetCanvas.transform, false);
             overlayRoot = rootObject.GetComponent<RectTransform>();
             Stretch(overlayRoot);
             overlayBlocker = rootObject.GetComponent<Image>();
             overlayBlocker.raycastTarget = true;
 
-            GameObject winBannerObj = new GameObject("WinBannerImage", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            winBannerObj.transform.SetParent(overlayRoot, false);
-            winBannerRect = winBannerObj.GetComponent<RectTransform>();
-            winBannerImage = winBannerObj.GetComponent<Image>();
-            winBannerImage.raycastTarget = false;
+            winContentRoot = new GameObject("WinBannerContent", typeof(RectTransform)).GetComponent<RectTransform>();
+            winContentRoot.SetParent(overlayRoot, false);
+            winContentRoot.anchorMin = winContentRoot.anchorMax = new Vector2(0.5f, 0.5f);
+            winContentRoot.sizeDelta = new Vector2(1000f, 320f);
+            BuildWinLetters();
 
-            failureBanner = new GameObject("FailureBanner", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image)).GetComponent<RectTransform>();
+            failureBanner = new GameObject("FailureBanner", typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(Image)).GetComponent<RectTransform>();
             failureBanner.SetParent(overlayRoot, false);
             failureBanner.anchorMin = failureBanner.anchorMax = new Vector2(0.5f, 0.5f);
             failureBanner.sizeDelta = failureBannerSize;
 
             failureBannerBackgroundImage = failureBanner.GetComponent<Image>();
+
             failureText = CreateText("FailureText", failureBanner, failureFontSize);
             Stretch(failureText.rectTransform);
             failureText.alignment = TextAlignmentOptions.Center;
             failureText.raycastTarget = false;
 
-            UpdateWinBannerVisuals();
             UpdateFailureBannerVisuals();
+
             rootObject.SetActive(false);
             return true;
-        }
-
-        private void UpdateWinBannerVisuals()
-        {
-            if (winBannerRect != null && winBannerImage != null)
-            {
-                winBannerRect.anchorMin = winBannerRect.anchorMax = new Vector2(0.5f, 0.5f);
-                winBannerRect.sizeDelta = winBannerSize;
-                winBannerRect.anchoredPosition = new Vector2(0f, winBannerOffsetY);
-                winBannerImage.sprite = winBannerSprite;
-                winBannerImage.preserveAspect = true;
-            }
         }
 
         private void UpdateFailureBannerVisuals()
@@ -292,7 +279,9 @@ namespace RestaurantLoop.UI
             {
                 failureBanner.sizeDelta = failureBannerSize;
                 failureBannerBackgroundImage.sprite = failureBannerSprite;
-                failureBannerBackgroundImage.type = (failureBannerSprite != null && useSlicedBannerImage) ? Image.Type.Sliced : Image.Type.Simple;
+                failureBannerBackgroundImage.type = (failureBannerSprite != null && useSlicedBannerImage)
+                    ? Image.Type.Sliced
+                    : Image.Type.Simple;
                 failureBannerBackgroundImage.color = failureBannerBackgroundColor;
                 failureBannerBackgroundImage.raycastTarget = false;
             }
@@ -304,9 +293,157 @@ namespace RestaurantLoop.UI
             }
         }
 
+        private void BuildWinLetters()
+        {
+            letters.Clear();
+            if (winLetterSprites == null || winLetterSprites.Count == 0) return;
+
+            List<Sprite> line1 = new List<Sprite>();
+            List<Sprite> line2 = new List<Sprite>();
+
+            for (int i = 0; i < winLetterSprites.Count; i++)
+            {
+                if (winLetterSprites[i] == null) continue;
+                if (i <= lineBreakIndex) line1.Add(winLetterSprites[i]);
+                else line2.Add(winLetterSprites[i]);
+            }
+
+            int globalIndex = 0;
+
+            float line1Width = BuildLine(line1, line1LetterSize, line1KerningFactor, line1ArcHeightY, winTextCenterOffsetY, line1MaxEdgeRotation,
+                line1ReverseRenderOrder, ref globalIndex);
+            float line2Width = BuildLine(line2, line2LetterSize, line2KerningFactor, line2ArcHeightY, winTextCenterOffsetY + line2OffsetY, line2MaxEdgeRotation,
+                line2ReverseRenderOrder, ref globalIndex);
+
+            float maxLineWidth = Mathf.Max(line1Width, line2Width);
+
+            float canvasWidth = overlayRoot != null && overlayRoot.rect.width > 1f ? overlayRoot.rect.width : 1080f;
+            float maxAllowedWidth = canvasWidth * maxScreenWidthPercent;
+
+            if (maxLineWidth > maxAllowedWidth && maxLineWidth > 0f)
+            {
+                float fitScale = maxAllowedWidth / maxLineWidth;
+                winContentRoot.localScale = new Vector3(fitScale, fitScale, 1f);
+            }
+            else
+            {
+                winContentRoot.localScale = Vector3.one;
+            }
+        }
+
+        private float GetOpticalKerningMultiplier(Sprite sprite)
+        {
+            if (sprite == null || string.IsNullOrEmpty(sprite.name)) return 1f;
+
+            char c = sprite.name.ToUpper()[0];
+
+            switch (c)
+            {
+                case 'T': return 0.76f;
+                case 'A': return 0.90f;
+                case 'S': return 0.95f;
+                case 'O': return 0.95f;
+                case 'E': return 0.92f;
+                case 'P': return 1.00f;
+                case 'L': return 1.00f;
+                case 'R': return 0.96f;
+                case 'N': return 1.04f;
+                case 'U': return 0.82f;
+                default: return 1f;
+            }
+        }
+
+        private float BuildLine(List<Sprite> sprites, Vector2 letterSize, float kerningFactor, float arcHeight, float offsetY, float maxRotation,
+            bool reverseOrder, ref int globalIndex)
+        {
+            int count = sprites.Count;
+            if (count == 0) return 0f;
+
+            List<float> scaledWidths = new List<float>(count);
+            for (int i = 0; i < count; i++)
+            {
+                Sprite sprite = sprites[i];
+                float aspect = (sprite != null && sprite.rect.height > 0f) ? (sprite.rect.width / sprite.rect.height) : 1f;
+                float actualWidth = letterSize.y * aspect;
+
+                if (useOpticalKerning)
+                {
+                    actualWidth *= GetOpticalKerningMultiplier(sprite);
+                }
+
+                scaledWidths.Add(actualWidth);
+            }
+
+            List<float> xPositions = new List<float>(count);
+            float currentX = 0f;
+
+            for (int i = 0; i < count; i++)
+            {
+                if (i == 0)
+                {
+                    xPositions.Add(0f);
+                }
+                else
+                {
+                    float previousWidth = scaledWidths[i - 1];
+                    float currentWidth = scaledWidths[i];
+                    float step = ((previousWidth + currentWidth) * 0.5f) * kerningFactor;
+                    currentX += step;
+                    xPositions.Add(currentX);
+                }
+            }
+
+            float totalLineWidth = currentX;
+            float startX = -totalLineWidth * 0.5f;
+
+            List<RectTransform> lineRects = new List<RectTransform>();
+
+            for (int i = 0; i < count; i++)
+            {
+                GameObject imageObject = new GameObject($"LetterSprite_{globalIndex:00}", typeof(RectTransform),
+                    typeof(CanvasRenderer), typeof(Image));
+                imageObject.transform.SetParent(winContentRoot, false);
+
+                Image image = imageObject.GetComponent<Image>();
+                image.sprite = sprites[i];
+                image.preserveAspect = true;
+                image.raycastTarget = false;
+
+                RectTransform rect = imageObject.GetComponent<RectTransform>();
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.sizeDelta = letterSize;
+
+                float x = startX + xPositions[i];
+                float normalizedX = totalLineWidth > 0f ? (x / (totalLineWidth * 0.5f)) : 0f;
+                normalizedX = Mathf.Clamp(normalizedX, -1f, 1f);
+
+                float y = (1f - (normalizedX * normalizedX)) * arcHeight + offsetY;
+                float rotZ = -normalizedX * maxRotation;
+
+                rect.anchoredPosition = new Vector2(x, y);
+                rect.localRotation = Quaternion.Euler(0f, 0f, rotZ);
+
+                lineRects.Add(rect);
+                letters.Add(rect);
+                globalIndex++;
+            }
+
+            if (reverseOrder)
+            {
+                for (int i = count - 1; i >= 0; i--) lineRects[i].SetAsLastSibling();
+            }
+            else
+            {
+                for (int i = 0; i < count; i++) lineRects[i].SetAsLastSibling();
+            }
+
+            return totalLineWidth + letterSize.x;
+        }
+
         private TMP_Text CreateText(string objectName, Transform parent, float fontSize)
         {
-            GameObject textObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            GameObject textObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(TextMeshProUGUI));
             textObject.transform.SetParent(parent, false);
             TMP_Text text = textObject.GetComponent<TextMeshProUGUI>();
             text.font = bannerFont != null ? bannerFont : TMP_Settings.defaultFontAsset;
@@ -317,23 +454,31 @@ namespace RestaurantLoop.UI
 
         private void ResetOverlay()
         {
-            activeScaleTween?.Kill();
-            activePulseTween?.Kill();
-            activeFailureSequence?.Kill();
+            activeIntroSequence?.Kill();
+            activeOutroSequence?.Kill();
+            activeIntroSequence = null;
+            activeOutroSequence = null;
 
-            activeScaleTween = null;
-            activePulseTween = null;
-            activeFailureSequence = null;
-
-            UpdateWinBannerVisuals();
-
-            if (winBannerRect != null)
+            if (winContentRoot != null)
             {
-                winBannerRect.DOKill();
-                winBannerRect.localScale = Vector3.zero;
+                for (int i = winContentRoot.childCount - 1; i >= 0; i--)
+                {
+                    GameObject child = winContentRoot.GetChild(i).gameObject;
+                    if (Application.isPlaying) Destroy(child);
+                    else DestroyImmediate(child);
+                }
             }
 
-            if (failureBanner != null) failureBanner.DOKill();
+            BuildWinLetters();
+
+            for (int i = 0; i < letters.Count; i++)
+            {
+                if (letters[i] == null) continue;
+                letters[i].DOKill();
+                letters[i].localScale = Vector3.zero;
+            }
+
+            failureBanner?.DOKill();
         }
 
         private void OnDisable() => ResetImmediate();
