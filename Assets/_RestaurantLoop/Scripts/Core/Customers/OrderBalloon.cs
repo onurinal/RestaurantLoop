@@ -1,6 +1,5 @@
 ﻿using System;
 using UnityEngine;
-using UnityEngine.UI;
 using DG.Tweening;
 
 namespace RestaurantLoop.Core
@@ -11,9 +10,6 @@ namespace RestaurantLoop.Core
     /// </summary>
     public class OrderBalloon : MonoBehaviour
     {
-        [Header("UI References")]
-        [SerializeField] private Image bgCircleImage;
-
         [Header("3D Food Display")]
         [Tooltip("Presentation-only food prefab.")]
         [SerializeField] private GameObject foodDisplayPrefab;
@@ -47,7 +43,6 @@ namespace RestaurantLoop.Core
         private void Awake()
         {
             restingLocalScale = transform.localScale;
-            EnsureImageReference();
             ApplyCameraOffset();
             CreateFoodDisplay();
         }
@@ -119,14 +114,6 @@ namespace RestaurantLoop.Core
             }
         }
 
-        private void EnsureImageReference()
-        {
-            if (bgCircleImage == null)
-            {
-                bgCircleImage = GetComponentInChildren<Image>();
-            }
-        }
-
         private void CreateFoodDisplay()
         {
             if (foodDisplayPrefab == null || foodDisplayTransform != null) return;
@@ -145,15 +132,6 @@ namespace RestaurantLoop.Core
             else
             {
                 foodDisplayTransform.localScale = foodDisplayPrefab.transform.localScale;
-            }
-        }
-
-        public void SetColorAndState(Color baseColor, bool isEdge)
-        {
-            EnsureImageReference();
-            if (bgCircleImage != null)
-            {
-                bgCircleImage.color = baseColor;
             }
         }
     }
