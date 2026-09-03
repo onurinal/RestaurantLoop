@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
 using DG.Tweening;
-using RestaurantLoop.Audio; 
+using RestaurantLoop.Audio;
 
 namespace RestaurantLoop.UI
 {
@@ -29,17 +29,17 @@ namespace RestaurantLoop.UI
 
         [Header("Settings Elements")]
         [SerializeField] private Button closeSettingsButton;
-        
+
         [Header("Legacy Audio Sliders (Kept for future use)")]
-        [SerializeField] private Slider musicSlider; 
-        [SerializeField] private Slider sfxSlider;   
+        [SerializeField] private Slider musicSlider;
+        [SerializeField] private Slider sfxSlider;
 
         [Header("Audio Toggle Buttons")]
         [SerializeField] private Button musicToggleButton;
         [SerializeField] private Button sfxToggleButton;
         [SerializeField] private Image musicToggleImage;
         [SerializeField] private Image sfxToggleImage;
-        
+
         [Header("Audio Toggle Sprites")]
         [SerializeField] private Sprite musicOnSprite;
         [SerializeField] private Sprite musicOffSprite;
@@ -81,10 +81,10 @@ namespace RestaurantLoop.UI
 
             if (musicSlider != null) musicSlider.onValueChanged.AddListener(UpdateMusicVolume);
             if (sfxSlider != null) sfxSlider.onValueChanged.AddListener(UpdateSfxVolume);
-            
+
             if (musicToggleButton != null) musicToggleButton.onClick.AddListener(ToggleMusic);
             if (sfxToggleButton != null) sfxToggleButton.onClick.AddListener(ToggleSFX);
-            
+
             levelText.text = "LEVEL 1";
         }
 
@@ -98,7 +98,7 @@ namespace RestaurantLoop.UI
 
         private void StartGame()
         {
-            SceneManager.LoadScene("Onur-2"); 
+            SceneManager.LoadScene("Gameplay");
         }
 
         private void OpenSettings()
@@ -133,9 +133,9 @@ namespace RestaurantLoop.UI
                 {
                     settingsPanel.SetActive(false);
                     panelTransform.localScale = settingsPanelBaseScale;
-                    
+
                     // Instantly hide the overlay when the panel animation is done
-                    if (darkOverlayPanel != null) 
+                    if (darkOverlayPanel != null)
                         darkOverlayPanel.SetActive(false);
                 });
         }
@@ -146,7 +146,7 @@ namespace RestaurantLoop.UI
             isMusicOn = !isMusicOn;
             float targetVolume = isMusicOn ? 1f : 0f;
             UpdateMusicVolume(targetVolume);
-            
+
             if (musicSlider != null) musicSlider.value = targetVolume;
             UpdateMusicButtonVisual();
             PlayTapSound();
@@ -157,7 +157,7 @@ namespace RestaurantLoop.UI
             isSfxOn = !isSfxOn;
             float targetVolume = isSfxOn ? 1f : 0f;
             UpdateSfxVolume(targetVolume);
-            
+
             if (sfxSlider != null) sfxSlider.value = targetVolume;
             UpdateSfxButtonVisual();
             PlayTapSound();
@@ -185,7 +185,7 @@ namespace RestaurantLoop.UI
         private void UpdateSfxVolume(float value)
         {
             PlayerPrefs.SetFloat("SfxVolume", value);
-            if (AudioManager.Instance != null) 
+            if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.SetSfxVolume(value);
             }
