@@ -40,7 +40,7 @@ namespace RestaurantLoop.UI
         [Header("Sliders & Slider Buttons")]
         [SerializeField] private Slider musicSlider;
         [SerializeField] private Slider sfxSlider;
-        [SerializeField] private Slider vibrationSlider; 
+        [SerializeField] private Slider vibrationSlider;
         [Tooltip("Invisible button placed over the vibration slider to detect taps")]
         [SerializeField] private Button vibrationSliderButton;
 
@@ -69,8 +69,8 @@ namespace RestaurantLoop.UI
         [SerializeField] private Button powerUp4Button;
 
         [Header("Power-Up VFX (Juice)")]
-        [SerializeField] private GameObject flyingPlatePrefab; 
-        [SerializeField] private Transform conveyorCounterPanel; 
+        [SerializeField] private GameObject flyingPlatePrefab;
+        [SerializeField] private Transform conveyorCounterPanel;
         [SerializeField] private float flyDuration = 0.5f;
         [SerializeField] private float spawnDepthFromCamera = 5f;
         [SerializeField] private float arcHeight = 2f; // Height of the arc during flight
@@ -81,7 +81,7 @@ namespace RestaurantLoop.UI
         private Vector3 settingsPanelBaseScale;
         private Vector3 winPanelBaseScale;
         private Vector3 losePanelBaseScale;
-        private Vector3 confirmLeavePanelBaseScale; 
+        private Vector3 confirmLeavePanelBaseScale;
 
         private void Awake()
         {
@@ -99,7 +99,7 @@ namespace RestaurantLoop.UI
         private void Start()
         {
             stateTransitionController?.Initialize(GetComponentInChildren<Canvas>(true));
-            
+
             // Initialize panel states
             if (darkOverlayPanel != null) darkOverlayPanel.SetActive(false);
             if (settingsPanel != null) settingsPanel.SetActive(false);
@@ -191,8 +191,8 @@ namespace RestaurantLoop.UI
 
             // Convert the UI button's 2D screen coordinate to a 3D world coordinate
             Vector3 buttonScreenPos = powerUp1Button.GetComponent<RectTransform>().position;
-            buttonScreenPos.z = spawnDepthFromCamera; 
-            
+            buttonScreenPos.z = spawnDepthFromCamera;
+
             Vector3 startWorldPos = Camera.main.ScreenToWorldPoint(buttonScreenPos);
 
             flying3DPlate.transform.position = startWorldPos;
@@ -203,10 +203,10 @@ namespace RestaurantLoop.UI
 
             // Spawn pop-up effect
             seq.Append(flying3DPlate.transform.DOScale(Vector3.one, 0.2f).SetEase(Ease.OutBack));
-            
+
             // Move towards the 3D counter in an arc (jump trajectory)
             seq.Append(flying3DPlate.transform.DOJump(conveyorCounterPanel.position, arcHeight, 1, flyDuration).SetEase(Ease.InOutQuad));
-            
+
             // Scale down slightly while flying
             seq.Join(flying3DPlate.transform.DOScale(Vector3.one * 0.7f, flyDuration));
 
@@ -271,9 +271,9 @@ namespace RestaurantLoop.UI
         private void OpenSettings()
         {
             // Pause the game and looping audio sources.
-            Time.timeScale = 0f; 
-            
-            if (AudioManager.Instance != null) 
+            Time.timeScale = 0f;
+
+            if (AudioManager.Instance != null)
                 AudioManager.Instance.PauseGameSounds();
 
             if (CrowdAudioGenerator.Instance != null)
@@ -289,18 +289,18 @@ namespace RestaurantLoop.UI
         private void CloseSettings()
         {
             // Resume the game and audio sources.
-            Time.timeScale = 1f; 
-            
-            if (AudioManager.Instance != null) 
+            Time.timeScale = 1f;
+
+            if (AudioManager.Instance != null)
                 AudioManager.Instance.ResumeGameSounds();
 
             if (CrowdAudioGenerator.Instance != null)
                 CrowdAudioGenerator.Instance.ResumeCrowdAudio();
 
             // Hide the settings panel with animation, then instantly disable the overlay on complete
-            HidePanel(settingsPanel, settingsPanelBaseScale, () => 
+            HidePanel(settingsPanel, settingsPanelBaseScale, () =>
             {
-                if (darkOverlayPanel != null) 
+                if (darkOverlayPanel != null)
                     darkOverlayPanel.SetActive(false);
             });
         }
@@ -332,16 +332,19 @@ namespace RestaurantLoop.UI
             }
         }
 
-        // --- Toggle Logic (Senkronize Edildi) ---
+        // --- Toggle Logic ---
+        // Butonlar sadece slider'ın değerini değiştirir; asıl senkronizasyon (bool + ikon)
+        // her zaman UpdateMusicVolume/UpdateSfxVolume içinde yapılır. Böylece slider'ı
+        // elle sürüklemek de, butona tıklamak da AYNI yoldan geçip ikonu günceller.
         private void ToggleMusic()
         {
             float targetVolume = isMusicOn ? 0f : 1f;
 
-            if (musicSlider != null) 
-                musicSlider.value = targetVolume;
-            else 
+            if (musicSlider != null)
+                musicSlider.value = targetVolume; // -> onValueChanged -> UpdateMusicVolume
+            else
                 UpdateMusicVolume(targetVolume);
-            
+
             PlayTapSound();
         }
 
@@ -349,9 +352,9 @@ namespace RestaurantLoop.UI
         {
             float targetVolume = isSfxOn ? 0f : 1f;
 
-            if (sfxSlider != null) 
-                sfxSlider.value = targetVolume;
-            else 
+            if (sfxSlider != null)
+                sfxSlider.value = targetVolume; // -> onValueChanged -> UpdateSfxVolume
+            else
                 UpdateSfxVolume(targetVolume);
 
             PlayTapSound();
@@ -369,13 +372,13 @@ namespace RestaurantLoop.UI
                 sfxToggleImage.sprite = isSfxOn ? sfxOnSprite : sfxOffSprite;
         }
 
-        // --- Value Update Logic (Senkronize Edildi) ---
+        // --- Value Update Logic (Tek Kaynak: Buton veya Slider fark etmez, buraya düşer) ---
         private void UpdateMusicVolume(float value)
         {
             PlayerPrefs.SetFloat("MusicVolume", value);
             if (AudioManager.Instance != null) AudioManager.Instance.SetMusicVolume(value);
 
-            // Slider kaydırıldığında bool'u ve resmi senkronize et
+            // Slider kaydırıldığında veya buton tıklanınca bool'u ve resmi senkronize et
             isMusicOn = value > 0f;
             UpdateMusicButtonVisual();
         }
@@ -388,7 +391,7 @@ namespace RestaurantLoop.UI
                 AudioManager.Instance.SetSfxVolume(value);
             }
 
-            // Slider kaydırıldığında bool'u ve resmi senkronize et
+            // Slider kaydırıldığında veya buton tıklanınca bool'u ve resmi senkronize et
             isSfxOn = value > 0f;
             UpdateSfxButtonVisual();
         }
@@ -469,7 +472,7 @@ namespace RestaurantLoop.UI
             panelTransform.DOKill();
             panel.SetActive(true);
             panelTransform.localScale = Vector3.Scale(baseScale, Vector3.one * panelPopInStartScale);
-            
+
             // DOTween's SetUpdate(true) allows the animation to play independently of Time.timeScale.
             panelTransform.DOScale(baseScale, panelPopInDuration).SetEase(panelPopInEase).SetUpdate(true);
         }
@@ -506,8 +509,8 @@ namespace RestaurantLoop.UI
         private void LoadMainMenu()
         {
             // Reset time scale to normal before scene transition.
-            Time.timeScale = 1f; 
-            
+            Time.timeScale = 1f;
+
             // Resume audio sources to ensure correct state initialization in the main menu.
             if (AudioManager.Instance != null) AudioManager.Instance.ResumeGameSounds();
             if (CrowdAudioGenerator.Instance != null) CrowdAudioGenerator.Instance.ResumeCrowdAudio();
@@ -526,16 +529,16 @@ namespace RestaurantLoop.UI
 
             gameSettingsButton.onClick.RemoveAllListeners();
             closeSettingsButton.onClick.RemoveAllListeners();
-            
+
             if (musicToggleButton != null) musicToggleButton.onClick.RemoveAllListeners();
             if (sfxToggleButton != null) sfxToggleButton.onClick.RemoveAllListeners();
-            
+
             if (musicSlider != null) musicSlider.onValueChanged.RemoveAllListeners();
             if (sfxSlider != null) sfxSlider.onValueChanged.RemoveAllListeners();
             if (vibrationSlider != null) vibrationSlider.onValueChanged.RemoveAllListeners();
-            
+
             if (vibrationSliderButton != null) vibrationSliderButton.onClick.RemoveAllListeners();
-            
+
             if (leaveButton != null) leaveButton.onClick.RemoveAllListeners();
             if (confirmLeaveYesButton != null) confirmLeaveYesButton.onClick.RemoveAllListeners();
             if (confirmLeaveNoButton != null) confirmLeaveNoButton.onClick.RemoveAllListeners();
