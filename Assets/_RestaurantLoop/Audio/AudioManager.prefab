@@ -67,7 +67,7 @@ MonoBehaviour:
   happyJumpSoundVolume: 1
   popSound: {fileID: 8300000, guid: 8ff5486e5ce3bdb4088cab4ece2c4864, type: 3}
   popSoundVolume: 1
-  customerEntranceSound: {fileID: 8300000, guid: 1b934124947d2d044811f2a283908af2, type: 3}
+  customerEntranceSound: {fileID: 8300000, guid: 7d44f2e5ddba6014bb2f90ddee5f4cfc, type: 3}
   customerEntranceSoundVolume: 1
   levelWinSound: {fileID: 8300000, guid: 6f7f7e0fd8f764f4a9a6bda8688b4bd2, type: 3}
   levelWinSoundVolume: 1
@@ -84,9 +84,9 @@ MonoBehaviour:
   powerUp4Sound: {fileID: 8300000, guid: 6ff6a3815c55fb7419e541f5fd246356, type: 3}
   powerUp4SoundVolume: 1
   beefSound: {fileID: 8300000, guid: 7e42f7bae9bbd784dad61f9fdf0ab97b, type: 3}
-  burgerSound: {fileID: 8300000, guid: b759b61b0928b974ea1d837d84203647, type: 3}
+  burgerSound: {fileID: 8300000, guid: e5a945623c7227c4c94ac4ee9f7cf85f, type: 3}
   cakeSound: {fileID: 8300000, guid: 7e42f7bae9bbd784dad61f9fdf0ab97b, type: 3}
-  drinkSound: {fileID: 8300000, guid: b759b61b0928b974ea1d837d84203647, type: 3}
+  drinkSound: {fileID: 8300000, guid: e5a945623c7227c4c94ac4ee9f7cf85f, type: 3}
   friesSound: {fileID: 8300000, guid: 7c3c7e9c89f21c54691c95ddcadc3eb2, type: 3}
   sushiSound: {fileID: 8300000, guid: 7e42f7bae9bbd784dad61f9fdf0ab97b, type: 3}
   maxSimultaneousSounds: 2
