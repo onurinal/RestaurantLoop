@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 8576011357849364723}
   - component: {fileID: 1725039309845968971}
   - component: {fileID: 126379300783380918}
+  - component: {fileID: 7001349167273848420}
   m_Layer: 5
   m_Name: HandButton
   m_TagString: Untagged
@@ -121,6 +122,23 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &7001349167273848420
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 418027538291031187}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0fb48b1ac282c7479432650d2a6f031, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.UI.ButtonPressFeedback
+  pressedScale: 0.9
+  pressDuration: 0.08
+  releaseDuration: 0.2
+  pressEase: 6
+  releaseEase: 27
 --- !u!1 &1535930912402369301
 GameObject:
   m_ObjectHideFlags: 0
@@ -594,6 +612,7 @@ GameObject:
   - component: {fileID: 5222126072448143956}
   - component: {fileID: 5580134399604984079}
   - component: {fileID: 7074614442700401465}
+  - component: {fileID: 5387016370166884556}
   m_Layer: 5
   m_Name: ShuffleButton
   m_TagString: Untagged
@@ -703,6 +722,23 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &5387016370166884556
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3242421266961772506}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0fb48b1ac282c7479432650d2a6f031, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.UI.ButtonPressFeedback
+  pressedScale: 0.9
+  pressDuration: 0.08
+  releaseDuration: 0.2
+  pressEase: 6
+  releaseEase: 27
 --- !u!1 &3489868827063296711
 GameObject:
   m_ObjectHideFlags: 0
@@ -959,6 +995,7 @@ GameObject:
   - component: {fileID: 2860562477933388113}
   - component: {fileID: 739429297083437271}
   - component: {fileID: 2034754613403291957}
+  - component: {fileID: 4481836635565490560}
   m_Layer: 5
   m_Name: Settings
   m_TagString: Untagged
@@ -1067,6 +1104,23 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &4481836635565490560
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4441976439425015435}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0fb48b1ac282c7479432650d2a6f031, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.UI.ButtonPressFeedback
+  pressedScale: 0.9
+  pressDuration: 0.08
+  releaseDuration: 0.2
+  pressEase: 6
+  releaseEase: 27
 --- !u!1 &4546633106113479936
 GameObject:
   m_ObjectHideFlags: 0
@@ -1855,6 +1909,7 @@ GameObject:
   - component: {fileID: 1954814531661457531}
   - component: {fileID: 8685152128670571084}
   - component: {fileID: 5022735418890280893}
+  - component: {fileID: 5872444327400823659}
   m_Layer: 5
   m_Name: ClearColorButton
   m_TagString: Untagged
@@ -1964,6 +2019,23 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &5872444327400823659
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7049494183112183693}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0fb48b1ac282c7479432650d2a6f031, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.UI.ButtonPressFeedback
+  pressedScale: 0.9
+  pressDuration: 0.08
+  releaseDuration: 0.2
+  pressEase: 6
+  releaseEase: 27
 --- !u!1 &7109919987671166899
 GameObject:
   m_ObjectHideFlags: 0
@@ -2418,6 +2490,7 @@ GameObject:
   - component: {fileID: 5852204393311255772}
   - component: {fileID: 8699771528838993238}
   - component: {fileID: 6591580905993835142}
+  - component: {fileID: 7199776905344377297}
   m_Layer: 5
   m_Name: AddStackButton
   m_TagString: Untagged
@@ -2527,6 +2600,23 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &7199776905344377297
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8903760029926719505}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0fb48b1ac282c7479432650d2a6f031, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.UI.ButtonPressFeedback
+  pressedScale: 0.9
+  pressDuration: 0.08
+  releaseDuration: 0.2
+  pressEase: 6
+  releaseEase: 27
 --- !u!1001 &1247890310438307736
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2698,7 +2788,13 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3614696541559334242, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 874979966552259679}
+    - targetCorrespondingSourceObject: {fileID: 2918653821880495162, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4843250337521866581}
   m_SourcePrefab: {fileID: 100100000, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
 --- !u!1 &718017590659875454 stripped
 GameObject:
@@ -2710,7 +2806,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 85365880077059802, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
   m_PrefabInstance: {fileID: 1247890310438307736}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 2555967586490245882}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
@@ -2721,6 +2817,50 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 54839089316717161, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
   m_PrefabInstance: {fileID: 1247890310438307736}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2555967586490245882 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3614696541559334242, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
+  m_PrefabInstance: {fileID: 1247890310438307736}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &874979966552259679
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2555967586490245882}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0fb48b1ac282c7479432650d2a6f031, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.UI.ButtonPressFeedback
+  pressedScale: 0.9
+  pressDuration: 0.08
+  releaseDuration: 0.2
+  pressEase: 6
+  releaseEase: 27
+--- !u!1 &4165901741039430562 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2918653821880495162, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
+  m_PrefabInstance: {fileID: 1247890310438307736}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4843250337521866581
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4165901741039430562}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0fb48b1ac282c7479432650d2a6f031, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.UI.ButtonPressFeedback
+  pressedScale: 0.9
+  pressDuration: 0.08
+  releaseDuration: 0.2
+  pressEase: 6
+  releaseEase: 27
 --- !u!114 &4291668882619612218 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 3089038045814487970, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
@@ -2737,7 +2877,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5950192640796722403, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
   m_PrefabInstance: {fileID: 1247890310438307736}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 4165901741039430562}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
@@ -2964,18 +3104,43 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4717114243900554333, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5137245482772001607}
+    - targetCorrespondingSourceObject: {fileID: 1161330962023604580, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3821330790120668498}
   m_SourcePrefab: {fileID: 100100000, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
 --- !u!114 &250541174073557927 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 2671732051703054976, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
   m_PrefabInstance: {fileID: 2768024902023430439}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 3923795951505809475}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+--- !u!1 &3923795951505809475 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1161330962023604580, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
+  m_PrefabInstance: {fileID: 2768024902023430439}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3821330790120668498
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3923795951505809475}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0fb48b1ac282c7479432650d2a6f031, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.UI.ButtonPressFeedback
+  pressedScale: 0.9
+  pressDuration: 0.08
+  releaseDuration: 0.2
+  pressEase: 6
+  releaseEase: 27
 --- !u!224 &5906819207914448323 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 8615600756985898212, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
@@ -3148,13 +3313,16 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 835364941137896954, guid: 3c993162e9e9cfd4f99f9ecf28fbc31c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2779253316571299875}
+    - targetCorrespondingSourceObject: {fileID: 3447946848494769590, guid: 3c993162e9e9cfd4f99f9ecf28fbc31c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5875855546784520780}
   m_SourcePrefab: {fileID: 100100000, guid: 3c993162e9e9cfd4f99f9ecf28fbc31c, type: 3}
 --- !u!114 &958296289992899258 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5198405508552357867, guid: 3c993162e9e9cfd4f99f9ecf28fbc31c, type: 3}
   m_PrefabInstance: {fileID: 5001527909923130705}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 7688047288003778791}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
@@ -3184,3 +3352,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.AspectRatioFitter
   m_AspectMode: 1
   m_AspectRatio: 1.146145
+--- !u!1 &7688047288003778791 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3447946848494769590, guid: 3c993162e9e9cfd4f99f9ecf28fbc31c, type: 3}
+  m_PrefabInstance: {fileID: 5001527909923130705}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5875855546784520780
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7688047288003778791}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0fb48b1ac282c7479432650d2a6f031, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.UI.ButtonPressFeedback
+  pressedScale: 0.9
+  pressDuration: 0.08
+  releaseDuration: 0.2
+  pressEase: 6
+  releaseEase: 27
