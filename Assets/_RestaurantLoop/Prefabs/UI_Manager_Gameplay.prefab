@@ -2135,7 +2135,9 @@ GameObject:
   - component: {fileID: 6565215986747430128}
   - component: {fileID: 1468792172751793714}
   - component: {fileID: 4625875557264607725}
-  - component: {fileID: 1081448265299213129}
+  - component: {fileID: 6918580534632870139}
+  - component: {fileID: 4863517708314199738}
+  - component: {fileID: 5022026089388030728}
   m_Layer: 0
   m_Name: UI_Manager_Gameplay
   m_TagString: Untagged
@@ -2175,7 +2177,7 @@ MonoBehaviour:
   settingsPanel: {fileID: 718017590659875454}
   winPanel: {fileID: 7430782782301437306}
   losePanel: {fileID: 5692322185863850155}
-  stateTransitionController: {fileID: 1081448265299213129}
+  stateTransitionController: {fileID: 0}
   panelPopInDuration: 0.25
   panelPopOutDuration: 0.16
   panelPopInStartScale: 0.75
@@ -2277,7 +2279,7 @@ MonoBehaviour:
   tapScaleAmount: 0.85
   handWorldOffset: {x: 30, y: -50}
   pointerScaleMultiplier: 2.5
---- !u!114 &1081448265299213129
+--- !u!114 &6918580534632870139
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2290,57 +2292,166 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.UI.GameStateTransitionController
   targetCanvas: {fileID: 4055934451993190454}
-  bannerFont: {fileID: 11400000, guid: d52f6a607eaec2446a8fd0010ad1817e, type: 2}
-  fireworkController: {fileID: 3696430918830654472}
+  bannerFont: {fileID: 0}
+  fireworkController: {fileID: 4863517708314199738}
   winSequence:
-    letterStaggerDelay: 0.055
-    letterScaleDuration: 0.18
-    holdDuration: 0.75
-    exitSpiralSpeed: 720
+    popInDuration: 0.35
+    popInEase: 27
+    idlePulseScale: 1.05
+    idlePulseDuration: 0.55
     exitDuration: 0.45
-    exitScaleEase: 26
+    exitEase: 26
+    fallbackHoldDuration: 1.5
   winOverlayColor: {r: 0.11, g: 0.06, b: 0.18, a: 0.52}
-  winLetterSprites:
-  - {fileID: -870944762, guid: bd32003f51e3603458275842ac4f0212, type: 3}
-  - {fileID: -1689813757, guid: 1ba53093187443748b2f12595c89e702, type: 3}
-  - {fileID: -733415410, guid: 204b661f2ccc8c44d9b4563235f431bc, type: 3}
-  - {fileID: 1396719952, guid: 2d2c6d01437aa6d43908ac227f2adc9b, type: 3}
-  - {fileID: 1591315275, guid: 78972455cdf46344e80a91cf587def9d, type: 3}
-  - {fileID: 1702719462, guid: 584c345f9a98b54459325503b4f8a3bb, type: 3}
-  - {fileID: -870944762, guid: bd32003f51e3603458275842ac4f0212, type: 3}
-  - {fileID: 1591315275, guid: 78972455cdf46344e80a91cf587def9d, type: 3}
-  - {fileID: 1324194488, guid: dca09ffd6d10ee343914e8cab310b21f, type: 3}
-  - {fileID: 1396719952, guid: 2d2c6d01437aa6d43908ac227f2adc9b, type: 3}
-  - {fileID: 1076102677, guid: 84eebd017a837c7448dd9a8a03f0077e, type: 3}
-  - {fileID: 1766316088, guid: 3e06dd0a83bf9e04a945ad60ddaef72e, type: 3}
-  - {fileID: 1766316088, guid: 3e06dd0a83bf9e04a945ad60ddaef72e, type: 3}
-  - {fileID: 1633300197, guid: a6c1e56409e01c94894d53fec4bb9b68, type: 3}
-  lineBreakIndex: 9
-  useOpticalKerning: 1
-  line1LetterSize: {x: 100, y: 100}
-  line1KerningFactor: 0.809
-  line1ArcHeightY: 28
-  line1MaxEdgeRotation: 5
-  line1ReverseRenderOrder: 1
-  line2LetterSize: {x: 150, y: 150}
-  line2KerningFactor: 0.9
-  line2ArcHeightY: 12
-  line2OffsetY: -108
-  line2MaxEdgeRotation: 2
-  line2ReverseRenderOrder: 1
-  winTextCenterOffsetY: 200
-  maxScreenWidthPercent: 0.9
+  winBannerSprite: {fileID: 21300000, guid: 6571b761fa0b3a840a59db2cb7820a2e, type: 3}
+  winBannerSize: {x: 1100, y: 550}
+  winBannerOffsetY: 200
   failureSequence:
     slideInDuration: 0.35
     holdDuration: 1
     slideOutDuration: 0.32
   failureBannerSize: {x: 1200, y: 244}
-  failureOverlayColor: {r: 0.3132075, g: 0.3132075, b: 0.3132075, a: 0.7607843}
+  failureOverlayColor: {r: 0.24528301, g: 0.24528301, b: 0.24528301, a: 0.69411767}
   failureBannerSprite: {fileID: 21300000, guid: a4ccd978a2bf8654b98de98865c32a5b, type: 3}
   failureBannerBackgroundColor: {r: 1, g: 1, b: 1, a: 1}
   useSlicedBannerImage: 0
   failureFontSize: 110
   failureTextColor: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &4863517708314199738
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5166230156354182908}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1bf02c9e6ae00348b06066bc21a122c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WinFireworkFXController
+  explosionCount: 2
+  fireworkPrefab: {fileID: 1826795072246435507, guid: 85492a7921a70c749a0db6359a9fb609, type: 3}
+  targetCamera: {fileID: 0}
+  winCanvas: {fileID: 4055934451993190454}
+  explosionSound: {fileID: 8300000, guid: 9de027129f17a994aa6043f6b8a2c8e8, type: 3}
+  audioSource: {fileID: 5022026089388030728}
+  explosionVolume: 0.3
+  minPitch: 0.95
+  maxPitch: 1.05
+  repeatAudioDuringParticles: 1
+  audioRepeatInterval: 0.6
+  repeatAudioVolumeScale: 0.3
+  autoDetectParticleLifetime: 1
+  fallbackParticleLifetime: 3.5
+  extraSustainPadding: 1
+  audioFadeOutDuration: 0.5
+  stopAudioOnDisable: 1
+  sortingOrderOffset: 100
+  minViewportX: 0.15
+  maxViewportX: 0.85
+  minViewportY: 0.15
+  maxViewportY: 0.85
+  spawnDistance: 10
+  initialDelay: 0.2
+  minimumDelay: 0.4
+  maximumDelay: 0.7
+--- !u!82 &5022026089388030728
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5166230156354182908}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 1
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!1 &5572695434381499300
 GameObject:
   m_ObjectHideFlags: 0
@@ -4315,10 +4426,6 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 4055934451993190454}
     - target: {fileID: 1523804014962459951, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
-      propertyPath: audioSource
-      value: 
-      objectReference: {fileID: 6583334658924891310}
-    - target: {fileID: 1523804014962459951, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
       propertyPath: maximumDelay
       value: 0.7
       objectReference: {fileID: 0}
@@ -4494,7 +4601,9 @@ PrefabInstance:
       propertyPath: m_ConstrainProportionsScale
       value: 1
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 1523804014962459951, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
+    - {fileID: 9022201015284698505, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
@@ -4516,17 +4625,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
---- !u!114 &3696430918830654472 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1523804014962459951, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
-  m_PrefabInstance: {fileID: 2768024902023430439}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7430782782301437306}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c1bf02c9e6ae00348b06066bc21a122c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WinFireworkFXController
 --- !u!1 &3923795951505809475 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1161330962023604580, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
@@ -4552,11 +4650,6 @@ MonoBehaviour:
 --- !u!224 &5906819207914448323 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 8615600756985898212, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
-  m_PrefabInstance: {fileID: 2768024902023430439}
-  m_PrefabAsset: {fileID: 0}
---- !u!82 &6583334658924891310 stripped
-AudioSource:
-  m_CorrespondingSourceObject: {fileID: 9022201015284698505, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
   m_PrefabInstance: {fileID: 2768024902023430439}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &7430782782301437306 stripped
