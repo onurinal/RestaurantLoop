@@ -220,11 +220,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4794353942678576422, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 493.57
+      value: 522
       objectReference: {fileID: 0}
     - target: {fileID: 4794353942678576422, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 149.71623
+      value: 158.34
       objectReference: {fileID: 0}
     - target: {fileID: 4794353942678576422, guid: c8a1bd225b1b87e4bb6226bffbfb0ac4, type: 3}
       propertyPath: m_LocalScale.x
@@ -2189,7 +2189,12 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4251731564247460705, guid: 48d9b6802971b544f9bb41b22ca9f557, type: 3}
   m_PrefabInstance: {fileID: 2433791085759176602}
   m_PrefabAsset: {fileID: 0}
---- !u!43 &1849397303
+--- !u!224 &1916999587 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 8338857051228210500, guid: 319abdcdb8a300f459c3ab64ad68e004, type: 3}
+  m_PrefabInstance: {fileID: 5522364340739403682}
+  m_PrefabAsset: {fileID: 0}
+--- !u!43 &1920043582
 Mesh:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2382,11 +2387,6 @@ Mesh:
       - serializedVersion: 1
         m_IndexStart: 0
         m_IndexCount: 0
---- !u!224 &1916999587 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 8338857051228210500, guid: 319abdcdb8a300f459c3ab64ad68e004, type: 3}
-  m_PrefabInstance: {fileID: 5522364340739403682}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1934231645
 GameObject:
   m_ObjectHideFlags: 0
