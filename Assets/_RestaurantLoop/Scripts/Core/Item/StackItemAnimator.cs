@@ -112,13 +112,18 @@ namespace RestaurantLoop.Core
         {
             if (itemPrefab == null) return;
 
-            // Spawn a dummy food item from the pool using the original prefab
             GameObject flyingItem = PoolManager.Instance.Spawn(itemPrefab, transform.position, Quaternion.identity);
-            
-            // Preserve the visual size of the stack item in the world
             flyingItem.transform.localScale = transform.lossyScale;
 
-            // Find, enable, and clear the trail renderer specifically for this flying dummy
+            if (flyingItem.TryGetComponent(out StackItem stackScript)) stackScript.enabled = false;
+            if (flyingItem.TryGetComponent(out Collider col)) col.enabled = false;
+
+            if (flyingItem.TryGetComponent(out StackItemVisuals visuals))
+            {
+                if (visuals.SingleMeshModel != null) visuals.SingleMeshModel.SetActive(true);
+                visuals.UpdateCountText(false, 0);
+            }
+
             TrailRenderer dummyTrail = flyingItem.GetComponentInChildren<TrailRenderer>(true);
             if (dummyTrail != null)
             {
@@ -129,16 +134,18 @@ namespace RestaurantLoop.Core
             Tween throwTween = flyingItem.transform.DOJump(targetCustomerPosition, 2f, 1, 0.35f);
             if (ignoreTimeScale) throwTween.SetUpdate(true);
 
-            throwTween.OnComplete(() => 
-            { 
-                // Disable and clear the trail before returning to the pool to prevent visual glitches on next spawn
+            throwTween.OnComplete(() =>
+            {
                 if (dummyTrail != null)
                 {
                     dummyTrail.Clear();
                     dummyTrail.enabled = false;
                 }
-                
-                PoolManager.Instance.Despawn(flyingItem); 
+
+                if (stackScript != null) stackScript.enabled = true;
+                if (col != null) col.enabled = true;
+
+                PoolManager.Instance.Despawn(flyingItem);
             });
         }
     }
