@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -5,15 +6,11 @@ using RestaurantLoop.Audio;
 
 namespace RestaurantLoop.UI
 {
-    /// <summary>
-    /// Controls win fireworks visuals and manages synchronized audio playback.
-    /// Ensures audio seamlessly covers the entire visual duration of particle effects.
-    /// </summary>
     [RequireComponent(typeof(AudioSource))]
     public sealed class WinFireworkFXController : MonoBehaviour
     {
         [Header("Burst Settings")]
-        [SerializeField, Min(1)] private int explosionCount = 3;
+        [SerializeField, Min(1)] private int explosionCount = 2;
 
         [Header("References")]
         [SerializeField] private GameObject fireworkPrefab;
@@ -23,29 +20,20 @@ namespace RestaurantLoop.UI
         [Header("Audio Settings")]
         [SerializeField] private AudioClip explosionSound;
         [SerializeField] private AudioSource audioSource;
-        [Tooltip("Base volume multiplier for explosion sounds.")]
         [SerializeField, Range(0f, 1f)] private float explosionVolume = 0.3f;
         [SerializeField, Range(0.8f, 1.2f)] private float minPitch = 0.95f;
         [SerializeField, Range(0.8f, 1.2f)] private float maxPitch = 1.05f;
 
         [Header("Audio Continuous Playback / Repeat")]
-        [Tooltip("If enabled, continuously repeats soft crackle/pop sounds while particles remain on screen.")]
         [SerializeField] private bool repeatAudioDuringParticles = true;
-        [Tooltip("Interval in seconds between repeated audio pops/crackles while particles are active.")]
         [SerializeField, Min(0.1f)] private float audioRepeatInterval = 0.35f;
-        [Tooltip("Volume multiplier for repeated background audio pops/crackles.")]
         [SerializeField, Range(0f, 1f)] private float repeatAudioVolumeScale = 0.6f;
 
         [Header("Automated Audio Lifetime Sync")]
-        [Tooltip("If enabled, automatically detects particle system lifetime from the prefab.")]
         [SerializeField] private bool autoDetectParticleLifetime = true;
-        [Tooltip("Fallback visual lifetime used if auto-detection is disabled or fails.")]
         [SerializeField, Min(0.1f)] private float fallbackParticleLifetime = 3.5f;
-        [Tooltip("Additional padding time (in seconds) added to particle lifetime to ensure audio never stops early.")]
         [SerializeField, Min(0f)] private float extraSustainPadding = 1.0f;
-        [Tooltip("Duration in seconds for the audio fade-out right before particles completely disappear.")]
         [SerializeField, Min(0f)] private float audioFadeOutDuration = 0.5f;
-        [Tooltip("Immediately stops audio when the component or UI panel is disabled.")]
         [SerializeField] private bool stopAudioOnDisable = true;
 
         [Header("Render Sorting")]
@@ -59,7 +47,6 @@ namespace RestaurantLoop.UI
         [SerializeField, Min(0.01f)] private float spawnDistance = 10f;
 
         [Header("Sequence Delays (Unscaled Realtime)")]
-        [Tooltip("Delay before the sequence begins after the panel is opened.")]
         [SerializeField, Min(0f)] private float initialDelay = 0.2f;
         [SerializeField, Min(0.05f)] private float minimumDelay = 0.25f;
         [SerializeField, Min(0.05f)] private float maximumDelay = 0.45f;
@@ -73,6 +60,7 @@ namespace RestaurantLoop.UI
         private int sortingLayerId;
         private int particleSortingOrder;
         private float detectedParticleLifetime;
+        private bool isPlaying = false;
 
         private void Awake()
         {
@@ -95,22 +83,17 @@ namespace RestaurantLoop.UI
                 audioSource.volume = 1f;
             }
 
-            sequenceCoroutine = StartCoroutine(PlaySequence());
+            isPlaying = false;
         }
 
         private void OnDisable()
         {
-            if (sequenceCoroutine != null)
-            {
-                StopCoroutine(sequenceCoroutine);
-                sequenceCoroutine = null;
-            }
+            if (sequenceCoroutine != null) StopCoroutine(sequenceCoroutine);
+            if (fadeOutCoroutine != null) StopCoroutine(fadeOutCoroutine);
 
-            if (fadeOutCoroutine != null)
-            {
-                StopCoroutine(fadeOutCoroutine);
-                fadeOutCoroutine = null;
-            }
+            sequenceCoroutine = null;
+            fadeOutCoroutine = null;
+            isPlaying = false;
 
             ClearSpawnedFireworks();
 
@@ -120,12 +103,27 @@ namespace RestaurantLoop.UI
             }
         }
 
+        public void PlayFireworks(Action onComplete)
+        {
+            if (sequenceCoroutine != null)
+            {
+                StopCoroutine(sequenceCoroutine);
+            }
+
+            if (!gameObject.activeInHierarchy)
+            {
+                gameObject.SetActive(true);
+            }
+
+            sequenceCoroutine = StartCoroutine(PlaySequence(onComplete));
+        }
+
         private void ConfigureAudioSource()
         {
             if (audioSource != null)
             {
                 audioSource.playOnAwake = false;
-                audioSource.spatialBlend = 0f; // 2D Sound for UI
+                audioSource.spatialBlend = 0f;
             }
         }
 
@@ -145,9 +143,6 @@ namespace RestaurantLoop.UI
             }
         }
 
-        /// <summary>
-        /// Automatically calculates the total visual duration of the particle system prefab.
-        /// </summary>
         private void UpdateParticleLifetime()
         {
             if (!autoDetectParticleLifetime || fireworkPrefab == null)
@@ -169,55 +164,41 @@ namespace RestaurantLoop.UI
             for (int i = 0; i < particleSystems.Count; i++)
             {
                 ParticleSystem.MainModule main = particleSystems[i].main;
-                float startDelay = main.startDelay.constantMax;
-                float duration = main.duration;
-                float startLifetime = main.startLifetime.constantMax;
-
-                float systemTotal = startDelay + duration + startLifetime;
-                if (systemTotal > maxLifetime)
-                {
-                    maxLifetime = systemTotal;
-                }
+                float systemTotal = main.startDelay.constantMax + main.duration + main.startLifetime.constantMax;
+                if (systemTotal > maxLifetime) maxLifetime = systemTotal;
             }
 
             detectedParticleLifetime = maxLifetime > 0f ? maxLifetime : fallbackParticleLifetime;
         }
 
-        private IEnumerator PlaySequence()
+        private IEnumerator PlaySequence(Action onComplete)
         {
+            isPlaying = true;
             RefreshReferences();
 
             if (fireworkPrefab == null || targetCamera == null)
             {
-                Debug.LogWarning($"{nameof(WinFireworkFXController)} on '{name}' requires a firework prefab and active target camera.", this);
+                isPlaying = false;
+                onComplete?.Invoke();
                 yield break;
             }
 
-            if (initialDelay > 0f)
-            {
-                yield return new WaitForSecondsRealtime(initialDelay);
-            }
+            if (initialDelay > 0f) yield return new WaitForSecondsRealtime(initialDelay);
 
-            // 1. Spawn visual bursts & play primary explosion audio
             for (int i = 0; i < explosionCount; i++)
             {
                 SpawnFirework();
 
                 if (i < explosionCount - 1)
                 {
-                    float delay = Random.Range(
-                        Mathf.Min(minimumDelay, maximumDelay),
-                        Mathf.Max(minimumDelay, maximumDelay));
-
+                    float delay = UnityEngine.Random.Range(Mathf.Min(minimumDelay, maximumDelay), Mathf.Max(minimumDelay, maximumDelay));
                     yield return new WaitForSecondsRealtime(delay);
                 }
             }
 
-            // 2. Calculate total remaining visual lifetime including extra sustain padding
             float totalVisualLifetime = detectedParticleLifetime + extraSustainPadding;
             float elapsedSustain = 0f;
 
-            // 3. Repeat audio crackles/pops if enabled while particles are falling
             if (repeatAudioDuringParticles && audioRepeatInterval > 0f)
             {
                 while (elapsedSustain < (totalVisualLifetime - audioFadeOutDuration))
@@ -234,28 +215,27 @@ namespace RestaurantLoop.UI
             else
             {
                 float remainingTime = totalVisualLifetime - audioFadeOutDuration;
-                if (remainingTime > 0f)
-                {
-                    yield return new WaitForSecondsRealtime(remainingTime);
-                }
+                if (remainingTime > 0f) yield return new WaitForSecondsRealtime(remainingTime);
             }
 
-            // 4. Smooth audio fade-out synchronized with particle cleanup
             if (audioFadeOutDuration > 0f)
             {
                 yield return StartCoroutine(FadeOutAudioRoutine(audioFadeOutDuration));
             }
             else
             {
-                if (audioSource != null) audioSource.Stop();
+                if (audioSource != null && audioSource.gameObject.activeInHierarchy) audioSource.Stop();
             }
 
+            isPlaying = false;
             sequenceCoroutine = null;
+
+            onComplete?.Invoke();
         }
 
         private IEnumerator FadeOutAudioRoutine(float duration)
         {
-            if (audioSource == null) yield break;
+            if (audioSource == null || !audioSource.gameObject.activeInHierarchy) yield break;
 
             float startVolume = audioSource.volume;
             float elapsed = 0f;
@@ -263,7 +243,7 @@ namespace RestaurantLoop.UI
             while (elapsed < duration)
             {
                 elapsed += Time.unscaledDeltaTime;
-                if (audioSource != null)
+                if (audioSource != null && audioSource.gameObject.activeInHierarchy)
                 {
                     audioSource.volume = Mathf.Lerp(startVolume, 0f, elapsed / duration);
                 }
@@ -271,10 +251,10 @@ namespace RestaurantLoop.UI
                 yield return null;
             }
 
-            if (audioSource != null)
+            if (audioSource != null && audioSource.gameObject.activeInHierarchy)
             {
                 audioSource.Stop();
-                audioSource.volume = startVolume; // Restore base volume for future plays
+                audioSource.volume = startVolume;
             }
         }
 
@@ -297,17 +277,15 @@ namespace RestaurantLoop.UI
             if (explosionSound == null) return;
 
             AudioManager audioManager = AudioManager.Instance;
-            float globalSfxVolume = audioManager != null
-                ? audioManager.SfxVolume
-                : Mathf.Clamp01(PlayerPrefs.GetFloat("SfxVolume", 1f));
+            float globalSfxVolume = audioManager != null ? audioManager.SfxVolume : Mathf.Clamp01(PlayerPrefs.GetFloat("SfxVolume", 1f));
 
             if ((audioManager != null && audioManager.IsSfxMuted) || globalSfxVolume <= Mathf.Epsilon) return;
 
             float finalVolume = volumeScale * explosionVolume * globalSfxVolume;
 
-            if (audioSource != null)
+            if (audioSource != null && audioSource.gameObject.activeInHierarchy)
             {
-                audioSource.pitch = Random.Range(minPitch, maxPitch);
+                audioSource.pitch = UnityEngine.Random.Range(minPitch, maxPitch);
                 audioSource.PlayOneShot(explosionSound, finalVolume);
             }
             else if (audioManager != null)
@@ -320,10 +298,7 @@ namespace RestaurantLoop.UI
         {
             for (int i = activeSpawnedFireworks.Count - 1; i >= 0; i--)
             {
-                if (activeSpawnedFireworks[i] != null)
-                {
-                    Destroy(activeSpawnedFireworks[i]);
-                }
+                if (activeSpawnedFireworks[i] != null) Destroy(activeSpawnedFireworks[i]);
             }
 
             activeSpawnedFireworks.Clear();
@@ -336,16 +311,12 @@ namespace RestaurantLoop.UI
             float minY = Mathf.Min(minViewportY, maxViewportY);
             float maxY = Mathf.Max(minViewportY, maxViewportY);
 
-            switch (Random.Range(0, 4))
+            switch (UnityEngine.Random.Range(0, 4))
             {
-                case 0: // Left edge
-                    return new Vector3(Random.Range(minX, Mathf.Lerp(minX, maxX, 0.25f)), Random.Range(minY, maxY), spawnDistance);
-                case 1: // Right edge
-                    return new Vector3(Random.Range(Mathf.Lerp(minX, maxX, 0.75f), maxX), Random.Range(minY, maxY), spawnDistance);
-                case 2: // Upper area
-                    return new Vector3(Random.Range(minX, maxX), Random.Range(Mathf.Lerp(minY, maxY, 0.65f), maxY), spawnDistance);
-                default: // Lower area
-                    return new Vector3(Random.Range(minX, maxX), Random.Range(minY, Mathf.Lerp(minY, maxY, 0.35f)), spawnDistance);
+                case 0: return new Vector3(UnityEngine.Random.Range(minX, Mathf.Lerp(minX, maxX, 0.25f)), UnityEngine.Random.Range(minY, maxY), spawnDistance);
+                case 1: return new Vector3(UnityEngine.Random.Range(Mathf.Lerp(minX, maxX, 0.75f), maxX), UnityEngine.Random.Range(minY, maxY), spawnDistance);
+                case 2: return new Vector3(UnityEngine.Random.Range(minX, maxX), UnityEngine.Random.Range(Mathf.Lerp(minY, maxY, 0.65f), maxY), spawnDistance);
+                default: return new Vector3(UnityEngine.Random.Range(minX, maxX), UnityEngine.Random.Range(minY, Mathf.Lerp(minY, maxY, 0.35f)), spawnDistance);
             }
         }
 

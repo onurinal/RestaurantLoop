@@ -12,7 +12,7 @@ namespace RestaurantLoop.UI
     {
         [Min(0f)] public float letterStaggerDelay = 0.055f;
         [Min(0.01f)] public float letterScaleDuration = 0.18f;
-        [Tooltip("Hold duration for the text overlay on screen in seconds.")]
+        [Tooltip("If no fireworks assigned, it will wait this long before exiting.")]
         [Min(0f)] public float holdDuration = 1.2f;
         [Min(1f)] public float exitSpiralSpeed = 720f;
         [Tooltip("Duration of the spiral/vortex exit animation in seconds.")]
@@ -36,28 +36,29 @@ namespace RestaurantLoop.UI
         [SerializeField] private Canvas targetCanvas;
         [SerializeField] private TMP_FontAsset bannerFont;
 
+        [Tooltip("Assign the WinFireworkFXController here. It will trigger after letters appear, and wait until it finishes before letters exit.")]
+        [SerializeField] private WinFireworkFXController fireworkController;
+
         [Header("Win Sequence Settings")]
         [SerializeField] private WinBannerSettings winSequence = new WinBannerSettings();
         [SerializeField] private Color winOverlayColor = new Color(0.11f, 0.06f, 0.18f, 0.52f);
 
         [Header("Win Letter Sprites")]
-        [Tooltip("Assign letter sprites in order (R, E, S, T, A, U, R, A, N, T, L, O, O, P).")]
         [SerializeField] private List<Sprite> winLetterSprites = new List<Sprite>();
-        [Tooltip("0-based index to break line (9 = after 10th letter 'T' of RESTAURANT).")]
         [SerializeField] private int lineBreakIndex = 9;
+
+        [Header("Typography & Spacing Engine")]
+        [SerializeField] private bool useOpticalKerning = true;
 
         [Header("Line 1 Setup (RESTAURANT)")]
         [SerializeField] private Vector2 line1LetterSize = new Vector2(100f, 100f);
-        [Tooltip("Kerning factor based on sprite width. Lower = tighter, Higher = loose.")]
-        [SerializeField, Range(0.4f, 1.2f)] private float line1KerningFactor = 0.92f;
+        [SerializeField, Range(0.4f, 1.2f)] private float line1KerningFactor = 0.88f;
         [SerializeField] private float line1ArcHeightY = 24f;
         [SerializeField, Range(0f, 30f)] private float line1MaxEdgeRotation = 5f;
-        [Tooltip("Check this if you want left letters (like N) to render on top of right letters (like T).")]
         [SerializeField] private bool line1ReverseRenderOrder = true;
 
         [Header("Line 2 Setup (LOOP - Main Menu Style)")]
         [SerializeField] private Vector2 line2LetterSize = new Vector2(150f, 150f);
-        [Tooltip("Kerning factor based on sprite width for line 2.")]
         [SerializeField, Range(0.4f, 1.2f)] private float line2KerningFactor = 0.88f;
         [SerializeField] private float line2ArcHeightY = 12f;
         [SerializeField] private float line2OffsetY = -108f;
@@ -89,7 +90,8 @@ namespace RestaurantLoop.UI
         private RectTransform failureBanner;
         private Image failureBannerBackgroundImage;
         private TMP_Text failureText;
-        private Sequence activeSequence;
+        private Sequence activeIntroSequence;
+        private Sequence activeOutroSequence;
 
         public void Initialize(Canvas canvas)
         {
@@ -97,11 +99,11 @@ namespace RestaurantLoop.UI
             EnsureOverlay();
         }
 
-        public void PlayWinSequence(Action onComplete)
+        public void PlayWinSequence(Action onFinalComplete)
         {
             if (!EnsureOverlay())
             {
-                onComplete?.Invoke();
+                onFinalComplete?.Invoke();
                 return;
             }
 
@@ -112,38 +114,52 @@ namespace RestaurantLoop.UI
             winContentRoot.gameObject.SetActive(true);
             failureBanner.gameObject.SetActive(false);
 
-            activeSequence = DOTween.Sequence().SetUpdate(true).SetTarget(this);
-            float revealEnd = 0f;
+            activeIntroSequence = DOTween.Sequence().SetUpdate(true).SetTarget(this);
 
             for (int i = 0; i < letters.Count; i++)
             {
                 RectTransform letter = letters[i];
                 float revealAt = i * winSequence.letterStaggerDelay;
-                revealEnd = revealAt + winSequence.letterScaleDuration;
-                activeSequence.Insert(revealAt,
-                    letter.DOScale(Vector3.one, winSequence.letterScaleDuration).SetEase(Ease.OutBack));
+                activeIntroSequence.Insert(revealAt, letter.DOScale(Vector3.one, winSequence.letterScaleDuration).SetEase(Ease.OutBack));
             }
 
-            float exitStart = revealEnd + winSequence.holdDuration;
+            activeIntroSequence.OnComplete(() =>
+            {
+                activeIntroSequence = null;
+
+                if (fireworkController != null)
+                {
+                    fireworkController.PlayFireworks(() => PlayWinOutroSequence(onFinalComplete));
+                }
+                else
+                {
+                    DOVirtual.DelayedCall(winSequence.holdDuration, () => PlayWinOutroSequence(onFinalComplete), ignoreTimeScale: true);
+                }
+            });
+        }
+
+        private void PlayWinOutroSequence(Action onFinalComplete)
+        {
+            activeOutroSequence = DOTween.Sequence().SetUpdate(true).SetTarget(this);
+
             for (int i = 0; i < letters.Count; i++)
             {
                 RectTransform letter = letters[i];
-                float exitAt = exitStart + i * winSequence.letterStaggerDelay * 0.22f;
+                float exitAt = i * winSequence.letterStaggerDelay * 0.22f;
                 float rotation = winSequence.exitSpiralSpeed * winSequence.exitDuration;
-                activeSequence.Insert(exitAt,
-                    letter.DOAnchorPos(Vector2.zero, winSequence.exitDuration).SetEase(Ease.InCubic));
-                activeSequence.Insert(exitAt,
-                    letter.DORotate(new Vector3(0f, 0f, rotation), winSequence.exitDuration,
-                        RotateMode.FastBeyond360).SetRelative().SetEase(Ease.InQuad));
-                activeSequence.Insert(exitAt,
-                    letter.DOScale(Vector3.zero, winSequence.exitDuration).SetEase(winSequence.exitScaleEase));
+
+                activeOutroSequence.Insert(exitAt, letter.DOAnchorPos(Vector2.zero, winSequence.exitDuration).SetEase(Ease.InCubic));
+                activeOutroSequence.Insert(exitAt,
+                    letter.DORotate(new Vector3(0f, 0f, rotation), winSequence.exitDuration, RotateMode.FastBeyond360).SetRelative().SetEase(Ease.InQuad));
+                activeOutroSequence.Insert(exitAt, letter.DOScale(Vector3.zero, winSequence.exitDuration).SetEase(winSequence.exitScaleEase));
             }
 
-            activeSequence.OnComplete(() =>
+            activeOutroSequence.OnComplete(() =>
             {
-                activeSequence = null;
+                activeOutroSequence = null;
                 overlayRoot.gameObject.SetActive(false);
-                onComplete?.Invoke();
+
+                onFinalComplete?.Invoke();
             });
         }
 
@@ -169,13 +185,13 @@ namespace RestaurantLoop.UI
             float offscreenY = canvasHeight * 0.5f + failureBannerSize.y;
             failureBanner.anchoredPosition = new Vector2(0f, offscreenY);
 
-            activeSequence = DOTween.Sequence().SetUpdate(true).SetTarget(this)
+            activeIntroSequence = DOTween.Sequence().SetUpdate(true).SetTarget(this)
                 .Append(failureBanner.DOAnchorPosY(0f, failureSequence.slideInDuration).SetEase(Ease.OutCubic))
                 .AppendInterval(failureSequence.holdDuration)
                 .Append(failureBanner.DOAnchorPosY(-offscreenY, failureSequence.slideOutDuration).SetEase(Ease.InCubic))
                 .OnComplete(() =>
                 {
-                    activeSequence = null;
+                    activeIntroSequence = null;
                     overlayRoot.gameObject.SetActive(false);
                     onComplete?.Invoke();
                 });
@@ -183,8 +199,10 @@ namespace RestaurantLoop.UI
 
         public void ResetImmediate()
         {
-            activeSequence?.Kill();
-            activeSequence = null;
+            activeIntroSequence?.Kill();
+            activeOutroSequence?.Kill();
+            activeIntroSequence = null;
+            activeOutroSequence = null;
             if (overlayRoot != null) overlayRoot.gameObject.SetActive(false);
         }
 
@@ -211,8 +229,7 @@ namespace RestaurantLoop.UI
                 return true;
             }
 
-            GameObject rootObject = new GameObject("GameStateTransitionOverlay", typeof(RectTransform),
-                typeof(CanvasRenderer), typeof(Image));
+            GameObject rootObject = new GameObject("GameStateTransitionOverlay", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             rootObject.transform.SetParent(targetCanvas.transform, false);
             overlayRoot = rootObject.GetComponent<RectTransform>();
             Stretch(overlayRoot);
@@ -225,21 +242,18 @@ namespace RestaurantLoop.UI
             winContentRoot.sizeDelta = new Vector2(1000f, 320f);
             BuildWinLetters();
 
-            failureBanner = new GameObject("FailureBanner", typeof(RectTransform), typeof(CanvasRenderer),
-                typeof(Image)).GetComponent<RectTransform>();
+            failureBanner = new GameObject("FailureBanner", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image)).GetComponent<RectTransform>();
             failureBanner.SetParent(overlayRoot, false);
             failureBanner.anchorMin = failureBanner.anchorMax = new Vector2(0.5f, 0.5f);
             failureBanner.sizeDelta = failureBannerSize;
 
             failureBannerBackgroundImage = failureBanner.GetComponent<Image>();
-
             failureText = CreateText("FailureText", failureBanner, failureFontSize);
             Stretch(failureText.rectTransform);
             failureText.alignment = TextAlignmentOptions.Center;
             failureText.raycastTarget = false;
 
             UpdateFailureBannerVisuals();
-
             rootObject.SetActive(false);
             return true;
         }
@@ -250,9 +264,7 @@ namespace RestaurantLoop.UI
             {
                 failureBanner.sizeDelta = failureBannerSize;
                 failureBannerBackgroundImage.sprite = failureBannerSprite;
-                failureBannerBackgroundImage.type = (failureBannerSprite != null && useSlicedBannerImage)
-                    ? Image.Type.Sliced
-                    : Image.Type.Simple;
+                failureBannerBackgroundImage.type = (failureBannerSprite != null && useSlicedBannerImage) ? Image.Type.Sliced : Image.Type.Simple;
                 failureBannerBackgroundImage.color = failureBannerBackgroundColor;
                 failureBannerBackgroundImage.raycastTarget = false;
             }
@@ -302,6 +314,28 @@ namespace RestaurantLoop.UI
             }
         }
 
+        private float GetOpticalKerningMultiplier(Sprite sprite)
+        {
+            if (sprite == null || string.IsNullOrEmpty(sprite.name)) return 1f;
+
+            char c = sprite.name.ToUpper()[0];
+
+            switch (c)
+            {
+                case 'T': return 0.70f;
+                case 'A': return 0.85f;
+                case 'S': return 0.95f;
+                case 'O': return 0.95f;
+                case 'E': return 1.05f;
+                case 'P': return 1.05f;
+                case 'L': return 1.05f;
+                case 'R': return 1.15f;
+                case 'N': return 1.15f;
+                case 'U': return 1.20f;
+                default: return 1f;
+            }
+        }
+
         private float BuildLine(List<Sprite> sprites, Vector2 letterSize, float kerningFactor, float arcHeight, float offsetY, float maxRotation,
             bool reverseOrder, ref int globalIndex)
         {
@@ -314,6 +348,12 @@ namespace RestaurantLoop.UI
                 Sprite sprite = sprites[i];
                 float aspect = (sprite != null && sprite.rect.height > 0f) ? (sprite.rect.width / sprite.rect.height) : 1f;
                 float actualWidth = letterSize.y * aspect;
+
+                if (useOpticalKerning)
+                {
+                    actualWidth *= GetOpticalKerningMultiplier(sprite);
+                }
+
                 scaledWidths.Add(actualWidth);
             }
 
@@ -343,8 +383,7 @@ namespace RestaurantLoop.UI
 
             for (int i = 0; i < count; i++)
             {
-                GameObject imageObject = new GameObject($"LetterSprite_{globalIndex:00}", typeof(RectTransform),
-                    typeof(CanvasRenderer), typeof(Image));
+                GameObject imageObject = new GameObject($"LetterSprite_{globalIndex:00}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
                 imageObject.transform.SetParent(winContentRoot, false);
 
                 Image image = imageObject.GetComponent<Image>();
@@ -385,8 +424,7 @@ namespace RestaurantLoop.UI
 
         private TMP_Text CreateText(string objectName, Transform parent, float fontSize)
         {
-            GameObject textObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer),
-                typeof(TextMeshProUGUI));
+            GameObject textObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
             textObject.transform.SetParent(parent, false);
             TMP_Text text = textObject.GetComponent<TextMeshProUGUI>();
             text.font = bannerFont != null ? bannerFont : TMP_Settings.defaultFontAsset;
@@ -397,8 +435,10 @@ namespace RestaurantLoop.UI
 
         private void ResetOverlay()
         {
-            activeSequence?.Kill();
-            activeSequence = null;
+            activeIntroSequence?.Kill();
+            activeOutroSequence?.Kill();
+            activeIntroSequence = null;
+            activeOutroSequence = null;
 
             if (winContentRoot != null)
             {
