@@ -231,6 +231,8 @@ namespace RestaurantLoop.Core
                 (PowerUpManager.Instance != null && PowerUpManager.Instance.IsClearColorResolving) ||
                 (LevelManager.Instance != null && !LevelManager.Instance.IsGameActive)) return;
 
+            VibrationManager.Instance?.PlayTapVibration();
+
             if (AudioManager.Instance != null && AudioManager.Instance.tapSound != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.tapSound);

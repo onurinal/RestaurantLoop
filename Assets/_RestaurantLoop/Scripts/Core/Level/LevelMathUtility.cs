@@ -10,6 +10,83 @@ namespace RestaurantLoop.Core
     public static class LevelMathUtility
     {
         public const int StackSizeStep = 5;
+        public const int MinimumColumnCount = 2;
+        public const int MaximumColumnCount = 4;
+
+        public static bool IsSupportedColumnCount(int columnCount)
+        {
+            return columnCount >= MinimumColumnCount && columnCount <= MaximumColumnCount;
+        }
+
+        /// <summary>
+        /// Finds a feasible row count and exact five-step partition. Rows are derived from demand,
+        /// stack bounds, and the supported column count instead of being independently authored.
+        /// </summary>
+        public static bool TryCalculateRowsAndPartition(
+            IReadOnlyList<CustomerDemandConfig> demandConfigs,
+            int minStackSize,
+            int maxStackSize,
+            int columnCount,
+            int seed,
+            out int calculatedRowCount,
+            out List<QueueStackConfig> generatedStacks,
+            out string error)
+        {
+            calculatedRowCount = 0;
+            generatedStacks = new List<QueueStackConfig>();
+
+            if (!IsSupportedColumnCount(columnCount))
+            {
+                error = $"Queue columns must be between {MinimumColumnCount} and {MaximumColumnCount}.";
+                return false;
+            }
+
+            if (!TryAggregateDemands(demandConfigs, out List<ItemDataSO> items,
+                    out List<int> demandCounts, out error) ||
+                !AreValidStackBounds(minStackSize, maxStackSize, out error))
+                return false;
+
+            int totalDemand = 0;
+            for (int i = 0; i < demandCounts.Count; i++) totalDemand += demandCounts[i];
+
+            int minimumRows = Mathf.Max(1, Mathf.CeilToInt(items.Count / (float)columnCount));
+            int maximumRows = totalDemand / (columnCount * minStackSize);
+            if (maximumRows < minimumRows)
+            {
+                error = "Demand is too small to populate a queue with the selected columns and stack bounds.";
+                return false;
+            }
+
+            float averageStackSize = (minStackSize + maxStackSize) * 0.5f;
+            int preferredRows = Mathf.Clamp(
+                Mathf.RoundToInt(totalDemand / (columnCount * averageStackSize)),
+                minimumRows,
+                maximumRows);
+
+            for (int offset = 0; offset <= maximumRows - minimumRows; offset++)
+            {
+                int lower = preferredRows - offset;
+                if (lower >= minimumRows && TryPartitionDemandToGrid(demandConfigs, minStackSize,
+                        maxStackSize, columnCount, lower, seed, out generatedStacks, out _))
+                {
+                    calculatedRowCount = lower;
+                    error = null;
+                    return true;
+                }
+
+                int upper = preferredRows + offset;
+                if (upper != lower && upper <= maximumRows && TryPartitionDemandToGrid(demandConfigs,
+                        minStackSize, maxStackSize, columnCount, upper, seed, out generatedStacks, out _))
+                {
+                    calculatedRowCount = upper;
+                    error = null;
+                    return true;
+                }
+            }
+
+            error = "No exact rectangular queue can conserve this demand with the selected stack bounds.";
+            return false;
+        }
 
         /// <summary>
         /// Fills an exact columns-by-rows grid with five-step stacks without adding or losing demand.
@@ -29,9 +106,9 @@ namespace RestaurantLoop.Core
                 return false;
 
             if (!AreValidStackBounds(minStackSize, maxStackSize, out error)) return false;
-            if (columnCount <= 0 || rowCount <= 0)
+            if (!IsSupportedColumnCount(columnCount) || rowCount <= 0)
             {
-                error = "Queue columns and rows must both be greater than zero.";
+                error = $"Queue columns must be {MinimumColumnCount}, 3, or {MaximumColumnCount}; rows must be positive.";
                 return false;
             }
 
@@ -112,7 +189,7 @@ namespace RestaurantLoop.Core
                 !AreValidStackBounds(minStackSize, maxStackSize, out _))
                 return new List<QueueStackConfig>();
 
-            columnCount = Mathf.Max(1, columnCount);
+            if (!IsSupportedColumnCount(columnCount)) return new List<QueueStackConfig>();
             float averageStackSize = (minStackSize + maxStackSize) * 0.5f;
             int preferredRows = Mathf.Max(1, Mathf.RoundToInt(totalDemand / (columnCount * averageStackSize)));
             int maximumRows = Mathf.Max(1, totalDemand / (columnCount * minStackSize));

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
 using RestaurantLoop.Audio; 
+using RestaurantLoop.Infrastructure;
 using RestaurantLoop.UI; 
 
 namespace RestaurantLoop.Core
@@ -194,6 +195,7 @@ namespace RestaurantLoop.Core
 
             CurrentState = LevelState.Lost;
             LastFailureReason = failureReason;
+            VibrationManager.Instance?.PlayLoseVibration();
 
             if (AudioManager.Instance != null && AudioManager.Instance.levelLoseSound != null)
             {
@@ -219,6 +221,7 @@ namespace RestaurantLoop.Core
             if (CurrentState != LevelState.Playing) return;
 
             CurrentState = LevelState.Won;
+            VibrationManager.Instance?.PlayWinVibration();
             SaveNextUnlockedLevel();
             
             if (TutorialManager.Instance != null)

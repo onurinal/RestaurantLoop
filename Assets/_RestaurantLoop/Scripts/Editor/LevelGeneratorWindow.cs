@@ -11,7 +11,16 @@ namespace RestaurantLoop.EditorTools
     {
         private const string DefaultBatchOutputFolder = "Assets/_RestaurantLoop/Data/Levels";
         private const int MaxSolvabilityAttemptsPerLevel = 5000;
-        private static readonly string[] GeneratorTabs = { "Single Level Generator", "Batch Level Generator" };
+        private static readonly string[] GeneratorTabs =
+            { "Single Level Generator", "Batch Level Generator", "Difficulty Presets" };
+
+        private enum DifficultyPresetTier
+        {
+            Easy,
+            Medium,
+            Hard,
+            VeryHard
+        }
 
         private enum ValidationStatus
         {
@@ -30,7 +39,7 @@ namespace RestaurantLoop.EditorTools
         [SerializeField] private List<ItemDataSO> customCustomerSequence = new List<ItemDataSO>();
 
         [SerializeField, Range(3, 20)] private int activeEdgeSlotCount = 6;
-        [SerializeField, Range(1, 8)] private int columnCount = 3;
+        [SerializeField, Range(2, 4)] private int columnCount = 3;
         [SerializeField, Range(1, 15)] private int rowCount = 3;
         [SerializeField] private int minStackSize = 10;
         [SerializeField] private int maxStackSize = 40;
@@ -105,11 +114,14 @@ namespace RestaurantLoop.EditorTools
 
         private Vector2 mainScrollPosition;
         private Vector2 batchScrollPosition;
+        private Vector2 presetScrollPosition;
         private Vector2 sequenceScrollPosition;
         private ValidationStatus validationStatus;
         private string validationMessage = "Generate or select a level, then validate it.";
         private MessageType batchMessageType = MessageType.Info;
         private string batchMessage = "Configure the batch ranges, then generate deterministic level assets.";
+        private MessageType presetMessageType = MessageType.Info;
+        private string presetMessage = "Choose a target asset and generate an official difficulty preset.";
 
         [MenuItem("Tools/RestaurantLoop/Level Generator")]
         public static void ShowWindow()
@@ -142,9 +154,13 @@ namespace RestaurantLoop.EditorTools
             {
                 DrawSingleLevelTab();
             }
-            else
+            else if (selectedTab == 1)
             {
                 DrawBatchLevelTab();
+            }
+            else
+            {
+                DrawDifficultyPresetsTab();
             }
         }
 
@@ -193,6 +209,62 @@ namespace RestaurantLoop.EditorTools
             EditorGUILayout.Space(6f);
             EditorGUILayout.HelpBox(batchMessage, batchMessageType);
             EditorGUILayout.EndScrollView();
+        }
+
+        private void DrawDifficultyPresetsTab()
+        {
+            presetScrollPosition = EditorGUILayout.BeginScrollView(presetScrollPosition);
+            EditorGUILayout.LabelField("Official Difficulty Presets", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "Each preset creates an exact five-step queue, derives rows automatically, restricts timed " +
+                "customers to foods visible in queue rows 1–2, and saves only after strict no-booster validation.",
+                MessageType.Info);
+
+            EditorGUILayout.Space(6f);
+            DrawTargetControls();
+            randomSeed = EditorGUILayout.IntField("Preset Random Seed", randomSeed);
+
+            EditorGUILayout.Space(6f);
+            EditorGUILayout.LabelField("Available Food Types", EditorStyles.boldLabel);
+            windowSerializedObject.Update();
+            EditorGUILayout.PropertyField(availableItemsProperty, new GUIContent("Food Items"), true);
+            windowSerializedObject.ApplyModifiedProperties();
+            if (GUILayout.Button("Find All Food Items"))
+            {
+                availableItems = FindAllFoodItems();
+                InitializeSerializedProperties(force: true);
+            }
+
+            EditorGUILayout.Space(10f);
+            DrawPresetButton("Generate Easy Level", DifficultyPresetTier.Easy,
+                "25–40 demand · 2–3 foods · 2–3 columns · 5–8 edge slots · 0 timed");
+            DrawPresetButton("Generate Medium Level", DifficultyPresetTier.Medium,
+                "45–75 demand · 3–4 foods · 3 columns · 8–12 edge slots · 3–6 timed at 15–20s");
+            DrawPresetButton("Generate Hard Level", DifficultyPresetTier.Hard,
+                "80–100 demand · 4–5 foods · 3–4 columns · 10–15 edge slots · 7–12 timed at 12–18s");
+            DrawPresetButton("Generate Very Hard Level", DifficultyPresetTier.VeryHard,
+                "105–125 demand · 5–6 foods · 4 columns · 14–20 edge slots · 15–20 timed at 10–15s");
+
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.HelpBox(presetMessage, presetMessageType);
+            DrawValidationStatus();
+
+            if (targetLevel != null)
+            {
+                DrawQueuePreview(targetLevel);
+                DrawCustomerSequencePreview(targetLevel);
+            }
+
+            EditorGUILayout.EndScrollView();
+        }
+
+        private void DrawPresetButton(string label, DifficultyPresetTier tier, string description)
+        {
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField(description, EditorStyles.wordWrappedMiniLabel);
+                if (GUILayout.Button(label, GUILayout.Height(36f))) GenerateDifficultyPreset(tier);
+            }
         }
 
         private void DrawBatchOutputSettings()
@@ -368,8 +440,8 @@ namespace RestaurantLoop.EditorTools
 
             EditorGUILayout.Space(4f);
             EditorGUILayout.LabelField("Queue Layout Grid Constraints", EditorStyles.miniBoldLabel);
-            batchMinQueueColumns = EditorGUILayout.IntSlider("Min Queue Columns", batchMinQueueColumns, 1, 8);
-            batchMaxQueueColumns = EditorGUILayout.IntSlider("Max Queue Columns", batchMaxQueueColumns, batchMinQueueColumns, 8);
+            batchMinQueueColumns = EditorGUILayout.IntSlider("Min Queue Columns", batchMinQueueColumns, 2, 4);
+            batchMaxQueueColumns = EditorGUILayout.IntSlider("Max Queue Columns", batchMaxQueueColumns, batchMinQueueColumns, 4);
             batchMinQueueRows = EditorGUILayout.IntSlider("Min Queue Rows", batchMinQueueRows, 1, 15);
             batchMaxQueueRows = EditorGUILayout.IntSlider("Max Queue Rows", batchMaxQueueRows, batchMinQueueRows, 15);
 
@@ -436,14 +508,17 @@ namespace RestaurantLoop.EditorTools
 
             EditorGUILayout.Space(6f);
             activeEdgeSlotCount = EditorGUILayout.IntSlider("Active Edge Slots", activeEdgeSlotCount, 3, 20);
-            columnCount = EditorGUILayout.IntSlider("Queue Columns", columnCount, 1, 8);
-            rowCount = EditorGUILayout.IntSlider("Queue Rows", rowCount, 1, 15);
+            columnCount = EditorGUILayout.IntSlider("Queue Columns", columnCount, 2, 4);
+            using (new EditorGUI.DisabledScope(true))
+            {
+                EditorGUILayout.IntField("Calculated Queue Rows", rowCount);
+            }
             minStackSize = EditorGUILayout.IntField("Minimum Stack Size", minStackSize);
             maxStackSize = EditorGUILayout.IntField("Maximum Stack Size", maxStackSize);
 
             EditorGUILayout.HelpBox(
-                $"Rack Slots are fixed at {LevelDataSO.FixedRackSlotCount}. The queue will contain exactly " +
-                $"{columnCount * rowCount} stacks.",
+                $"Rack Slots are fixed at {LevelDataSO.FixedRackSlotCount}. Rows are derived from total demand, " +
+                "the selected columns, and five-step stack bounds.",
                 MessageType.Info);
 
             minStackSize = SnapStackSize(minStackSize);
@@ -478,13 +553,13 @@ namespace RestaurantLoop.EditorTools
             for (int attempt = 0; attempt < MaxSolvabilityAttemptsPerLevel; attempt++)
             {
                 int effectiveSeed = unchecked(randomSeed + attempt * 1000);
-                if (!LevelMathUtility.TryPartitionDemandToGrid(
+                if (!LevelMathUtility.TryCalculateRowsAndPartition(
                         demandConfigs,
                         minStackSize,
                         maxStackSize,
                         columnCount,
-                        rowCount,
                         effectiveSeed,
+                        out int generatedRows,
                         out List<QueueStackConfig> stacks,
                         out error))
                 {
@@ -495,6 +570,8 @@ namespace RestaurantLoop.EditorTools
                     }
                     continue;
                 }
+
+                rowCount = generatedRows;
 
                 List<ItemDataSO> sequence = useCustomSequence && customCustomerSequence.Count > 0
                     ? new List<ItemDataSO>(customCustomerSequence)
@@ -565,9 +642,9 @@ namespace RestaurantLoop.EditorTools
             for (int attempt = 0; attempt < MaxSolvabilityAttemptsPerLevel; attempt++)
             {
                 int effectiveSeed = unchecked(randomSeed + attempt * 1000);
-                if (!LevelMathUtility.TryPartitionDemandToGrid(
-                        demandConfigs, minStackSize, maxStackSize, columnCount, rowCount, effectiveSeed,
-                        out List<QueueStackConfig> stacks, out string error))
+                if (!LevelMathUtility.TryCalculateRowsAndPartition(
+                        demandConfigs, minStackSize, maxStackSize, columnCount, effectiveSeed,
+                        out int generatedRows, out List<QueueStackConfig> stacks, out string error))
                 {
                     if (attempt == 0)
                     {
@@ -576,6 +653,8 @@ namespace RestaurantLoop.EditorTools
                     }
                     continue;
                 }
+
+                rowCount = generatedRows;
 
                 if (!TryBuildSingleTimedCustomers(demandConfigs, stacks, columnCount, rowCount, sequenceToUse, effectiveSeed,
                         out List<TimedCustomerConfig> timedCustomers, out _)) continue;
@@ -663,7 +742,9 @@ namespace RestaurantLoop.EditorTools
             LevelValidationReport report = LevelValidator.AnalyzeLevel(targetLevel);
             if (report.SolvableWithoutPowerUps)
             {
-                SetValidationStatus(ValidationStatus.SolvableWithoutPowerUps, "Solvable without power-ups.");
+                SetValidationStatus(
+                    ValidationStatus.SolvableWithoutPowerUps,
+                    $"Solvable without power-ups. {report.ValidationMessage}");
             }
             else if (report.SolvableWithPowerUps)
             {
@@ -677,6 +758,148 @@ namespace RestaurantLoop.EditorTools
                     ValidationStatus.InvalidOrUnsolvable,
                     $"Unsolvable or invalid. Demand: {targetLevel.TotalCustomerDemand}, queue items: {targetLevel.TotalQueueItems}.");
             }
+        }
+
+        private void GenerateDifficultyPreset(DifficultyPresetTier tier)
+        {
+            PresetDifficultyProfile profile = PresetDifficultyProfile.For(tier);
+            List<ItemDataSO> validItems = GetDistinctAvailableItems();
+            if (validItems.Count < profile.MinFoodTypes)
+            {
+                SetPresetMessage(
+                    $"{profile.DisplayName} requires at least {profile.MinFoodTypes} food assets; " +
+                    $"only {validItems.Count} valid items are configured.",
+                    MessageType.Error);
+                return;
+            }
+
+            if (targetLevel == null && !CreateNewLevelAsset()) return;
+
+            for (int attempt = 0; attempt < MaxSolvabilityAttemptsPerLevel; attempt++)
+            {
+                int candidateSeed = unchecked(randomSeed + ((int)tier + 1) * 1000003 + attempt * 7919);
+                System.Random random = new System.Random(candidateSeed);
+                int foodTypeCount = NextInclusive(
+                    random,
+                    profile.MinFoodTypes,
+                    Mathf.Min(profile.MaxFoodTypes, validItems.Count));
+                int columns = NextInclusive(random, profile.MinColumns, profile.MaxColumns);
+                int activeSlots = NextInclusive(random, profile.MinActiveSlots, profile.MaxActiveSlots);
+                int totalDemand = NextInclusive(
+                    random,
+                    profile.MinDemand / LevelMathUtility.StackSizeStep,
+                    profile.MaxDemand / LevelMathUtility.StackSizeStep) * LevelMathUtility.StackSizeStep;
+
+                int minimumRows = Mathf.Max(1, Mathf.CeilToInt(foodTypeCount / (float)columns));
+                int maximumRows = Mathf.Min(15, totalDemand / (columns * profile.MinStackSize));
+                if (maximumRows < minimumRows) continue;
+                int desiredRows = NextInclusive(random, minimumRows, maximumRows);
+                int rows = FindClosestFeasibleRowCount(
+                    totalDemand,
+                    columns,
+                    desiredRows,
+                    minimumRows,
+                    maximumRows,
+                    profile.MinStackSize,
+                    profile.MaxStackSize);
+                if (rows <= 0) continue;
+
+                int queueSlotCount = columns * rows;
+                List<CustomerDemandConfig> demands = CreateRandomDemandDistribution(
+                    validItems,
+                    totalDemand,
+                    foodTypeCount,
+                    queueSlotCount,
+                    profile.MinStackSize,
+                    profile.MaxStackSize,
+                    random);
+                if (demands == null) continue;
+
+                if (!LevelMathUtility.TryPartitionDemandToGrid(
+                        demands,
+                        profile.MinStackSize,
+                        profile.MaxStackSize,
+                        columns,
+                        rows,
+                        candidateSeed,
+                        out List<QueueStackConfig> stacks,
+                        out _))
+                    continue;
+
+                List<ItemDataSO> sequence =
+                    LevelMathUtility.GenerateDeterministicCustomerSequence(demands, candidateSeed);
+                int timedCount = NextInclusive(random, profile.MinTimedCustomers, profile.MaxTimedCustomers);
+                int timedDuration = timedCount > 0
+                    ? NextInclusive(random, profile.MinTimerDuration, profile.MaxTimerDuration)
+                    : 0;
+                if (!TryBuildBatchTimedCustomers(
+                        stacks,
+                        columns,
+                        rows,
+                        sequence,
+                        timedCount,
+                        timedDuration,
+                        random,
+                        out List<TimedCustomerConfig> timedCustomers))
+                    continue;
+
+                LevelDataSO validationAsset = CreateInstance<LevelDataSO>();
+                ApplyCandidateData(validationAsset, activeSlots, columns, rows, demands, stacks, sequence, timedCustomers);
+                validationAsset.minStackSize = profile.MinStackSize;
+                validationAsset.maxStackSize = profile.MaxStackSize;
+                LevelValidationReport report = LevelValidator.AnalyzeLevel(validationAsset);
+                DestroyImmediate(validationAsset);
+                if (!report.SolvableWithoutPowerUps) continue;
+
+                Undo.RecordObject(targetLevel, $"Generate {profile.DisplayName} Level");
+                ApplyCandidateData(targetLevel, activeSlots, columns, rows, demands, stacks, sequence, timedCustomers);
+                targetLevel.minStackSize = profile.MinStackSize;
+                targetLevel.maxStackSize = profile.MaxStackSize;
+                EditorUtility.SetDirty(targetLevel);
+                AssetDatabase.SaveAssets();
+
+                LoadTargetValues();
+                SetValidationStatus(
+                    ValidationStatus.SolvableWithoutPowerUps,
+                    $"{profile.DisplayName} certified without power-ups. {report.ValidationMessage}");
+                SetPresetMessage(
+                    $"Updated {AssetDatabase.GetAssetPath(targetLevel)} using seed {candidateSeed}. " +
+                    $"Demand {totalDemand}, foods {foodTypeCount}, queue {columns}×{rows}, edge slots {activeSlots}, " +
+                    $"timed customers {timedCustomers.Count}{(timedCount > 0 ? $" at {timedDuration}s" : string.Empty)}.",
+                    MessageType.Info);
+                Selection.activeObject = targetLevel;
+                return;
+            }
+
+            SetValidationStatus(
+                ValidationStatus.InvalidOrUnsolvable,
+                $"No strictly solvable {profile.DisplayName} candidate was found after " +
+                $"{MaxSolvabilityAttemptsPerLevel:N0} attempts.");
+            SetPresetMessage(
+                "Try another seed or confirm that enough valid food assets are assigned.",
+                MessageType.Error);
+        }
+
+        private List<ItemDataSO> GetDistinctAvailableItems()
+        {
+            if (availableItems == null || availableItems.Count == 0) availableItems = FindAllFoodItems();
+
+            List<ItemDataSO> validItems = new List<ItemDataSO>();
+            HashSet<ItemDataSO> seen = new HashSet<ItemDataSO>();
+            for (int i = 0; i < availableItems.Count; i++)
+            {
+                ItemDataSO item = availableItems[i];
+                if (item != null && seen.Add(item)) validItems.Add(item);
+            }
+
+            return validItems;
+        }
+
+        private void SetPresetMessage(string message, MessageType type)
+        {
+            presetMessage = message;
+            presetMessageType = type;
+            Repaint();
         }
 
         private void GenerateBatchLevels()
@@ -1478,8 +1701,7 @@ namespace RestaurantLoop.EditorTools
             ClampRange(ref batchMidMinStackSize, ref batchMidMaxStackSize, 5, 500);
             ClampRange(ref batchLateMinStackSize, ref batchLateMaxStackSize, 5, 500);
 
-            ClampRange(ref batchMinQueueColumns, ref batchMaxQueueColumns, 1, 8);
-            ClampRange(ref batchMaxQueueColumns, ref batchMaxQueueColumns, batchMinQueueColumns, 8);
+            ClampRange(ref batchMinQueueColumns, ref batchMaxQueueColumns, 2, 4);
             ClampRange(ref batchMinQueueRows, ref batchMaxQueueRows, 1, 15);
             ClampRange(ref batchMaxQueueRows, ref batchMaxQueueRows, batchMinQueueRows, 15);
             ClampRange(ref batchMidMinTimedCustomers, ref batchMidMaxTimedCustomers, 0, 100);
@@ -1735,16 +1957,18 @@ namespace RestaurantLoop.EditorTools
                 }
             }
 
-            if (!LevelMathUtility.TryPartitionDemandToGrid(
+            if (!LevelMathUtility.TryCalculateRowsAndPartition(
                     demandConfigs,
                     minStackSize,
                     maxStackSize,
                     columnCount,
-                    rowCount,
                     randomSeed,
+                    out int generatedRows,
                     out _,
                     out error))
                 return false;
+
+            rowCount = generatedRows;
 
             error = null;
             return true;
@@ -1908,6 +2132,78 @@ namespace RestaurantLoop.EditorTools
                 Stacks = stacks;
                 Sequence = sequence;
                 TimedCustomers = timedCustomers;
+            }
+        }
+
+        private readonly struct PresetDifficultyProfile
+        {
+            public string DisplayName { get; }
+            public int MinDemand { get; }
+            public int MaxDemand { get; }
+            public int MinFoodTypes { get; }
+            public int MaxFoodTypes { get; }
+            public int MinColumns { get; }
+            public int MaxColumns { get; }
+            public int MinActiveSlots { get; }
+            public int MaxActiveSlots { get; }
+            public int MinStackSize { get; }
+            public int MaxStackSize { get; }
+            public int MinTimedCustomers { get; }
+            public int MaxTimedCustomers { get; }
+            public int MinTimerDuration { get; }
+            public int MaxTimerDuration { get; }
+
+            private PresetDifficultyProfile(
+                string displayName,
+                int minDemand,
+                int maxDemand,
+                int minFoodTypes,
+                int maxFoodTypes,
+                int minColumns,
+                int maxColumns,
+                int minActiveSlots,
+                int maxActiveSlots,
+                int minStackSize,
+                int maxStackSize,
+                int minTimedCustomers,
+                int maxTimedCustomers,
+                int minTimerDuration,
+                int maxTimerDuration)
+            {
+                DisplayName = displayName;
+                MinDemand = minDemand;
+                MaxDemand = maxDemand;
+                MinFoodTypes = minFoodTypes;
+                MaxFoodTypes = maxFoodTypes;
+                MinColumns = minColumns;
+                MaxColumns = maxColumns;
+                MinActiveSlots = minActiveSlots;
+                MaxActiveSlots = maxActiveSlots;
+                MinStackSize = minStackSize;
+                MaxStackSize = maxStackSize;
+                MinTimedCustomers = minTimedCustomers;
+                MaxTimedCustomers = maxTimedCustomers;
+                MinTimerDuration = minTimerDuration;
+                MaxTimerDuration = maxTimerDuration;
+            }
+
+            public static PresetDifficultyProfile For(DifficultyPresetTier tier)
+            {
+                switch (tier)
+                {
+                    case DifficultyPresetTier.Easy:
+                        return new PresetDifficultyProfile(
+                            "Easy", 25, 40, 2, 3, 2, 3, 5, 8, 5, 15, 0, 0, 0, 0);
+                    case DifficultyPresetTier.Medium:
+                        return new PresetDifficultyProfile(
+                            "Medium", 45, 75, 3, 4, 3, 3, 8, 12, 5, 20, 3, 6, 15, 20);
+                    case DifficultyPresetTier.Hard:
+                        return new PresetDifficultyProfile(
+                            "Hard", 80, 100, 4, 5, 3, 4, 10, 15, 5, 25, 7, 12, 12, 18);
+                    default:
+                        return new PresetDifficultyProfile(
+                            "Very Hard", 105, 125, 5, 6, 4, 4, 14, 20, 5, 30, 15, 20, 10, 15);
+                }
             }
         }
 

@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
 using RestaurantLoop.Audio;
+using RestaurantLoop.Infrastructure;
 
 namespace RestaurantLoop.Core
 {
@@ -232,6 +233,7 @@ namespace RestaurantLoop.Core
                 if (normalized <= criticalBoundary && !isCriticalSoundActive)
                 {
                     isCriticalSoundActive = true;
+                    VibrationManager.Instance?.PlayTimedWarningVibration();
                     if (AudioManager.Instance != null) AudioManager.Instance.StartCriticalWarning();
                 }
 

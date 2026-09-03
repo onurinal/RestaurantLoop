@@ -44,7 +44,7 @@ namespace RestaurantLoop.Core
         public int rackSlotCount => FixedRackSlotCount;
 
         [Header("Queue Layout Setup")]
-        [Range(1, 8)] public int columnCount = 3;
+        [Range(LevelMathUtility.MinimumColumnCount, LevelMathUtility.MaximumColumnCount)] public int columnCount = 3;
         public int calculatedRowCount = 3;
 
         [Header("Queue Stack Size Constraints")]
