@@ -12,11 +12,17 @@ namespace RestaurantLoop.UI
     {
         [Header("Settings Panels")]
         [Tooltip("The dark background panel that appears instantly behind the settings menu")]
-        [SerializeField] private GameObject darkOverlayPanel; // ADDED
+        [SerializeField] private GameObject darkOverlayPanel;
         [SerializeField] private GameObject settingsPanel;
         [SerializeField] private GameObject winPanel;
         [SerializeField] private GameObject losePanel;
         [SerializeField] private GameStateTransitionController stateTransitionController;
+
+        [Header("Confirmation Panel")]
+        [SerializeField] private GameObject confirmLeavePanel;
+        [SerializeField] private Button leaveButton;
+        [SerializeField] private Button confirmLeaveYesButton;
+        [SerializeField] private Button confirmLeaveNoButton;
 
         [Header("Panel Pop Animation")]
         [SerializeField, Min(0f)] private float panelPopInDuration = 0.25f;
@@ -31,9 +37,12 @@ namespace RestaurantLoop.UI
         [SerializeField] private Button gameSettingsButton;
         [SerializeField] private Button closeSettingsButton;
 
-        [Header("Legacy Audio Sliders (Kept for future use)")]
+        [Header("Sliders & Slider Buttons")]
         [SerializeField] private Slider musicSlider;
         [SerializeField] private Slider sfxSlider;
+        [SerializeField] private Slider vibrationSlider; 
+        [Tooltip("Invisible button placed over the vibration slider to detect taps")]
+        [SerializeField] private Button vibrationSliderButton;
 
         [Header("Audio Toggle Buttons")]
         [SerializeField] private Button musicToggleButton;
@@ -72,6 +81,7 @@ namespace RestaurantLoop.UI
         private Vector3 settingsPanelBaseScale;
         private Vector3 winPanelBaseScale;
         private Vector3 losePanelBaseScale;
+        private Vector3 confirmLeavePanelBaseScale; 
 
         private void Awake()
         {
@@ -83,6 +93,7 @@ namespace RestaurantLoop.UI
             settingsPanelBaseScale = GetPanelScale(settingsPanel);
             winPanelBaseScale = GetPanelScale(winPanel);
             losePanelBaseScale = GetPanelScale(losePanel);
+            confirmLeavePanelBaseScale = GetPanelScale(confirmLeavePanel);
         }
 
         private void Start()
@@ -91,17 +102,21 @@ namespace RestaurantLoop.UI
             
             // Initialize panel states
             if (darkOverlayPanel != null) darkOverlayPanel.SetActive(false);
-            settingsPanel.SetActive(false);
-            winPanel.SetActive(false);
-            losePanel.SetActive(false);
+            if (settingsPanel != null) settingsPanel.SetActive(false);
+            if (winPanel != null) winPanel.SetActive(false);
+            if (losePanel != null) losePanel.SetActive(false);
+            if (confirmLeavePanel != null) confirmLeavePanel.SetActive(false);
 
             float savedMusicVol = PlayerPrefs.GetFloat("MusicVolume", 1f);
             float savedSfxVol = PlayerPrefs.GetFloat("SfxVolume", 1f);
+            float savedVibration = PlayerPrefs.GetFloat("Vibration", 1f);
+
             isMusicOn = savedMusicVol > 0f;
             isSfxOn = savedSfxVol > 0f;
 
             if (musicSlider != null) musicSlider.value = savedMusicVol;
             if (sfxSlider != null) sfxSlider.value = savedSfxVol;
+            if (vibrationSlider != null) vibrationSlider.value = savedVibration;
 
             UpdateMusicButtonVisual();
             UpdateSfxButtonVisual();
@@ -116,6 +131,31 @@ namespace RestaurantLoop.UI
 
             if (musicSlider != null) musicSlider.onValueChanged.AddListener(UpdateMusicVolume);
             if (sfxSlider != null) sfxSlider.onValueChanged.AddListener(UpdateSfxVolume);
+            if (vibrationSlider != null) vibrationSlider.onValueChanged.AddListener(UpdateVibration);
+
+            // Titreşim sliderı üzerine tıklanınca çalışacak kod
+            if (vibrationSliderButton != null)
+            {
+                vibrationSliderButton.onClick.AddListener(ToggleVibrationSliderState);
+                vibrationSliderButton.onClick.AddListener(PlayTapSound);
+            }
+
+            // Çıkış (Leave) Butonları
+            if (leaveButton != null)
+            {
+                leaveButton.onClick.AddListener(OpenConfirmLeavePanel);
+                leaveButton.onClick.AddListener(PlayTapSound);
+            }
+            if (confirmLeaveYesButton != null)
+            {
+                confirmLeaveYesButton.onClick.AddListener(QuitGame);
+                confirmLeaveYesButton.onClick.AddListener(PlayTapSound);
+            }
+            if (confirmLeaveNoButton != null)
+            {
+                confirmLeaveNoButton.onClick.AddListener(CloseConfirmLeavePanel);
+                confirmLeaveNoButton.onClick.AddListener(PlayTapSound);
+            }
 
             if (LevelManager.Instance != null)
             {
@@ -135,7 +175,6 @@ namespace RestaurantLoop.UI
             loseMainMenuButton.onClick.AddListener(PlayTapSound);
 
             if (powerUp1Button != null) powerUp1Button.onClick.AddListener(TriggerPowerUp1Effect);
-            
             if (powerUp2Button != null) powerUp2Button.onClick.AddListener(PlayPowerUp2Sound);
             if (powerUp3Button != null) powerUp3Button.onClick.AddListener(PlayPowerUp3Sound);
             if (powerUp4Button != null) powerUp4Button.onClick.AddListener(PlayPowerUp4Sound);
@@ -266,25 +305,55 @@ namespace RestaurantLoop.UI
             });
         }
 
+        private void OpenConfirmLeavePanel()
+        {
+            ShowPanel(confirmLeavePanel, confirmLeavePanelBaseScale);
+        }
+
+        private void CloseConfirmLeavePanel()
+        {
+            HidePanel(confirmLeavePanel, confirmLeavePanelBaseScale);
+        }
+
+        private void QuitGame()
+        {
+            Debug.Log("Exiting Game from GameUIManager...");
+            // LoadMainMenu() ile ana menüye dönebilir veya tamamen çıkış yapabilirsin:
+            Application.Quit();
+        }
+
+        // --- Titreşim Slider'ını Şalter Gibi Tersine Çeviren Fonksiyon ---
+        private void ToggleVibrationSliderState()
+        {
+            if (vibrationSlider != null)
+            {
+                // Değer 0 ise 1 yap, 1 ise 0 yap. Slider'ın kendi "OnValueChanged" eventi otomatik tetiklenecektir.
+                vibrationSlider.value = vibrationSlider.value == 0 ? 1 : 0;
+            }
+        }
+
+        // --- Toggle Logic (Senkronize Edildi) ---
         private void ToggleMusic()
         {
-            isMusicOn = !isMusicOn;
-            float targetVolume = isMusicOn ? 1f : 0f;
-            UpdateMusicVolume(targetVolume);
+            float targetVolume = isMusicOn ? 0f : 1f;
 
-            if (musicSlider != null) musicSlider.value = targetVolume;
-            UpdateMusicButtonVisual();
+            if (musicSlider != null) 
+                musicSlider.value = targetVolume;
+            else 
+                UpdateMusicVolume(targetVolume);
+            
             PlayTapSound();
         }
 
         private void ToggleSFX()
         {
-            isSfxOn = !isSfxOn;
-            float targetVolume = isSfxOn ? 1f : 0f;
-            UpdateSfxVolume(targetVolume);
+            float targetVolume = isSfxOn ? 0f : 1f;
 
-            if (sfxSlider != null) sfxSlider.value = targetVolume;
-            UpdateSfxButtonVisual();
+            if (sfxSlider != null) 
+                sfxSlider.value = targetVolume;
+            else 
+                UpdateSfxVolume(targetVolume);
+
             PlayTapSound();
         }
 
@@ -300,10 +369,15 @@ namespace RestaurantLoop.UI
                 sfxToggleImage.sprite = isSfxOn ? sfxOnSprite : sfxOffSprite;
         }
 
+        // --- Value Update Logic (Senkronize Edildi) ---
         private void UpdateMusicVolume(float value)
         {
             PlayerPrefs.SetFloat("MusicVolume", value);
             if (AudioManager.Instance != null) AudioManager.Instance.SetMusicVolume(value);
+
+            // Slider kaydırıldığında bool'u ve resmi senkronize et
+            isMusicOn = value > 0f;
+            UpdateMusicButtonVisual();
         }
 
         private void UpdateSfxVolume(float value)
@@ -313,6 +387,15 @@ namespace RestaurantLoop.UI
             {
                 AudioManager.Instance.SetSfxVolume(value);
             }
+
+            // Slider kaydırıldığında bool'u ve resmi senkronize et
+            isSfxOn = value > 0f;
+            UpdateSfxButtonVisual();
+        }
+
+        private void UpdateVibration(float value)
+        {
+            PlayerPrefs.SetFloat("Vibration", value);
         }
 
         private void ShowWinPanel()
@@ -443,10 +526,20 @@ namespace RestaurantLoop.UI
 
             gameSettingsButton.onClick.RemoveAllListeners();
             closeSettingsButton.onClick.RemoveAllListeners();
+            
             if (musicToggleButton != null) musicToggleButton.onClick.RemoveAllListeners();
             if (sfxToggleButton != null) sfxToggleButton.onClick.RemoveAllListeners();
+            
             if (musicSlider != null) musicSlider.onValueChanged.RemoveAllListeners();
             if (sfxSlider != null) sfxSlider.onValueChanged.RemoveAllListeners();
+            if (vibrationSlider != null) vibrationSlider.onValueChanged.RemoveAllListeners();
+            
+            if (vibrationSliderButton != null) vibrationSliderButton.onClick.RemoveAllListeners();
+            
+            if (leaveButton != null) leaveButton.onClick.RemoveAllListeners();
+            if (confirmLeaveYesButton != null) confirmLeaveYesButton.onClick.RemoveAllListeners();
+            if (confirmLeaveNoButton != null) confirmLeaveNoButton.onClick.RemoveAllListeners();
+
             nextLevelButton.onClick.RemoveAllListeners();
             retryButton.onClick.RemoveAllListeners();
             winMainMenuButton.onClick.RemoveAllListeners();
