@@ -61,6 +61,8 @@ MonoBehaviour:
   rackDropSoundVolume: 1
   nomNomSound: {fileID: 8300000, guid: e006202d4a9c70643a738e5c4f0b35cd, type: 3}
   nomNomSoundVolume: 1
+  drinkConsumeSound: {fileID: 8300000, guid: 4dd42186b1847c6479393c6bbf199453, type: 3}
+  drinkConsumeSoundVolume: 1
   happyJumpSound: {fileID: 8300000, guid: 5791c0e0a6066274bb9de1196ffe4eb9, type: 3}
   happyJumpSoundVolume: 1
   popSound: {fileID: 8300000, guid: 8ff5486e5ce3bdb4088cab4ece2c4864, type: 3}
@@ -85,8 +87,8 @@ MonoBehaviour:
   burgerSound: {fileID: 8300000, guid: b759b61b0928b974ea1d837d84203647, type: 3}
   cakeSound: {fileID: 8300000, guid: 7e42f7bae9bbd784dad61f9fdf0ab97b, type: 3}
   drinkSound: {fileID: 8300000, guid: b759b61b0928b974ea1d837d84203647, type: 3}
-  friesSound: {fileID: 8300000, guid: 4323b3397609b9549a28ba2c56440ad5, type: 3}
-  sushiSound: {fileID: 8300000, guid: e418101092c6d434d838ba6646c96a7c, type: 3}
+  friesSound: {fileID: 8300000, guid: 7c3c7e9c89f21c54691c95ddcadc3eb2, type: 3}
+  sushiSound: {fileID: 8300000, guid: 7e42f7bae9bbd784dad61f9fdf0ab97b, type: 3}
   maxSimultaneousSounds: 2
 --- !u!82 &3898750725045401640
 AudioSource:

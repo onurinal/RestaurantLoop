@@ -36,6 +36,11 @@ namespace RestaurantLoop.Audio
         [Range(0f, 1f)] public float nomNomSoundVolume = 1f;
 
         [Space(5)]
+        [Tooltip("Played when a customer consumes a drink item")]
+        public AudioClip drinkConsumeSound;
+        [Range(0f, 1f)] public float drinkConsumeSoundVolume = 1f;
+
+        [Space(5)]
         public AudioClip happyJumpSound;
         [Range(0f, 1f)] public float happyJumpSoundVolume = 1f;
 
@@ -179,6 +184,7 @@ namespace RestaurantLoop.Audio
             if (throwSound != null) clipVolumeModifiers[throwSound] = throwSoundVolume;
             if (rackDropSound != null) clipVolumeModifiers[rackDropSound] = rackDropSoundVolume;
             if (nomNomSound != null) clipVolumeModifiers[nomNomSound] = nomNomSoundVolume;
+            if (drinkConsumeSound != null) clipVolumeModifiers[drinkConsumeSound] = drinkConsumeSoundVolume;
             if (happyJumpSound != null) clipVolumeModifiers[happyJumpSound] = happyJumpSoundVolume;
             if (popSound != null) clipVolumeModifiers[popSound] = popSoundVolume;
             if (customerEntranceSound != null) clipVolumeModifiers[customerEntranceSound] = customerEntranceSoundVolume;
@@ -335,7 +341,28 @@ namespace RestaurantLoop.Audio
             }
         }
 
-        // ADDED: Pause looping game sounds (like the timed warning) when the game is paused
+        public void PlayFoodConsumeSound(string foodName)
+        {
+            if (string.IsNullOrEmpty(foodName)) 
+            {
+                if (nomNomSound != null) PlaySFX(nomNomSound);
+                return;
+            }
+
+            string lowerName = foodName.ToLower();
+
+            // Play the drink sound if the item name contains "drink" and the clip is assigned
+            if (lowerName.Contains("drink") && drinkConsumeSound != null)
+            {
+                PlaySFX(drinkConsumeSound);
+            }
+            // Otherwise, play the default eating (nomNom) sound
+            else if (nomNomSound != null)
+            {
+                PlaySFX(nomNomSound);
+            }
+        }
+
         public void PauseGameSounds()
         {
             if (timedWarningSource != null && timedWarningSource.isPlaying)
@@ -344,7 +371,6 @@ namespace RestaurantLoop.Audio
             }
         }
 
-        // ADDED: Resume paused looping game sounds
         public void ResumeGameSounds()
         {
             if (timedWarningSource != null)

@@ -360,8 +360,12 @@ namespace RestaurantLoop.Core
 
             if (animator != null) animator.SetTrigger(EatHash);
 
-            if (AudioManager.Instance != null && AudioManager.Instance.nomNomSound != null)
-                AudioManager.Instance.PlaySFX(AudioManager.Instance.nomNomSound);
+            // Pass the item name to the AudioManager to determine the correct consume sound
+            if (AudioManager.Instance != null)
+            {
+                string itemName = requiredData != null ? requiredData.ItemName : "";
+                AudioManager.Instance.PlayFoodConsumeSound(itemName);
+            }
 
             yield return new WaitForSeconds(0.5f);
 
@@ -388,8 +392,12 @@ namespace RestaurantLoop.Core
 
             if (animator != null) animator.SetTrigger(EatHash);
 
-            if (AudioManager.Instance != null && AudioManager.Instance.nomNomSound != null)
-                AudioManager.Instance.PlaySFX(AudioManager.Instance.nomNomSound);
+            // Pass the item name to the AudioManager to determine the correct consume sound
+            if (AudioManager.Instance != null)
+            {
+                string itemName = requiredData != null ? requiredData.ItemName : "";
+                AudioManager.Instance.PlayFoodConsumeSound(itemName);
+            }
 
             yield return new WaitForSecondsRealtime(0.5f);
 
