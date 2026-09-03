@@ -301,7 +301,12 @@ namespace RestaurantLoop.Audio
 
                 float finalVolume = globalSfxVolume * individualVolumeMultiplier;
 
-                sfxSource.pitch = Random.Range(0.92f, 1.08f);
+                // Check if the current clip is a power-up sound
+                bool isPowerUp = (clip == powerUp1Sound || clip == powerUp2Sound || clip == powerUp3Sound || clip == powerUp4Sound);
+                
+                // Assign a fixed pitch (1.0f) for power-ups, or a random pitch for regular sound effects
+                sfxSource.pitch = isPowerUp ? 1.0f : Random.Range(0.92f, 1.08f);
+                
                 sfxSource.PlayOneShot(clip, finalVolume);
             }
         }
