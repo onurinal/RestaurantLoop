@@ -23,6 +23,8 @@ namespace RestaurantLoop.Core
 
     public class LevelManager : MonoBehaviour
     {
+        private const string HighestUnlockedLevelIndexPreferenceKey = "RestaurantLoop.HighestUnlockedLevelIndex";
+
         public static LevelManager Instance { get; private set; }
 
         [Header("Level Sequence")]
@@ -54,6 +56,7 @@ namespace RestaurantLoop.Core
             if (Instance == null)
             {
                 Instance = this;
+                RestoreHighestUnlockedLevel();
             }
             else
             {
@@ -71,6 +74,16 @@ namespace RestaurantLoop.Core
             if (CrowdManager.Instance != null)
             {
                 CrowdManager.Instance.OnDemandChanged -= HandleDemandChanged;
+            }
+        }
+
+        private void OnApplicationPause(bool paused)
+        {
+            // An active attempt is deliberately never persisted. Reset it as soon as the
+            // application backgrounds so returning always shows the authored level start.
+            if (paused && CurrentLevel != null)
+            {
+                LoadCurrentLevel();
             }
         }
 
@@ -206,6 +219,7 @@ namespace RestaurantLoop.Core
             if (CurrentState != LevelState.Playing) return;
 
             CurrentState = LevelState.Won;
+            SaveNextUnlockedLevel();
             
             if (TutorialManager.Instance != null)
             {
@@ -232,6 +246,26 @@ namespace RestaurantLoop.Core
 
             currentLevelIndex++;
             LoadCurrentLevel();
+        }
+
+        private void RestoreHighestUnlockedLevel()
+        {
+            if (levelSequence == null || levelSequence.Count == 0) return;
+
+            int savedIndex = PlayerPrefs.GetInt(HighestUnlockedLevelIndexPreferenceKey, currentLevelIndex);
+            currentLevelIndex = Mathf.Clamp(Mathf.Max(currentLevelIndex, savedIndex), 0, levelSequence.Count - 1);
+        }
+
+        private void SaveNextUnlockedLevel()
+        {
+            if (levelSequence == null || levelSequence.Count == 0) return;
+
+            int nextUnlockedIndex = Mathf.Min(currentLevelIndex + 1, levelSequence.Count - 1);
+            int highestUnlockedIndex = PlayerPrefs.GetInt(HighestUnlockedLevelIndexPreferenceKey, 0);
+            if (nextUnlockedIndex <= highestUnlockedIndex) return;
+
+            PlayerPrefs.SetInt(HighestUnlockedLevelIndexPreferenceKey, nextUnlockedIndex);
+            PlayerPrefs.Save();
         }
 
 #if UNITY_EDITOR

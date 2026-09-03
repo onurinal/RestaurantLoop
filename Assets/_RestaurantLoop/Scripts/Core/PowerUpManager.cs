@@ -16,7 +16,7 @@ namespace RestaurantLoop.Core
 
     /// <summary>
     /// Owns the temporary power-up state for one level attempt. Nothing here is
-    /// persisted: every level load starts with one use of each power-up.
+    /// persisted: every level load starts with 99 uses of each power-up.
     /// </summary>
     public sealed class PowerUpManager : MonoBehaviour
     {
