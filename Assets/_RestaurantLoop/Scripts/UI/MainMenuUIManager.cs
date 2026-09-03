@@ -9,6 +9,10 @@ namespace RestaurantLoop.UI
 {
     public class MainMenuUIManager : MonoBehaviour
     {
+        // Matches LevelManager's PlayerPrefs key. The tutorial is sequence index 0,
+        // so the menu starts by presenting the first regular level to a new player.
+        private const string HighestUnlockedLevelIndexPreferenceKey = "RestaurantLoop.HighestUnlockedLevelIndex";
+
         [Header("Panels")]
         [Tooltip("The dark background panel that appears instantly behind the settings menu")]
         [SerializeField] private GameObject darkOverlayPanel; // ADDED
@@ -85,7 +89,17 @@ namespace RestaurantLoop.UI
             if (musicToggleButton != null) musicToggleButton.onClick.AddListener(ToggleMusic);
             if (sfxToggleButton != null) sfxToggleButton.onClick.AddListener(ToggleSFX);
 
-            levelText.text = "LEVEL 1";
+            UpdateLevelText();
+        }
+
+        private void UpdateLevelText()
+        {
+            if (levelText == null) return;
+
+            int highestUnlockedLevel = Mathf.Max(
+                1,
+                PlayerPrefs.GetInt(HighestUnlockedLevelIndexPreferenceKey, 1));
+            levelText.text = $"LEVEL {highestUnlockedLevel}";
         }
 
         private void PlayTapSound()
