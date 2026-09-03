@@ -1,11 +1,18 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
+using UnityEngine.UI;
 using DG.Tweening;
 
 namespace RestaurantLoop.Core
 {
+    /// <summary>
+    /// Controls presentation, scaling animations, and food model display for the customer order balloon.
+    /// Uses UI Image components for World Space Canvas rendering.
+    /// </summary>
     public class OrderBalloon : MonoBehaviour
     {
-        [SerializeField] private SpriteRenderer bgRenderer;
+        [Header("UI References")]
+        [SerializeField] private Image bgCircleImage;
 
         [Header("3D Food Display")]
         [Tooltip("Presentation-only food prefab.")]
@@ -40,7 +47,7 @@ namespace RestaurantLoop.Core
         private void Awake()
         {
             restingLocalScale = transform.localScale;
-            EnsureRenderer();
+            EnsureImageReference();
             ApplyCameraOffset();
             CreateFoodDisplay();
         }
@@ -81,7 +88,7 @@ namespace RestaurantLoop.Core
                 .SetTarget(this);
         }
 
-        public void PlayOut(System.Action onComplete)
+        public void PlayOut(Action onComplete)
         {
             scaleTween?.Kill();
             scaleTween = null;
@@ -112,11 +119,12 @@ namespace RestaurantLoop.Core
             }
         }
 
-        private void EnsureRenderer()
+        private void EnsureImageReference()
         {
-            if (bgRenderer != null) return;
-            bgRenderer = GetComponent<SpriteRenderer>();
-            if (bgRenderer == null) bgRenderer = GetComponentInChildren<SpriteRenderer>();
+            if (bgCircleImage == null)
+            {
+                bgCircleImage = GetComponentInChildren<Image>();
+            }
         }
 
         private void CreateFoodDisplay()
@@ -142,8 +150,11 @@ namespace RestaurantLoop.Core
 
         public void SetColorAndState(Color baseColor, bool isEdge)
         {
-            EnsureRenderer();
-            if (bgRenderer != null) bgRenderer.color = baseColor;
+            EnsureImageReference();
+            if (bgCircleImage != null)
+            {
+                bgCircleImage.color = baseColor;
+            }
         }
     }
 }

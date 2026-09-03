@@ -3,7 +3,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
 using RestaurantLoop.Audio;
-using TMPro;
 
 namespace RestaurantLoop.Core
 {
@@ -15,13 +14,12 @@ namespace RestaurantLoop.Core
         [SerializeField] private Customer customer;
         [SerializeField] private GameObject timerRoot;
         [SerializeField] private Image timerFillImage;
+        [SerializeField] private Image hourglassImage;
         [SerializeField] private RectTransform pulseTarget;
 
         [Header("Low Time Alert")]
         [Tooltip("Normalized remaining time percentage (0.05 to 0.9) to trigger the warning state. 0.5 = 50%.")]
         [SerializeField, Range(0.05f, 0.9f)] private float warningNormalizedThreshold = 0.5f;
-        [Tooltip("Second-based threshold override (disabled when set to 0).")]
-        [SerializeField, Min(0f)] private float warningSecondsThreshold = 0f;
         [SerializeField, Min(0f)] private float pulseSpeed = 8f;
         [SerializeField, Range(0f, 0.3f)] private float pulseScaleAmount = 0.1f;
         [SerializeField] private Color normalColor = new Color(0.18f, 0.85f, 0.25f, 1f);
@@ -31,16 +29,6 @@ namespace RestaurantLoop.Core
         [Header("Pop-Up Attention Animation")]
         [SerializeField] private float popDuration = 0.4f;
         [SerializeField] private float punchAmount = 0.35f;
-
-        [Header("Final Countdown")]
-        [SerializeField] private TMP_Text countdownText;
-        [Tooltip("Position offset for the countdown text. Use a negative Z value to render in front of other UI elements.")]
-        [SerializeField] private Vector3 countdownOffset = new Vector3(0f, 125f, -1f);
-        [SerializeField, Min(0.01f)] private float countdownPopDuration = 0.28f;
-        [SerializeField, Min(0f)] private float countdownVisibleDuration = 0.45f;
-        [Tooltip("Font size override for the final countdown digits.")]
-        [SerializeField, Min(1f)] private float countdownFontSize = 92f;
-        [SerializeField, Range(0f, 20f)] private float countdownTiltAngle = 8f;
 
         private float duration;
         private float remainingTime;
@@ -55,8 +43,6 @@ namespace RestaurantLoop.Core
         private bool isCriticalSoundActive;
 
         private Tween popTween;
-        private Sequence countdownTween;
-        private int lastCountdownDigit;
 
         public bool IsTimed => isTimed;
         public float RemainingTime => remainingTime;
@@ -67,7 +53,6 @@ namespace RestaurantLoop.Core
             if (customer == null) customer = GetComponent<Customer>();
             if (pulseTarget == null && timerRoot != null) pulseTarget = timerRoot.transform as RectTransform;
             ConfigureRadialClockImage();
-            EnsureCountdownText();
             if (pulseTarget != null) pulseBaseScale = pulseTarget.localScale;
             pulsePhase = Mathf.Abs(GetInstanceID() % 360) * Mathf.Deg2Rad;
             SetTimerVisible(false);
@@ -106,7 +91,6 @@ namespace RestaurantLoop.Core
                 ActivateAndPlayPopAnimation();
             }
 
-            // Stop sounds and halt countdown immediately if the level is no longer active
             if (LevelManager.Instance != null && !LevelManager.Instance.IsGameActive)
             {
                 StopWarningSoundTracker();
@@ -115,13 +99,6 @@ namespace RestaurantLoop.Core
 
             remainingTime = Mathf.Max(0f, remainingTime - Time.deltaTime);
             RefreshVisuals();
-
-            int countdownDigit = Mathf.CeilToInt(remainingTime);
-            if (remainingTime <= 3f && countdownDigit >= 1 && countdownDigit != lastCountdownDigit)
-            {
-                lastCountdownDigit = countdownDigit;
-                ShowFinalCountdownDigit(countdownDigit);
-            }
 
             if (remainingTime <= 0f) Expire();
         }
@@ -134,13 +111,12 @@ namespace RestaurantLoop.Core
             remainingTime = duration;
             timerStarted = false;
             completed = false;
-            lastCountdownDigit = 0;
 
             StopWarningSoundTracker();
             hasPlayedWarningSound = false;
             isCriticalSoundActive = false;
 
-            if (pulseTarget != null) pulseTarget.localScale = pulseBaseScale;
+            if (pulseTarget != null) pulseBaseScale = pulseTarget.localScale;
             SetTimerVisible(false);
             RefreshVisuals();
         }
@@ -182,6 +158,14 @@ namespace RestaurantLoop.Core
         private void ActivateAndPlayPopAnimation()
         {
             SetTimerVisible(true);
+
+            if (!hasPlayedWarningSound)
+            {
+                hasPlayedWarningSound = true;
+                isWarningSoundActive = true;
+                if (AudioManager.Instance != null) AudioManager.Instance.StartTimedWarning();
+            }
+
             if (pulseTarget == null) return;
 
             KillPopTween();
@@ -201,80 +185,6 @@ namespace RestaurantLoop.Core
             }
 
             if (pulseTarget != null) pulseTarget.DOKill();
-
-            countdownTween?.Kill();
-            countdownTween = null;
-            if (countdownText != null)
-            {
-                countdownText.DOKill();
-                countdownText.gameObject.SetActive(false);
-            }
-        }
-
-        private void ShowFinalCountdownDigit(int digit)
-        {
-            if (countdownText == null) return;
-
-            RectTransform target = countdownText.rectTransform;
-            target.anchoredPosition3D = countdownOffset; // Override position (X, Y, Z) with Inspector offset
-
-            countdownTween?.Kill();
-            target.DOKill();
-            countdownText.DOKill();
-            countdownText.text = digit.ToString();
-            countdownText.gameObject.SetActive(true);
-            countdownText.alpha = 1f;
-            target.localScale = Vector3.zero;
-            target.localRotation = Quaternion.identity;
-
-            countdownTween = DOTween.Sequence()
-                .SetUpdate(true)
-                .SetTarget(target)
-                .Append(target.DOScale(1.15f, countdownPopDuration * 0.68f).SetEase(Ease.OutBack))
-                .Append(target.DOScale(1f, countdownPopDuration * 0.32f).SetEase(Ease.OutQuad))
-                .AppendInterval(countdownVisibleDuration)
-                .Append(countdownText.DOFade(0f, 0.16f).SetEase(Ease.InQuad))
-                .Join(target.DOScale(0.72f, 0.16f).SetEase(Ease.InBack))
-                .OnComplete(() =>
-                {
-                    countdownTween = null;
-                    if (countdownText != null) countdownText.gameObject.SetActive(false);
-                });
-
-            customer?.PlayCountdownUrgency(countdownTiltAngle, countdownPopDuration);
-        }
-
-        private void EnsureCountdownText()
-        {
-            if (countdownText != null)
-            {
-                // Force configured offset and font size onto existing countdown text element
-                countdownText.rectTransform.anchoredPosition3D = countdownOffset;
-                if (countdownFontSize > 0f) countdownText.fontSize = countdownFontSize;
-                return;
-            }
-
-            if (timerRoot == null) return;
-
-            // Dynamically instantiate UI text if none was assigned in Inspector
-            GameObject textObject = new GameObject("FinalCountdownText", typeof(RectTransform),
-                typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-            textObject.transform.SetParent(timerRoot.transform, false);
-            countdownText = textObject.GetComponent<TextMeshProUGUI>();
-            countdownText.font = TMP_Settings.defaultFontAsset;
-            countdownText.fontSize = countdownFontSize;
-            countdownText.fontStyle = FontStyles.Bold;
-            countdownText.color = Color.white;
-            countdownText.outlineColor = Color.black;
-            countdownText.outlineWidth = 0.24f;
-            countdownText.alignment = TextAlignmentOptions.Center;
-            countdownText.raycastTarget = false;
-
-            RectTransform rect = countdownText.rectTransform;
-            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = new Vector2(180f, 130f);
-            rect.anchoredPosition3D = countdownOffset;
-            textObject.SetActive(false);
         }
 
         private void Expire()
@@ -300,40 +210,37 @@ namespace RestaurantLoop.Core
             timerFillImage.fillAmount = normalized;
 
             float warningBoundary = warningNormalizedThreshold;
+            Color currentColor;
 
             if (normalized > warningBoundary)
             {
                 float safeRange = Mathf.Max(0.0001f, 1f - warningBoundary);
-                timerFillImage.color = Color.Lerp(warningColor, normalColor, (normalized - warningBoundary) / safeRange);
-                if (pulseTarget != null && (popTween == null || !popTween.IsActive()))
+                currentColor = Color.Lerp(warningColor, normalColor, (normalized - warningBoundary) / safeRange);
+            }
+            else
+            {
+                float warningProgress = warningBoundary > 0f ? normalized / warningBoundary : 0f;
+                currentColor = Color.Lerp(criticalColor, warningColor, warningProgress);
+            }
+
+            timerFillImage.color = currentColor;
+            if (hourglassImage != null) hourglassImage.color = currentColor;
+
+            if (timerStarted && !completed)
+            {
+                float criticalBoundary = warningBoundary * 0.4f;
+                if (normalized <= criticalBoundary && !isCriticalSoundActive)
                 {
-                    pulseTarget.localScale = pulseBaseScale;
+                    isCriticalSoundActive = true;
+                    if (AudioManager.Instance != null) AudioManager.Instance.StartCriticalWarning();
                 }
 
-                return;
-            }
-
-            if (!hasPlayedWarningSound)
-            {
-                hasPlayedWarningSound = true;
-                isWarningSoundActive = true;
-                if (AudioManager.Instance != null) AudioManager.Instance.StartTimedWarning();
-            }
-
-            float criticalBoundary = warningBoundary * 0.4f;
-            if (normalized <= criticalBoundary && !isCriticalSoundActive)
-            {
-                isCriticalSoundActive = true;
-                if (AudioManager.Instance != null) AudioManager.Instance.StartCriticalWarning();
-            }
-
-            float warningProgress = warningBoundary > 0f ? normalized / warningBoundary : 0f;
-            timerFillImage.color = Color.Lerp(criticalColor, warningColor, warningProgress);
-
-            if (pulseTarget != null && (popTween == null || !popTween.IsActive()))
-            {
-                float pulse = 1f + Mathf.Sin(Time.time * pulseSpeed + pulsePhase) * pulseScaleAmount;
-                pulseTarget.localScale = pulseBaseScale * pulse;
+                if (pulseTarget != null && (popTween == null || !popTween.IsActive()))
+                {
+                    float currentPulseSpeed = normalized <= criticalBoundary ? pulseSpeed * 1.4f : pulseSpeed;
+                    float pulse = 1f + Mathf.Sin(Time.time * currentPulseSpeed + pulsePhase) * pulseScaleAmount;
+                    pulseTarget.localScale = pulseBaseScale * pulse;
+                }
             }
         }
 

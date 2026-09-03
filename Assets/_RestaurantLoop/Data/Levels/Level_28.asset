@@ -50,23 +50,23 @@ MonoBehaviour:
     timedCustomerCount: 0
     timedCustomerDuration: 0
   orderedCustomerSequence:
+  - {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
+  - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
+  - {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
   - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
+  - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
+  - {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
+  - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
   - {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
   - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
-  - {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
   - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
+  - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
+  - {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
+  - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
   - {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
+  - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
   - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-  - {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
-  - {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
-  - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
-  - {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
   - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
-  - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
-  - {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
-  - {fileID: 11400000, guid: 1426af7754e0866469abe3bc06f9c524, type: 2}
-  - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
-  - {fileID: 11400000, guid: 9c20548e532aa8343865f0e9ef959bd3, type: 2}
   - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   - {fileID: 11400000, guid: ce61f22eb1d36274a868a3d26ef5dd9f, type: 2}
   - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
@@ -156,34 +156,18 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   timedCustomers:
-  - customerIndex: 29
-    timeLimitDuration: 20
-  - customerIndex: 39
-    timeLimitDuration: 20
-  - customerIndex: 42
-    timeLimitDuration: 20
-  - customerIndex: 46
-    timeLimitDuration: 20
-  - customerIndex: 49
-    timeLimitDuration: 20
-  - customerIndex: 54
-    timeLimitDuration: 20
-  - customerIndex: 78
-    timeLimitDuration: 20
-  - customerIndex: 87
-    timeLimitDuration: 20
-  - customerIndex: 87
-    timeLimitDuration: 20
-  - customerIndex: 87
-    timeLimitDuration: 20
-  - customerIndex: 87
-    timeLimitDuration: 20
-  - customerIndex: 87
-    timeLimitDuration: 20
-  - customerIndex: 87
-    timeLimitDuration: 20
-  - customerIndex: 87
-    timeLimitDuration: 20
+  - customerIndex: 0
+    timeLimitDuration: 16
+  - customerIndex: 1
+    timeLimitDuration: 16
+  - customerIndex: 2
+    timeLimitDuration: 16
+  - customerIndex: 3
+    timeLimitDuration: 16
+  - customerIndex: 4
+    timeLimitDuration: 16
+  - customerIndex: 5
+    timeLimitDuration: 16
   queueStackConfigs:
   - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
     itemCount: 10
