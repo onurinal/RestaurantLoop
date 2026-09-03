@@ -1,7 +1,8 @@
 fileFormatVersion: 2
 guid: 99a3c35fd3589814bb81e1499055d070
 labels:
-- RestaurantLoopSeed_0
+- RestaurantLoopSeed_20260903
+- RestaurantLoopTargetFailRate_0-5
 NativeFormatImporter:
   externalObjects: {}
   mainObjectFileID: 11400000

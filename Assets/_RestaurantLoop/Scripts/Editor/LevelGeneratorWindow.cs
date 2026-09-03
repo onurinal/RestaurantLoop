@@ -43,6 +43,10 @@ namespace RestaurantLoop.EditorTools
         [SerializeField] private List<ItemDataSO> availableItems = new List<ItemDataSO>();
         [SerializeField] private AnimationCurve batchDifficultyCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
+        [Header("MVP Progression Preset")]
+        [Tooltip("The approved 30-level progression rises overall but eases every third level. Use the menu command to restore its defaults.")]
+        [SerializeField] private bool useMvpSawtoothPreset = true;
+
         // Demand (Min / Max per tier)
         [SerializeField] private int batchEarlyMinDemand = 20;
         [SerializeField] private int batchEarlyMaxDemand = 40;
@@ -75,7 +79,8 @@ namespace RestaurantLoop.EditorTools
         [SerializeField] private int batchLateMinStackSize = 5;
         [SerializeField] private int batchLateMaxStackSize = 20;
 
-        // Timed Customers (Early levels 1-10 always use zero)
+        // Timed Customers (levels before batchTimedCustomerStartLevel always use zero)
+        [SerializeField, Min(1)] private int batchTimedCustomerStartLevel = 15;
         [SerializeField, Min(0)] private int batchMidMinTimedCustomers = 1;
         [SerializeField, Min(0)] private int batchMidMaxTimedCustomers = 2;
         [SerializeField, Min(0)] private int batchLateMinTimedCustomers = 3;
@@ -111,6 +116,14 @@ namespace RestaurantLoop.EditorTools
         {
             LevelGeneratorWindow window = GetWindow<LevelGeneratorWindow>("Level Generator");
             window.minSize = new Vector2(480f, 650f);
+        }
+
+        [MenuItem("Tools/RestaurantLoop/Rebuild MVP Levels 1-30")]
+        private static void RebuildMvpLevels()
+        {
+            LevelGeneratorWindow window = GetWindow<LevelGeneratorWindow>("Level Generator");
+            window.ApplyMvpSawtoothPreset();
+            window.GenerateBatchLevels();
         }
 
         private void OnEnable()
@@ -166,6 +179,12 @@ namespace RestaurantLoop.EditorTools
             DrawBatchProgressionSettings();
 
             EditorGUILayout.Space(10f);
+            if (GUILayout.Button("Apply MVP Sawtooth Defaults"))
+            {
+                ApplyMvpSawtoothPreset();
+            }
+
+            EditorGUILayout.Space(4f);
             if (GUILayout.Button($"Generate All {Mathf.Max(1, totalLevelsToGenerate)} Levels", GUILayout.Height(38f)))
             {
                 GenerateBatchLevels();
@@ -207,12 +226,107 @@ namespace RestaurantLoop.EditorTools
             windowSerializedObject.ApplyModifiedProperties();
         }
 
+        private void ApplyMvpSawtoothPreset()
+        {
+            batchOutputFolder = DefaultBatchOutputFolder;
+            totalLevelsToGenerate = 30;
+            startingLevelNumber = 1;
+            baseRandomSeed = 20260903;
+            overwriteExistingAssets = true;
+            assignToOpenLevelManager = false;
+            useMvpSawtoothPreset = true;
+
+            batchDifficultyCurve = CreateMvpSawtoothCurve();
+
+            batchEarlyMinDemand = 25;
+            batchEarlyMaxDemand = 40;
+            batchMidMinDemand = 55;
+            batchMidMaxDemand = 80;
+            batchLateMinDemand = 90;
+            batchLateMaxDemand = 125;
+
+            batchEarlyMinActiveEdgeSlots = 4;
+            batchEarlyMaxActiveEdgeSlots = 6;
+            batchMidMinActiveEdgeSlots = 6;
+            batchMidMaxActiveEdgeSlots = 9;
+            batchLateMinActiveEdgeSlots = 8;
+            batchLateMaxActiveEdgeSlots = 12;
+
+            batchEarlyMinFoodTypes = 3;
+            batchEarlyMaxFoodTypes = 3;
+            batchMidMinFoodTypes = 3;
+            batchMidMaxFoodTypes = 5;
+            batchLateMinFoodTypes = 5;
+            batchLateMaxFoodTypes = 6;
+
+            batchEarlyMinStackSize = 5;
+            batchEarlyMaxStackSize = 15;
+            batchMidMinStackSize = 5;
+            batchMidMaxStackSize = 20;
+            batchLateMinStackSize = 5;
+            batchLateMaxStackSize = 25;
+
+            batchTimedCustomerStartLevel = 15;
+            batchMidMinTimedCustomers = 1;
+            batchMidMaxTimedCustomers = 2;
+            batchLateMinTimedCustomers = 3;
+            batchLateMaxTimedCustomers = 5;
+            batchTimedCustomerMinDuration = 12;
+            batchTimedCustomerMaxDuration = 20;
+
+            batchMinQueueColumns = 3;
+            batchMaxQueueColumns = 4;
+            batchMinQueueRows = 1;
+            batchMaxQueueRows = 8;
+            availableItems = FindAllFoodItems();
+            NormalizeBatchRanges();
+        }
+
+        private static AnimationCurve CreateMvpSawtoothCurve()
+        {
+            const int levelCount = 30;
+            Keyframe[] keys = new Keyframe[levelCount];
+            for (int levelIndex = 0; levelIndex < levelCount; levelIndex++)
+            {
+                float linearProgress = levelIndex / (float)(levelCount - 1);
+                float sawtoothProgress = GetMvpSawtoothProgress(levelIndex, linearProgress);
+                keys[levelIndex] = new Keyframe(linearProgress, sawtoothProgress);
+            }
+
+            return new AnimationCurve(keys);
+        }
+
+        private static List<ItemDataSO> FindAllFoodItems()
+        {
+            string[] guids = AssetDatabase.FindAssets("t:ItemDataSO");
+            Array.Sort(guids, StringComparer.Ordinal);
+
+            List<ItemDataSO> items = new List<ItemDataSO>(guids.Length);
+            for (int i = 0; i < guids.Length; i++)
+            {
+                ItemDataSO item = AssetDatabase.LoadAssetAtPath<ItemDataSO>(AssetDatabase.GUIDToAssetPath(guids[i]));
+                if (item != null) items.Add(item);
+            }
+
+            return items;
+        }
+
         private void DrawBatchProgressionSettings()
         {
             EditorGUILayout.Space(8f);
             EditorGUILayout.LabelField("Early / Mid / Late Difficulty Progression", EditorStyles.boldLabel);
+            useMvpSawtoothPreset = EditorGUILayout.Toggle(
+                new GUIContent("Use MVP Sawtooth", "Rising progression with periodic relief levels. The preset is tuned for Levels 1-30."),
+                useMvpSawtoothPreset);
+            if (useMvpSawtoothPreset)
+            {
+                EditorGUILayout.HelpBox(
+                    "MVP targets: 25→125 customers, 3→6 food types, relief every third level, " +
+                    "0–5% target fail rate in L1–10, 10–20% in L11–20, and 20–30% in L21–30.",
+                    MessageType.Info);
+            }
             batchDifficultyCurve = EditorGUILayout.CurveField(
-                new GUIContent("Progression Curve", "Maps normalized batch progress to difficulty. Curve values are clamped to 0-1."),
+                new GUIContent("Progression Curve", "Maps normalized batch progress to difficulty. In the MVP preset this is a sawtooth curve."),
                 batchDifficultyCurve);
 
             EditorGUILayout.Space(4f);
@@ -243,7 +357,8 @@ namespace RestaurantLoop.EditorTools
 
             EditorGUILayout.Space(4f);
             EditorGUILayout.LabelField("Timed Customers", EditorStyles.miniBoldLabel);
-            EditorGUILayout.HelpBox("Levels 1-10 generate no timed customers. Timed foods must appear in queue row 1 or 2.", MessageType.Info);
+            EditorGUILayout.HelpBox("Timed customers begin at the configured level. Timed foods must appear in queue row 1 or 2.", MessageType.Info);
+            batchTimedCustomerStartLevel = EditorGUILayout.IntField("Timed Customer Start Level", batchTimedCustomerStartLevel);
             DrawMinMaxInt("Mid Timed Customers", ref batchMidMinTimedCustomers, ref batchMidMaxTimedCustomers, 0, 100);
             DrawMinMaxInt("Late Timed Customers", ref batchLateMinTimedCustomers, ref batchLateMaxTimedCustomers, 0, 100);
             batchTimedCustomerMinDuration = EditorGUILayout.IntField("Minimum Timer Duration", batchTimedCustomerMinDuration);
@@ -880,7 +995,7 @@ namespace RestaurantLoop.EditorTools
 
         private void GetBatchTimedCustomerRange(int levelNumber, out int minimum, out int maximum)
         {
-            if (levelNumber <= 10)
+            if (levelNumber < batchTimedCustomerStartLevel)
             {
                 minimum = 0;
                 maximum = 0;
@@ -1021,6 +1136,11 @@ namespace RestaurantLoop.EditorTools
 
         private BatchDifficultyProfile CreateDifficultyProfile(int levelIndex, int availableItemCount)
         {
+            if (useMvpSawtoothPreset)
+            {
+                return CreateMvpSawtoothDifficultyProfile(levelIndex, availableItemCount);
+            }
+
             float normalizedProgress = totalLevelsToGenerate <= 1
                 ? 0f
                 : levelIndex / (float)(totalLevelsToGenerate - 1);
@@ -1060,6 +1180,42 @@ namespace RestaurantLoop.EditorTools
                 batchMaxQueueRows,
                 minStackSize,
                 maxStackSize);
+        }
+
+        private BatchDifficultyProfile CreateMvpSawtoothDifficultyProfile(int levelIndex, int availableItemCount)
+        {
+            float linearProgress = totalLevelsToGenerate <= 1
+                ? 0f
+                : levelIndex / (float)(totalLevelsToGenerate - 1);
+            float sawtoothProgress = GetMvpSawtoothProgress(levelIndex, linearProgress);
+
+            int targetDemand = SnapStackSize(Mathf.RoundToInt(Mathf.Lerp(25f, 125f, sawtoothProgress)));
+            int targetFoodTypes = Mathf.Clamp(3 + Mathf.FloorToInt(linearProgress * 3.01f), 3, availableItemCount);
+            int targetActiveSlots = Mathf.Clamp(Mathf.RoundToInt(Mathf.Lerp(4f, 12f, sawtoothProgress)), 3, 20);
+            int targetMaxStackSize = Mathf.Max(5,
+                SnapStackSize(Mathf.RoundToInt(Mathf.Lerp(10f, 25f, sawtoothProgress))));
+            int targetColumns = targetFoodTypes >= 5 ? 4 : 3;
+
+            return new BatchDifficultyProfile(
+                targetDemand,
+                targetDemand,
+                targetFoodTypes,
+                targetFoodTypes,
+                targetActiveSlots,
+                targetActiveSlots,
+                targetColumns,
+                targetColumns,
+                1,
+                8,
+                5,
+                targetMaxStackSize);
+        }
+
+        private static float GetMvpSawtoothProgress(int levelIndex, float linearProgress)
+        {
+            int phase = levelIndex % 3;
+            float reliefOffset = phase == 0 ? -0.025f : phase == 1 ? 0.025f : 0.09f;
+            return Mathf.Clamp01(linearProgress + reliefOffset);
         }
 
         private static void ApplyCandidateData(
@@ -1114,25 +1270,35 @@ namespace RestaurantLoop.EditorTools
             }
 
             EditorUtility.SetDirty(level);
-            SetGeneratedSeedLabel(level, candidate.Seed);
+            SetGeneratedLabels(level, candidate.Seed, candidate.LevelNumber);
             return level;
         }
 
-        private static void SetGeneratedSeedLabel(LevelDataSO level, int seed)
+        private static void SetGeneratedLabels(LevelDataSO level, int seed, int levelNumber)
         {
             const string seedLabelPrefix = "RestaurantLoopSeed_";
+            const string targetFailRateLabelPrefix = "RestaurantLoopTargetFailRate_";
             string[] existingLabels = AssetDatabase.GetLabels(level);
-            List<string> updatedLabels = new List<string>(existingLabels.Length + 1);
+            List<string> updatedLabels = new List<string>(existingLabels.Length + 2);
             for (int i = 0; i < existingLabels.Length; i++)
             {
-                if (!existingLabels[i].StartsWith(seedLabelPrefix, StringComparison.Ordinal))
+                if (!existingLabels[i].StartsWith(seedLabelPrefix, StringComparison.Ordinal) &&
+                    !existingLabels[i].StartsWith(targetFailRateLabelPrefix, StringComparison.Ordinal))
                 {
                     updatedLabels.Add(existingLabels[i]);
                 }
             }
 
             updatedLabels.Add(seedLabelPrefix + seed);
+            updatedLabels.Add(targetFailRateLabelPrefix + GetTargetFailRateBand(levelNumber));
             AssetDatabase.SetLabels(level, updatedLabels.ToArray());
+        }
+
+        private static string GetTargetFailRateBand(int levelNumber)
+        {
+            if (levelNumber <= 10) return "0-5";
+            if (levelNumber <= 20) return "10-20";
+            return "20-30";
         }
 
         private string AssignToOpenLevelManager(List<LevelDataSO> generatedAssets)
@@ -1152,16 +1318,29 @@ namespace RestaurantLoop.EditorTools
             }
 
             managerSerializedObject.Update();
-            sequenceProperty.arraySize = generatedAssets.Count;
+            LevelDataSO tutorialLevel = sequenceProperty.arraySize > 0
+                ? sequenceProperty.GetArrayElementAtIndex(0).objectReferenceValue as LevelDataSO
+                : null;
+            bool preserveTutorial = tutorialLevel != null && tutorialLevel.name == "Level_00";
+            int generatedStartIndex = preserveTutorial ? 1 : 0;
+
+            sequenceProperty.arraySize = generatedAssets.Count + generatedStartIndex;
+            if (preserveTutorial)
+            {
+                sequenceProperty.GetArrayElementAtIndex(0).objectReferenceValue = tutorialLevel;
+            }
+
             for (int i = 0; i < generatedAssets.Count; i++)
             {
-                sequenceProperty.GetArrayElementAtIndex(i).objectReferenceValue = generatedAssets[i];
+                sequenceProperty.GetArrayElementAtIndex(i + generatedStartIndex).objectReferenceValue = generatedAssets[i];
             }
 
             managerSerializedObject.ApplyModifiedProperties();
             EditorUtility.SetDirty(manager);
             if (manager.gameObject.scene.IsValid()) EditorSceneManager.MarkSceneDirty(manager.gameObject.scene);
-            return " Assigned them to the open scene LevelManager.";
+            return preserveTutorial
+                ? " Assigned them to the open scene LevelManager and preserved Level_00."
+                : " Assigned them to the open scene LevelManager.";
         }
 
         private bool ValidateBatchInputs(out List<ItemDataSO> validItems, out string error)
@@ -1280,6 +1459,7 @@ namespace RestaurantLoop.EditorTools
             totalLevelsToGenerate = Mathf.Max(1, totalLevelsToGenerate);
             startingLevelNumber = Mathf.Max(1, startingLevelNumber);
             batchDifficultyCurve ??= AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+            batchTimedCustomerStartLevel = Mathf.Max(1, batchTimedCustomerStartLevel);
 
             ClampMinMaxTier(ref batchEarlyMinDemand, ref batchEarlyMaxDemand, ref batchMidMinDemand, ref batchMidMaxDemand,
                 ref batchLateMinDemand, ref batchLateMaxDemand, 5, 10000);
