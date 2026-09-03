@@ -49,8 +49,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Audio.AudioManager
   sfxSource: {fileID: 3898750725045401640}
   musicSource: {fileID: 7430551240814991461}
-  backgroundMusic: {fileID: 8300000, guid: 5f06449f3a77b3441bea66031ef6e227, type: 3}
-  backgroundMusicVolume: 0.5
+  backgroundMusic: {fileID: 8300000, guid: 8d3147bbc5bba304b8d51812092371d7, type: 3}
+  backgroundMusicVolume: 0.3
   tapSound: {fileID: 8300000, guid: 19ee98aaf35a44842926bc72f3fdb2b1, type: 3}
   tapSoundVolume: 1
   boardClickSound: {fileID: 8300000, guid: 7e42f7bae9bbd784dad61f9fdf0ab97b, type: 3}
