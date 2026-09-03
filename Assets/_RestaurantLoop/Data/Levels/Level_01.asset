@@ -12,63 +12,43 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cfdb8c1eedbf45d8b7a445b938b8e144, type: 3}
   m_Name: Level_01
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.LevelDataSO
-  activeEdgeSlotCount: 7
+  activeEdgeSlotCount: 4
   columnCount: 3
-  calculatedRowCount: 2
+  calculatedRowCount: 1
   minStackSize: 5
   maxStackSize: 10
   conveyorSpeedMultiplier: 1
   customerDemands:
+  - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
+    totalCustomerCount: 10
+    includeTimedCustomers: 0
+    timedCustomerCount: 0
+    timedCustomerDuration: 0
+  - itemData: {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
+    totalCustomerCount: 10
+    includeTimedCustomers: 0
+    timedCustomerCount: 0
+    timedCustomerDuration: 0
   - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
     totalCustomerCount: 5
     includeTimedCustomers: 0
     timedCustomerCount: 0
     timedCustomerDuration: 0
-  - itemData: {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
-    totalCustomerCount: 15
-    includeTimedCustomers: 0
-    timedCustomerCount: 0
-    timedCustomerDuration: 0
-  - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-    totalCustomerCount: 5
-    includeTimedCustomers: 0
-    timedCustomerCount: 0
-    timedCustomerDuration: 0
-  - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-    totalCustomerCount: 5
-    includeTimedCustomers: 0
-    timedCustomerCount: 0
-    timedCustomerDuration: 0
-  - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-    totalCustomerCount: 5
-    includeTimedCustomers: 0
-    timedCustomerCount: 0
-    timedCustomerDuration: 0
   orderedCustomerSequence:
-  - {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
-  - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
-  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-  - {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
-  - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
-  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-  - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
   - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   - {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
   - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
   - {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
   - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
+  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
+  - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
+  - {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
+  - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
   - {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
   - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
-  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-  - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
-  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-  - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
-  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-  - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
-  - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-  - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
+  - {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
   - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
   - {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
   - {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
@@ -83,14 +63,8 @@ MonoBehaviour:
   timedCustomers: []
   queueStackConfigs:
   - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-    itemCount: 5
-  - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-    itemCount: 5
-  - itemData: {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
     itemCount: 10
   - itemData: {fileID: 11400000, guid: 8111fd76b548c2a4da49b849dce528aa, type: 2}
     itemCount: 5
   - itemData: {fileID: 11400000, guid: c75ae598c6b91f84ca09c90898ac35b6, type: 2}
-    itemCount: 5
-  - itemData: {fileID: 11400000, guid: 4fc059fb7c2b0334da09dc02cbf174fe, type: 2}
-    itemCount: 5
+    itemCount: 10
