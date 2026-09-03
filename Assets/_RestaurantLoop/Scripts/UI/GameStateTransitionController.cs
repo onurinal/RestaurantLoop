@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
-using DG.Tweening;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
+using DG.Tweening;
 
 namespace RestaurantLoop.UI
 {
     [Serializable]
-    public sealed class WinBannerSettings
+    public class WinBannerSettings
     {
         [Min(0f)] public float letterStaggerDelay = 0.055f;
         [Min(0.01f)] public float letterScaleDuration = 0.18f;
@@ -21,13 +21,14 @@ namespace RestaurantLoop.UI
     }
 
     [Serializable]
-    public sealed class FailureBannerSettings
+    public class FailureBannerSettings
     {
         [Min(0.01f)] public float slideInDuration = 0.35f;
         [Range(0.2f, 2f)] public float holdDuration = 1f;
         [Min(0.01f)] public float slideOutDuration = 0.32f;
     }
 
+    [ExecuteAlways]
     [DisallowMultipleComponent]
     public sealed class GameStateTransitionController : MonoBehaviour
     {
@@ -39,31 +40,33 @@ namespace RestaurantLoop.UI
         [SerializeField] private WinBannerSettings winSequence = new WinBannerSettings();
         [SerializeField] private Color winOverlayColor = new Color(0.11f, 0.06f, 0.18f, 0.52f);
 
-        [Header("Win Letter Sprites & Sizing")]
-        [Tooltip("Assign letter sprites in order (e.g., R, E, S, T, A, U, R, A, N, T, L, O, O, P).")]
+        [Header("Win Letter Sprites")]
+        [Tooltip("Assign letter sprites in order (R, E, S, T, A, U, R, A, N, T, L, O, O, P).")]
         [SerializeField] private List<Sprite> winLetterSprites = new List<Sprite>();
-        [Tooltip("On-screen width and height for each letter sprite.")]
-        [SerializeField] private Vector2 winLetterSize = new Vector2(110f, 110f);
+        [Tooltip("0-based index to break line (9 = after 10th letter 'T' of RESTAURANT).")]
+        [SerializeField] private int lineBreakIndex = 9;
 
-        [Header("Modular Pixel Spacing & Line Breaks")]
-        [Tooltip("0-based letter indices after which a LINE BREAK is inserted. E.g., '9' pushes everything after 'RESTAURANT' to the next line.")]
-        [SerializeField] private List<int> lineBreakAfterIndices = new List<int> { 9 };
-        [Tooltip("Horizontal pixel distance between first line letter centers (RESTAURANT).")]
-        [SerializeField, Min(0f)] private float letterSpacingX = 85f;
-        [Tooltip("Horizontal pixel distance for second line letter centers (LOOP). Set to 0 to use default spacing.")]
-        [SerializeField, Min(0f)] private float secondLineLetterSpacingX = 110f;
-        [Tooltip("Vertical pixel distance pushing the second line downwards (negative value moves down).")]
-        [SerializeField] private float lineSpacingY = -120f;
+        [Header("Line 1 Setup (RESTAURANT)")]
+        [SerializeField] private Vector2 line1LetterSize = new Vector2(100f, 100f);
+        [Tooltip("Kerning factor based on sprite width. Lower = tighter, Higher = loose.")]
+        [SerializeField, Range(0.4f, 1.2f)] private float line1KerningFactor = 0.92f;
+        [SerializeField] private float line1ArcHeightY = 24f;
+        [SerializeField, Range(0f, 30f)] private float line1MaxEdgeRotation = 5f;
+        [Tooltip("Check this if you want left letters (like N) to render on top of right letters (like T).")]
+        [SerializeField] private bool line1ReverseRenderOrder = true;
 
-        [Header("Screen Safety & Arc Layout Settings")]
-        [Tooltip("Maximum percentage of canvas width the text is allowed to occupy (0.85 = 85%). Prevents hitting screen edges.")]
-        [SerializeField, Range(0.5f, 0.95f)] private float maxScreenWidthPercent = 0.90f;
-        [Tooltip("Vertical position offset relative to the screen center.")]
-        [SerializeField] private float winTextCenterOffsetY = 280f;
-        [Tooltip("Arch height in pixels. Set to 0 for completely FLAT text, or 30-40 for a subtle curve.")]
-        [SerializeField] private float arcHeightY = 35f;
-        [Tooltip("Maximum tilt/rotation of letters at the far outer edges (in degrees).")]
-        [SerializeField, Range(0f, 45f)] private float maxEdgeRotation = 10f;
+        [Header("Line 2 Setup (LOOP - Main Menu Style)")]
+        [SerializeField] private Vector2 line2LetterSize = new Vector2(150f, 150f);
+        [Tooltip("Kerning factor based on sprite width for line 2.")]
+        [SerializeField, Range(0.4f, 1.2f)] private float line2KerningFactor = 0.88f;
+        [SerializeField] private float line2ArcHeightY = 12f;
+        [SerializeField] private float line2OffsetY = -108f;
+        [SerializeField, Range(0f, 30f)] private float line2MaxEdgeRotation = 2f;
+        [SerializeField] private bool line2ReverseRenderOrder = true;
+
+        [Header("Global Layout Settings")]
+        [SerializeField] private float winTextCenterOffsetY = 200f;
+        [SerializeField, Range(0.5f, 0.98f)] private float maxScreenWidthPercent = 0.90f;
 
         [Header("Failure Sequence Settings")]
         [SerializeField] private FailureBannerSettings failureSequence = new FailureBannerSettings();
@@ -192,6 +195,22 @@ namespace RestaurantLoop.UI
             if (targetCanvas == null) targetCanvas = GetComponentInParent<Canvas>();
             if (targetCanvas == null) return false;
 
+            Transform existingOverlay = targetCanvas.transform.Find("GameStateTransitionOverlay");
+            if (existingOverlay != null)
+            {
+                overlayRoot = existingOverlay.GetComponent<RectTransform>();
+                overlayBlocker = overlayRoot.GetComponent<Image>();
+                winContentRoot = overlayRoot.Find("WinBannerContent") as RectTransform;
+                failureBanner = overlayRoot.Find("FailureBanner") as RectTransform;
+                if (failureBanner != null)
+                {
+                    failureBannerBackgroundImage = failureBanner.GetComponent<Image>();
+                    failureText = failureBanner.GetComponentInChildren<TMP_Text>();
+                }
+
+                return true;
+            }
+
             GameObject rootObject = new GameObject("GameStateTransitionOverlay", typeof(RectTransform),
                 typeof(CanvasRenderer), typeof(Image));
             rootObject.transform.SetParent(targetCanvas.transform, false);
@@ -250,98 +269,118 @@ namespace RestaurantLoop.UI
             letters.Clear();
             if (winLetterSprites == null || winLetterSprites.Count == 0) return;
 
-            List<List<Sprite>> lines = new List<List<Sprite>>();
-            List<Sprite> currentLine = new List<Sprite>();
+            List<Sprite> line1 = new List<Sprite>();
+            List<Sprite> line2 = new List<Sprite>();
 
             for (int i = 0; i < winLetterSprites.Count; i++)
             {
                 if (winLetterSprites[i] == null) continue;
-                currentLine.Add(winLetterSprites[i]);
-
-                if (lineBreakAfterIndices != null && lineBreakAfterIndices.Contains(i))
-                {
-                    lines.Add(currentLine);
-                    currentLine = new List<Sprite>();
-                }
-            }
-
-            if (currentLine.Count > 0)
-            {
-                lines.Add(currentLine);
-            }
-
-            if (lines.Count == 0) return;
-
-            float maxLineWidth = 0f;
-            for (int lineIdx = 0; lineIdx < lines.Count; lineIdx++)
-            {
-                var line = lines[lineIdx];
-                if (line.Count == 0) continue;
-
-                float activeSpacing = (lineIdx > 0 && secondLineLetterSpacingX > 0f) ? secondLineLetterSpacingX : letterSpacingX;
-                float lineWidth = (line.Count - 1) * activeSpacing;
-                if (lineWidth > maxLineWidth) maxLineWidth = lineWidth;
+                if (i <= lineBreakIndex) line1.Add(winLetterSprites[i]);
+                else line2.Add(winLetterSprites[i]);
             }
 
             int globalIndex = 0;
 
-            for (int lineIdx = 0; lineIdx < lines.Count; lineIdx++)
-            {
-                List<Sprite> lineSprites = lines[lineIdx];
-                int lineCount = lineSprites.Count;
-                if (lineCount == 0) continue;
+            float line1Width = BuildLine(line1, line1LetterSize, line1KerningFactor, line1ArcHeightY, winTextCenterOffsetY, line1MaxEdgeRotation,
+                line1ReverseRenderOrder, ref globalIndex);
+            float line2Width = BuildLine(line2, line2LetterSize, line2KerningFactor, line2ArcHeightY, winTextCenterOffsetY + line2OffsetY, line2MaxEdgeRotation,
+                line2ReverseRenderOrder, ref globalIndex);
 
-                float activeSpacing = (lineIdx > 0 && secondLineLetterSpacingX > 0f) ? secondLineLetterSpacingX : letterSpacingX;
+            float maxLineWidth = Mathf.Max(line1Width, line2Width);
 
-                float currentLineWidth = (lineCount - 1) * activeSpacing;
-                float startX = -currentLineWidth * 0.5f;
-
-                for (int i = 0; i < lineCount; i++)
-                {
-                    Sprite letterSprite = lineSprites[i];
-
-                    GameObject imageObject = new GameObject($"LetterSprite_{globalIndex:00}", typeof(RectTransform),
-                        typeof(CanvasRenderer), typeof(Image));
-                    imageObject.transform.SetParent(winContentRoot, false);
-
-                    Image image = imageObject.GetComponent<Image>();
-                    image.sprite = letterSprite;
-                    image.preserveAspect = true;
-                    image.raycastTarget = false;
-
-                    RectTransform rect = imageObject.GetComponent<RectTransform>();
-                    rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
-                    rect.sizeDelta = winLetterSize;
-
-                    float x = startX + (i * activeSpacing);
-
-                    float normalizedX = maxLineWidth > 0f ? (x / (maxLineWidth * 0.5f)) : 0f;
-                    normalizedX = Mathf.Clamp(normalizedX, -1f, 1f);
-
-                    float y = (1f - (normalizedX * normalizedX)) * arcHeightY + winTextCenterOffsetY + (lineIdx * lineSpacingY);
-                    float rotZ = -normalizedX * maxEdgeRotation;
-
-                    rect.anchoredPosition = new Vector2(x, y);
-                    rect.localRotation = Quaternion.Euler(0f, 0f, rotZ);
-
-                    letters.Add(rect);
-                    globalIndex++;
-                }
-            }
-
-            float totalMaxSpan = maxLineWidth + winLetterSize.x;
             float canvasWidth = overlayRoot != null && overlayRoot.rect.width > 1f ? overlayRoot.rect.width : 1080f;
             float maxAllowedWidth = canvasWidth * maxScreenWidthPercent;
 
-            if (totalMaxSpan > maxAllowedWidth && totalMaxSpan > 0f)
+            if (maxLineWidth > maxAllowedWidth && maxLineWidth > 0f)
             {
-                float fitScale = maxAllowedWidth / totalMaxSpan;
+                float fitScale = maxAllowedWidth / maxLineWidth;
                 winContentRoot.localScale = new Vector3(fitScale, fitScale, 1f);
             }
             else
             {
                 winContentRoot.localScale = Vector3.one;
             }
+        }
+
+        private float BuildLine(List<Sprite> sprites, Vector2 letterSize, float kerningFactor, float arcHeight, float offsetY, float maxRotation,
+            bool reverseOrder, ref int globalIndex)
+        {
+            int count = sprites.Count;
+            if (count == 0) return 0f;
+
+            List<float> scaledWidths = new List<float>(count);
+            for (int i = 0; i < count; i++)
+            {
+                Sprite sprite = sprites[i];
+                float aspect = (sprite != null && sprite.rect.height > 0f) ? (sprite.rect.width / sprite.rect.height) : 1f;
+                float actualWidth = letterSize.y * aspect;
+                scaledWidths.Add(actualWidth);
+            }
+
+            List<float> xPositions = new List<float>(count);
+            float currentX = 0f;
+
+            for (int i = 0; i < count; i++)
+            {
+                if (i == 0)
+                {
+                    xPositions.Add(0f);
+                }
+                else
+                {
+                    float previousWidth = scaledWidths[i - 1];
+                    float currentWidth = scaledWidths[i];
+                    float step = ((previousWidth + currentWidth) * 0.5f) * kerningFactor;
+                    currentX += step;
+                    xPositions.Add(currentX);
+                }
+            }
+
+            float totalLineWidth = currentX;
+            float startX = -totalLineWidth * 0.5f;
+
+            List<RectTransform> lineRects = new List<RectTransform>();
+
+            for (int i = 0; i < count; i++)
+            {
+                GameObject imageObject = new GameObject($"LetterSprite_{globalIndex:00}", typeof(RectTransform),
+                    typeof(CanvasRenderer), typeof(Image));
+                imageObject.transform.SetParent(winContentRoot, false);
+
+                Image image = imageObject.GetComponent<Image>();
+                image.sprite = sprites[i];
+                image.preserveAspect = true;
+                image.raycastTarget = false;
+
+                RectTransform rect = imageObject.GetComponent<RectTransform>();
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.sizeDelta = letterSize;
+
+                float x = startX + xPositions[i];
+                float normalizedX = totalLineWidth > 0f ? (x / (totalLineWidth * 0.5f)) : 0f;
+                normalizedX = Mathf.Clamp(normalizedX, -1f, 1f);
+
+                float y = (1f - (normalizedX * normalizedX)) * arcHeight + offsetY;
+                float rotZ = -normalizedX * maxRotation;
+
+                rect.anchoredPosition = new Vector2(x, y);
+                rect.localRotation = Quaternion.Euler(0f, 0f, rotZ);
+
+                lineRects.Add(rect);
+                letters.Add(rect);
+                globalIndex++;
+            }
+
+            if (reverseOrder)
+            {
+                for (int i = count - 1; i >= 0; i--) lineRects[i].SetAsLastSibling();
+            }
+            else
+            {
+                for (int i = 0; i < count; i++) lineRects[i].SetAsLastSibling();
+            }
+
+            return totalLineWidth + letterSize.x;
         }
 
         private TMP_Text CreateText(string objectName, Transform parent, float fontSize)
@@ -361,18 +400,23 @@ namespace RestaurantLoop.UI
             activeSequence?.Kill();
             activeSequence = null;
 
-            for (int i = winContentRoot.childCount - 1; i >= 0; i--)
+            if (winContentRoot != null)
             {
-                Destroy(winContentRoot.GetChild(i).gameObject);
+                for (int i = winContentRoot.childCount - 1; i >= 0; i--)
+                {
+                    GameObject child = winContentRoot.GetChild(i).gameObject;
+                    if (Application.isPlaying) Destroy(child);
+                    else DestroyImmediate(child);
+                }
             }
 
             BuildWinLetters();
 
             for (int i = 0; i < letters.Count; i++)
             {
-                RectTransform letter = letters[i];
-                letter.DOKill();
-                letter.localScale = Vector3.zero;
+                if (letters[i] == null) continue;
+                letters[i].DOKill();
+                letters[i].localScale = Vector3.zero;
             }
 
             failureBanner?.DOKill();
