@@ -11,6 +11,8 @@ namespace RestaurantLoop.UI
     public class GameUIManager : MonoBehaviour
     {
         [Header("Settings Panels")]
+        [Tooltip("The dark background panel that appears instantly behind the settings menu")]
+        [SerializeField] private GameObject darkOverlayPanel; // ADDED
         [SerializeField] private GameObject settingsPanel;
         [SerializeField] private GameObject winPanel;
         [SerializeField] private GameObject losePanel;
@@ -86,6 +88,9 @@ namespace RestaurantLoop.UI
         private void Start()
         {
             stateTransitionController?.Initialize(GetComponentInChildren<Canvas>(true));
+            
+            // Initialize panel states
+            if (darkOverlayPanel != null) darkOverlayPanel.SetActive(false);
             settingsPanel.SetActive(false);
             winPanel.SetActive(false);
             losePanel.SetActive(false);
@@ -235,6 +240,10 @@ namespace RestaurantLoop.UI
             if (CrowdAudioGenerator.Instance != null)
                 CrowdAudioGenerator.Instance.PauseCrowdAudio();
 
+            // Enable dark overlay instantly without animation
+            if (darkOverlayPanel != null)
+                darkOverlayPanel.SetActive(true);
+
             ShowPanel(settingsPanel, settingsPanelBaseScale);
         }
 
@@ -249,7 +258,12 @@ namespace RestaurantLoop.UI
             if (CrowdAudioGenerator.Instance != null)
                 CrowdAudioGenerator.Instance.ResumeCrowdAudio();
 
-            HidePanel(settingsPanel, settingsPanelBaseScale);
+            // Hide the settings panel with animation, then instantly disable the overlay on complete
+            HidePanel(settingsPanel, settingsPanelBaseScale, () => 
+            {
+                if (darkOverlayPanel != null) 
+                    darkOverlayPanel.SetActive(false);
+            });
         }
 
         private void ToggleMusic()
