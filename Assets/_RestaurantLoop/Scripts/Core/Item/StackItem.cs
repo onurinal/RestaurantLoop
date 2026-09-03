@@ -210,9 +210,10 @@ namespace RestaurantLoop.Core
 
         public void PlayClearColorThrow(Vector3 targetCustomerPosition)
         {
-            if (visuals == null || animator == null) return;
-            // Removed SetTrailActive(true) here. Trail will not activate while flying to the customer.
-            animator.AnimateItemThrowToCustomer(visuals.SingleMeshModel, targetCustomerPosition, ignoreTimeScale: true);
+            if (visuals == null || animator == null || itemData == null) return;
+            
+            // Pass the itemData.StackPrefab instead of the SingleMeshModel to create a dummy object
+            animator.AnimateItemThrowToCustomer(itemData.StackPrefab, targetCustomerPosition, ignoreTimeScale: true);
         }
 
         public void SetWaitingForRack(bool waiting)
@@ -432,8 +433,8 @@ namespace RestaurantLoop.Core
             if (AudioManager.Instance != null && AudioManager.Instance.throwSound != null)
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.throwSound);
 
-            // Removed SetTrailActive(true) here. Prevents accidentally activating trails for remaining stacked plates.
-            animator.AnimateItemThrowToCustomer(visuals.SingleMeshModel, targetCustomer.transform.position);
+            // Pass the prefab to the animator instead of the current mesh model
+            animator.AnimateItemThrowToCustomer(itemData.StackPrefab, targetCustomer.transform.position);
 
             SetItemCount(remainingCount);
             FoodCommittedToCustomer?.Invoke(this, targetCustomer, itemData);

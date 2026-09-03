@@ -108,21 +108,38 @@ namespace RestaurantLoop.Core
             completion?.Invoke();
         }
 
-        public void AnimateItemThrowToCustomer(GameObject singleMeshModel, Vector3 targetCustomerPosition, bool ignoreTimeScale = false)
+        public void AnimateItemThrowToCustomer(GameObject itemPrefab, Vector3 targetCustomerPosition, bool ignoreTimeScale = false)
         {
-            if (singleMeshModel == null) return;
+            if (itemPrefab == null) return;
 
-            // Rack stacks inherit a smaller world scale from their slot hierarchy. Preserve the
-            // source mesh's rendered size when its flight visual is spawned at the scene root.
-            Vector3 sourceWorldScale = singleMeshModel.transform.lossyScale;
-            GameObject flyingItem = PoolManager.Instance.Spawn(singleMeshModel, transform.position, Quaternion.identity);
-            flyingItem.transform.localScale = sourceWorldScale;
+            // Spawn a dummy food item from the pool using the original prefab
+            GameObject flyingItem = PoolManager.Instance.Spawn(itemPrefab, transform.position, Quaternion.identity);
+            
+            // Preserve the visual size of the stack item in the world
+            flyingItem.transform.localScale = transform.lossyScale;
+
+            // Find, enable, and clear the trail renderer specifically for this flying dummy
+            TrailRenderer dummyTrail = flyingItem.GetComponentInChildren<TrailRenderer>(true);
+            if (dummyTrail != null)
+            {
+                dummyTrail.enabled = true;
+                dummyTrail.Clear();
+            }
 
             Tween throwTween = flyingItem.transform.DOJump(targetCustomerPosition, 2f, 1, 0.35f);
             if (ignoreTimeScale) throwTween.SetUpdate(true);
 
-            throwTween
-                .OnComplete(() => { PoolManager.Instance.Despawn(flyingItem); });
+            throwTween.OnComplete(() => 
+            { 
+                // Disable and clear the trail before returning to the pool to prevent visual glitches on next spawn
+                if (dummyTrail != null)
+                {
+                    dummyTrail.Clear();
+                    dummyTrail.enabled = false;
+                }
+                
+                PoolManager.Instance.Despawn(flyingItem); 
+            });
         }
     }
 }
