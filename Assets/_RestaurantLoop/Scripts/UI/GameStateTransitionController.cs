@@ -28,40 +28,42 @@ namespace RestaurantLoop.UI
         [Min(0.01f)] public float slideOutDuration = 0.32f;
     }
 
-    /// <summary>
-    /// Owns presentation-only win/fail overlays. LevelManager remains the sole owner
-    /// of gameplay state and invokes these sequences only after a result is confirmed.
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class GameStateTransitionController : MonoBehaviour
     {
-        private const string WinTitle = "RESTAURANT LOOP";
-
         [Header("References")]
         [SerializeField] private Canvas targetCanvas;
         [SerializeField] private TMP_FontAsset bannerFont;
 
         [Header("Win Sequence Settings")]
         [SerializeField] private WinBannerSettings winSequence = new WinBannerSettings();
-        [SerializeField] private Sprite optionalMiddleIcon;
-        [SerializeField] private Vector2 optionalMiddleIconSize = new Vector2(110f, 110f);
         [SerializeField] private Color winOverlayColor = new Color(0.11f, 0.06f, 0.18f, 0.52f);
 
-        [Header("Win Text Customization")]
-        [SerializeField, Min(10f)] private float winLetterFontSize = 120f;
-        [SerializeField] private Color winLetterTextColor = Color.white;
-        [Tooltip("Extra spacing angle between adjacent letters.")]
-        [SerializeField, Range(0f, 20f)] private float letterSpacingAngle = 3f;
-        [Tooltip("Extra spacing angle between words (RESTAURANT and LOOP).")]
-        [SerializeField, Range(0f, 40f)] private float wordSpacingAngle = 12f;
+        [Header("Win Letter Sprites & Sizing")]
+        [Tooltip("Assign letter sprites in order (e.g., R, E, S, T, A, U, R, A, N, T, L, O, O, P).")]
+        [SerializeField] private List<Sprite> winLetterSprites = new List<Sprite>();
+        [Tooltip("On-screen width and height for each letter sprite.")]
+        [SerializeField] private Vector2 winLetterSize = new Vector2(110f, 110f);
 
-        [Header("Win Sequence Arc Layout Settings")]
+        [Header("Modular Pixel Spacing & Line Breaks")]
+        [Tooltip("0-based letter indices after which a LINE BREAK is inserted. E.g., '9' pushes everything after 'RESTAURANT' to the next line.")]
+        [SerializeField] private List<int> lineBreakAfterIndices = new List<int> { 9 };
+        [Tooltip("Horizontal pixel distance between first line letter centers (RESTAURANT).")]
+        [SerializeField, Min(0f)] private float letterSpacingX = 85f;
+        [Tooltip("Horizontal pixel distance for second line letter centers (LOOP). Set to 0 to use default spacing.")]
+        [SerializeField, Min(0f)] private float secondLineLetterSpacingX = 110f;
+        [Tooltip("Vertical pixel distance pushing the second line downwards (negative value moves down).")]
+        [SerializeField] private float lineSpacingY = -120f;
+
+        [Header("Screen Safety & Arc Layout Settings")]
+        [Tooltip("Maximum percentage of canvas width the text is allowed to occupy (0.85 = 85%). Prevents hitting screen edges.")]
+        [SerializeField, Range(0.5f, 0.95f)] private float maxScreenWidthPercent = 0.90f;
         [Tooltip("Vertical position offset relative to the screen center.")]
-        [SerializeField] private float winTextCenterOffsetY = 180f;
-        [Tooltip("Total arc angle for the curved text layout in degrees.")]
-        [SerializeField, Range(0f, 120f)] private float winArcAngle = 80f;
-        [Tooltip("Radius of the curved arc layout.")]
-        [SerializeField, Min(100f)] private float winArcRadius = 520f;
+        [SerializeField] private float winTextCenterOffsetY = 280f;
+        [Tooltip("Arch height in pixels. Set to 0 for completely FLAT text, or 30-40 for a subtle curve.")]
+        [SerializeField] private float arcHeightY = 35f;
+        [Tooltip("Maximum tilt/rotation of letters at the far outer edges (in degrees).")]
+        [SerializeField, Range(0f, 45f)] private float maxEdgeRotation = 10f;
 
         [Header("Failure Sequence Settings")]
         [SerializeField] private FailureBannerSettings failureSequence = new FailureBannerSettings();
@@ -81,14 +83,10 @@ namespace RestaurantLoop.UI
         private RectTransform overlayRoot;
         private Image overlayBlocker;
         private RectTransform winContentRoot;
-        private RectTransform middleIconAnchor;
-        private Image middleIconImage;
         private RectTransform failureBanner;
         private Image failureBannerBackgroundImage;
         private TMP_Text failureText;
         private Sequence activeSequence;
-
-        public RectTransform MiddleIconAnchor => middleIconAnchor;
 
         public void Initialize(Canvas canvas)
         {
@@ -123,14 +121,6 @@ namespace RestaurantLoop.UI
                     letter.DOScale(Vector3.one, winSequence.letterScaleDuration).SetEase(Ease.OutBack));
             }
 
-            if (middleIconImage != null && middleIconImage.gameObject.activeSelf)
-            {
-                middleIconAnchor.localScale = Vector3.zero;
-                activeSequence.Insert(revealEnd,
-                    middleIconAnchor.DOScale(Vector3.one, winSequence.letterScaleDuration).SetEase(Ease.OutBack));
-                revealEnd += winSequence.letterScaleDuration;
-            }
-
             float exitStart = revealEnd + winSequence.holdDuration;
             for (int i = 0; i < letters.Count; i++)
             {
@@ -144,15 +134,6 @@ namespace RestaurantLoop.UI
                         RotateMode.FastBeyond360).SetRelative().SetEase(Ease.InQuad));
                 activeSequence.Insert(exitAt,
                     letter.DOScale(Vector3.zero, winSequence.exitDuration).SetEase(winSequence.exitScaleEase));
-            }
-
-            if (middleIconImage != null && middleIconImage.gameObject.activeSelf)
-            {
-                activeSequence.Insert(exitStart,
-                    middleIconAnchor.DORotate(new Vector3(0f, 0f, 360f), winSequence.exitDuration,
-                        RotateMode.FastBeyond360));
-                activeSequence.Insert(exitStart,
-                    middleIconAnchor.DOScale(Vector3.zero, winSequence.exitDuration).SetEase(winSequence.exitScaleEase));
             }
 
             activeSequence.OnComplete(() =>
@@ -225,18 +206,6 @@ namespace RestaurantLoop.UI
             winContentRoot.sizeDelta = new Vector2(1000f, 320f);
             BuildWinLetters();
 
-            middleIconAnchor = new GameObject("OptionalMiddleIconAnchor", typeof(RectTransform)).GetComponent<RectTransform>();
-            middleIconAnchor.SetParent(winContentRoot, false);
-            middleIconAnchor.anchorMin = middleIconAnchor.anchorMax = new Vector2(0.5f, 0.5f);
-            middleIconAnchor.sizeDelta = optionalMiddleIconSize;
-            if (optionalMiddleIcon != null)
-            {
-                middleIconImage = middleIconAnchor.gameObject.AddComponent<Image>();
-                middleIconImage.sprite = optionalMiddleIcon;
-                middleIconImage.preserveAspect = true;
-                middleIconImage.raycastTarget = false;
-            }
-
             failureBanner = new GameObject("FailureBanner", typeof(RectTransform), typeof(CanvasRenderer),
                 typeof(Image)).GetComponent<RectTransform>();
             failureBanner.SetParent(overlayRoot, false);
@@ -276,61 +245,102 @@ namespace RestaurantLoop.UI
             }
         }
 
-        private void GetLetterArcTransform(int index, out Vector2 position, out Quaternion rotation)
-        {
-            int totalLetters = 0;
-            int spaceCount = 0;
-
-            for (int i = 0; i < WinTitle.Length; i++)
-            {
-                if (WinTitle[i] == ' ') spaceCount++;
-                else totalLetters++;
-            }
-
-            float baseStepAngle = winArcAngle / Math.Max(1, totalLetters - 1 + spaceCount);
-            float effectiveLetterStep = baseStepAngle + letterSpacingAngle;
-
-            int spacesBefore = 0;
-            int lettersBefore = 0;
-            for (int i = 0; i < index; i++)
-            {
-                if (WinTitle[i] == ' ') spacesBefore++;
-                else lettersBefore++;
-            }
-
-            float angleFromStart = lettersBefore * effectiveLetterStep + spacesBefore * (effectiveLetterStep + wordSpacingAngle);
-            float totalSpan = (totalLetters - 1) * effectiveLetterStep + spaceCount * (effectiveLetterStep + wordSpacingAngle);
-            float currentAngle = angleFromStart - (totalSpan * 0.5f);
-
-            float angleRad = currentAngle * Mathf.Deg2Rad;
-            float x = winArcRadius * Mathf.Sin(angleRad);
-            float y = (winArcRadius * Mathf.Cos(angleRad) - winArcRadius) + winTextCenterOffsetY;
-
-            position = new Vector2(x, y);
-            rotation = Quaternion.Euler(0f, 0f, -currentAngle);
-        }
-
         private void BuildWinLetters()
         {
             letters.Clear();
-            for (int i = 0; i < WinTitle.Length; i++)
+            if (winLetterSprites == null || winLetterSprites.Count == 0) return;
+
+            List<List<Sprite>> lines = new List<List<Sprite>>();
+            List<Sprite> currentLine = new List<Sprite>();
+
+            for (int i = 0; i < winLetterSprites.Count; i++)
             {
-                if (WinTitle[i] == ' ') continue;
+                if (winLetterSprites[i] == null) continue;
+                currentLine.Add(winLetterSprites[i]);
 
-                TMP_Text text = CreateText($"Letter_{i:00}", winContentRoot, winLetterFontSize);
-                text.text = WinTitle[i].ToString();
-                text.color = winLetterTextColor;
-                text.alignment = TextAlignmentOptions.Center;
-                text.raycastTarget = false;
-                RectTransform rect = text.rectTransform;
-                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
-                rect.sizeDelta = new Vector2(winLetterFontSize * 1.1f, winLetterFontSize * 1.4f);
+                if (lineBreakAfterIndices != null && lineBreakAfterIndices.Contains(i))
+                {
+                    lines.Add(currentLine);
+                    currentLine = new List<Sprite>();
+                }
+            }
 
-                GetLetterArcTransform(i, out Vector2 arcPos, out Quaternion arcRot);
-                rect.anchoredPosition = arcPos;
-                rect.localRotation = arcRot;
+            if (currentLine.Count > 0)
+            {
+                lines.Add(currentLine);
+            }
 
-                letters.Add(rect);
+            if (lines.Count == 0) return;
+
+            float maxLineWidth = 0f;
+            for (int lineIdx = 0; lineIdx < lines.Count; lineIdx++)
+            {
+                var line = lines[lineIdx];
+                if (line.Count == 0) continue;
+
+                float activeSpacing = (lineIdx > 0 && secondLineLetterSpacingX > 0f) ? secondLineLetterSpacingX : letterSpacingX;
+                float lineWidth = (line.Count - 1) * activeSpacing;
+                if (lineWidth > maxLineWidth) maxLineWidth = lineWidth;
+            }
+
+            int globalIndex = 0;
+
+            for (int lineIdx = 0; lineIdx < lines.Count; lineIdx++)
+            {
+                List<Sprite> lineSprites = lines[lineIdx];
+                int lineCount = lineSprites.Count;
+                if (lineCount == 0) continue;
+
+                float activeSpacing = (lineIdx > 0 && secondLineLetterSpacingX > 0f) ? secondLineLetterSpacingX : letterSpacingX;
+
+                float currentLineWidth = (lineCount - 1) * activeSpacing;
+                float startX = -currentLineWidth * 0.5f;
+
+                for (int i = 0; i < lineCount; i++)
+                {
+                    Sprite letterSprite = lineSprites[i];
+
+                    GameObject imageObject = new GameObject($"LetterSprite_{globalIndex:00}", typeof(RectTransform),
+                        typeof(CanvasRenderer), typeof(Image));
+                    imageObject.transform.SetParent(winContentRoot, false);
+
+                    Image image = imageObject.GetComponent<Image>();
+                    image.sprite = letterSprite;
+                    image.preserveAspect = true;
+                    image.raycastTarget = false;
+
+                    RectTransform rect = imageObject.GetComponent<RectTransform>();
+                    rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+                    rect.sizeDelta = winLetterSize;
+
+                    float x = startX + (i * activeSpacing);
+
+                    float normalizedX = maxLineWidth > 0f ? (x / (maxLineWidth * 0.5f)) : 0f;
+                    normalizedX = Mathf.Clamp(normalizedX, -1f, 1f);
+
+                    float y = (1f - (normalizedX * normalizedX)) * arcHeightY + winTextCenterOffsetY + (lineIdx * lineSpacingY);
+                    float rotZ = -normalizedX * maxEdgeRotation;
+
+                    rect.anchoredPosition = new Vector2(x, y);
+                    rect.localRotation = Quaternion.Euler(0f, 0f, rotZ);
+
+                    letters.Add(rect);
+                    globalIndex++;
+                }
+            }
+
+            float totalMaxSpan = maxLineWidth + winLetterSize.x;
+            float canvasWidth = overlayRoot != null && overlayRoot.rect.width > 1f ? overlayRoot.rect.width : 1080f;
+            float maxAllowedWidth = canvasWidth * maxScreenWidthPercent;
+
+            if (totalMaxSpan > maxAllowedWidth && totalMaxSpan > 0f)
+            {
+                float fitScale = maxAllowedWidth / totalMaxSpan;
+                winContentRoot.localScale = new Vector3(fitScale, fitScale, 1f);
+            }
+            else
+            {
+                winContentRoot.localScale = Vector3.one;
             }
         }
 
@@ -353,8 +363,7 @@ namespace RestaurantLoop.UI
 
             for (int i = winContentRoot.childCount - 1; i >= 0; i--)
             {
-                Transform child = winContentRoot.GetChild(i);
-                if (child != middleIconAnchor) Destroy(child.gameObject);
+                Destroy(winContentRoot.GetChild(i).gameObject);
             }
 
             BuildWinLetters();
@@ -364,21 +373,6 @@ namespace RestaurantLoop.UI
                 RectTransform letter = letters[i];
                 letter.DOKill();
                 letter.localScale = Vector3.zero;
-
-                TMP_Text text = letter.GetComponent<TMP_Text>();
-                if (text != null)
-                {
-                    text.fontSize = winLetterFontSize;
-                    text.color = winLetterTextColor;
-                }
-            }
-
-            middleIconAnchor?.DOKill();
-            if (middleIconAnchor != null)
-            {
-                middleIconAnchor.localScale = optionalMiddleIcon != null ? Vector3.one : Vector3.zero;
-                middleIconAnchor.localRotation = Quaternion.identity;
-                middleIconAnchor.gameObject.SetActive(optionalMiddleIcon != null);
             }
 
             failureBanner?.DOKill();
