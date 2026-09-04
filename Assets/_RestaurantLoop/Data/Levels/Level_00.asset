@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Level_00
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.LevelDataSO
   activeEdgeSlotCount: 1
-  columnCount: 1
+  columnCount: 2
   calculatedRowCount: 1
   minStackSize: 2
   maxStackSize: 2
