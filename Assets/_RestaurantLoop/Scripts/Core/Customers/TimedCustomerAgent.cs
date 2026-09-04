@@ -54,7 +54,8 @@ namespace RestaurantLoop.Core
             if (customer == null) customer = GetComponent<Customer>();
             if (pulseTarget == null && timerRoot != null) pulseTarget = timerRoot.transform as RectTransform;
             ConfigureRadialClockImage();
-            if (pulseTarget != null) pulseBaseScale = pulseTarget.localScale;
+            
+            pulseBaseScale = Vector3.one;
             pulsePhase = Mathf.Abs(GetInstanceID() % 360) * Mathf.Deg2Rad;
             SetTimerVisible(false);
         }
@@ -62,7 +63,6 @@ namespace RestaurantLoop.Core
         private void OnEnable()
         {
             KillPopTween();
-            if (pulseTarget != null) pulseTarget.localScale = pulseBaseScale;
             SetTimerVisible(isTimed && timerStarted && !completed);
             RefreshVisuals();
         }
@@ -70,7 +70,6 @@ namespace RestaurantLoop.Core
         private void OnDisable()
         {
             KillPopTween();
-            if (pulseTarget != null) pulseTarget.localScale = pulseBaseScale;
             SetTimerVisible(false);
             StopWarningSoundTracker();
         }
@@ -117,7 +116,7 @@ namespace RestaurantLoop.Core
             hasPlayedWarningSound = false;
             isCriticalSoundActive = false;
 
-            if (pulseTarget != null) pulseBaseScale = pulseTarget.localScale;
+            pulseBaseScale = Vector3.one;
             SetTimerVisible(false);
             RefreshVisuals();
         }
@@ -129,7 +128,6 @@ namespace RestaurantLoop.Core
             timerStarted = false;
             KillPopTween();
             SetTimerVisible(false);
-            if (pulseTarget != null) pulseBaseScale = pulseTarget.localScale;
 
             StopWarningSoundTracker();
         }
@@ -185,7 +183,11 @@ namespace RestaurantLoop.Core
                 popTween = null;
             }
 
-            if (pulseTarget != null) pulseTarget.DOKill();
+            if (pulseTarget != null)
+            {
+                pulseTarget.DOKill();
+                pulseTarget.localScale = pulseBaseScale;
+            }
         }
 
         private void Expire()

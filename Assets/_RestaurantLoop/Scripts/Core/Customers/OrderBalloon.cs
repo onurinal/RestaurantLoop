@@ -37,26 +37,26 @@ namespace RestaurantLoop.Core
         [SerializeField] private float cameraOffsetDistance = 0.8f;
 
         private Transform foodDisplayTransform;
-        private Vector3 restingLocalScale;
+        private Vector3 authoredScale = Vector3.one;
+        private bool isAuthoredScaleCaptured;
         private Tween scaleTween;
 
         private void Awake()
         {
-            restingLocalScale = transform.localScale;
+            CaptureAuthoredScale();
             ApplyCameraOffset();
             CreateFoodDisplay();
         }
 
         private void OnEnable()
         {
+            CaptureAuthoredScale();
             PlayIn();
         }
 
         private void OnDisable()
         {
-            scaleTween?.Kill();
-            scaleTween = null;
-            transform.localScale = restingLocalScale;
+            ResetScale();
         }
 
         private void LateUpdate()
@@ -71,38 +71,75 @@ namespace RestaurantLoop.Core
 
         public void PlayIn()
         {
-            scaleTween?.Kill();
-            scaleTween = null;
+            KillTween();
+            CaptureAuthoredScale();
 
-            restingLocalScale = transform.localScale;
-            if (!animateScale) return;
+            if (!animateScale)
+            {
+                transform.localScale = authoredScale;
+                return;
+            }
 
-            transform.localScale = restingLocalScale * showStartScale;
-            scaleTween = transform.DOScale(restingLocalScale, showDuration)
+            transform.localScale = authoredScale * showStartScale;
+            scaleTween = transform.DOScale(authoredScale, showDuration)
                 .SetEase(showEase, showEaseOvershoot)
                 .SetTarget(this);
         }
 
         public void PlayOut(Action onComplete)
         {
-            scaleTween?.Kill();
-            scaleTween = null;
+            KillTween();
+            CaptureAuthoredScale();
 
             if (!animateScale)
             {
-                transform.localScale = restingLocalScale;
+                transform.localScale = authoredScale;
                 onComplete?.Invoke();
                 return;
             }
 
-            scaleTween = transform.DOScale(restingLocalScale * hideEndScale, hideDuration)
+            scaleTween = transform.DOScale(authoredScale * hideEndScale, hideDuration)
                 .SetEase(hideEase, hideEaseOvershoot)
                 .SetTarget(this)
                 .OnComplete(() =>
                 {
-                    transform.localScale = restingLocalScale;
+                    transform.localScale = authoredScale;
                     onComplete?.Invoke();
                 });
+        }
+
+        public void ResetScale()
+        {
+            KillTween();
+            CaptureAuthoredScale();
+            transform.localScale = authoredScale;
+        }
+
+        private void KillTween()
+        {
+            if (scaleTween != null && scaleTween.IsActive())
+            {
+                scaleTween.Kill();
+            }
+            scaleTween = null;
+            transform.DOKill();
+        }
+
+        private void CaptureAuthoredScale()
+        {
+            if (isAuthoredScaleCaptured) return;
+
+            // Capture initial scale before any animation or pooling modification
+            if (transform.localScale != Vector3.zero)
+            {
+                authoredScale = transform.localScale;
+            }
+            else
+            {
+                authoredScale = Vector3.one;
+            }
+
+            isAuthoredScaleCaptured = true;
         }
 
         private void ApplyCameraOffset()

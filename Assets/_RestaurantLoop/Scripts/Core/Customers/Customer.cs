@@ -65,6 +65,7 @@ namespace RestaurantLoop.Core
             KillTransientTweens();
 
             if (customerRenderer != null) customerRenderer.SetPropertyBlock(null);
+            if (orderBalloon != null) orderBalloon.ResetScale();
         }
 
         private void OnDestroy()
@@ -93,6 +94,11 @@ namespace RestaurantLoop.Core
             transform.localScale = authoredLocalScale;
             transform.rotation = Quaternion.identity;
             ModelTransform.localRotation = Quaternion.identity;
+
+            if (orderBalloon != null)
+            {
+                orderBalloon.ResetScale();
+            }
 
             SetBalloonActive(false, animate: false);
             SetDesaturation(1f, 0f);
@@ -360,7 +366,6 @@ namespace RestaurantLoop.Core
 
             if (animator != null) animator.SetTrigger(EatHash);
 
-            // Pass the item name to the AudioManager to determine the correct consume sound
             if (AudioManager.Instance != null)
             {
                 string itemName = requiredData != null ? requiredData.ItemName : "";
@@ -392,7 +397,6 @@ namespace RestaurantLoop.Core
 
             if (animator != null) animator.SetTrigger(EatHash);
 
-            // Pass the item name to the AudioManager to determine the correct consume sound
             if (AudioManager.Instance != null)
             {
                 string itemName = requiredData != null ? requiredData.ItemName : "";
