@@ -60,7 +60,6 @@ namespace RestaurantLoop.UI
         private int sortingLayerId;
         private int particleSortingOrder;
         private float detectedParticleLifetime;
-        private bool isPlaying = false;
 
         private void Awake()
         {
@@ -82,8 +81,6 @@ namespace RestaurantLoop.UI
             {
                 audioSource.volume = 1f;
             }
-
-            isPlaying = false;
         }
 
         private void OnDisable()
@@ -93,7 +90,6 @@ namespace RestaurantLoop.UI
 
             sequenceCoroutine = null;
             fadeOutCoroutine = null;
-            isPlaying = false;
 
             ClearSpawnedFireworks();
 
@@ -173,12 +169,10 @@ namespace RestaurantLoop.UI
 
         private IEnumerator PlaySequence(Action onComplete)
         {
-            isPlaying = true;
             RefreshReferences();
 
             if (fireworkPrefab == null || targetCamera == null)
             {
-                isPlaying = false;
                 onComplete?.Invoke();
                 yield break;
             }
@@ -227,7 +221,6 @@ namespace RestaurantLoop.UI
                 if (audioSource != null && audioSource.gameObject.activeInHierarchy) audioSource.Stop();
             }
 
-            isPlaying = false;
             sequenceCoroutine = null;
 
             onComplete?.Invoke();
