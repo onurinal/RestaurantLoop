@@ -20,6 +20,8 @@ namespace RestaurantLoop.UI
 
         [Header("Confirmation Panel")]
         [SerializeField] private GameObject confirmLeavePanel;
+        [Tooltip("Are you sure paneli açılmadan önce kapatılacak panel (örn. Settings). Boş bırakılırsa hiçbir şey kapatılmaz.")]
+        [SerializeField] private GameObject panelToHideOnConfirmLeave;
         [SerializeField] private Button leaveButton;
         [SerializeField] private Button confirmLeaveYesButton;
         [SerializeField] private Button confirmLeaveNoButton;
@@ -82,6 +84,7 @@ namespace RestaurantLoop.UI
         private Vector3 winPanelBaseScale;
         private Vector3 losePanelBaseScale;
         private Vector3 confirmLeavePanelBaseScale;
+        private Vector3 panelToHideOnConfirmLeaveBaseScale;
 
         private void Awake()
         {
@@ -94,6 +97,7 @@ namespace RestaurantLoop.UI
             winPanelBaseScale = GetPanelScale(winPanel);
             losePanelBaseScale = GetPanelScale(losePanel);
             confirmLeavePanelBaseScale = GetPanelScale(confirmLeavePanel);
+            panelToHideOnConfirmLeaveBaseScale = GetPanelScale(panelToHideOnConfirmLeave);
         }
 
         private void Start()
@@ -307,12 +311,27 @@ namespace RestaurantLoop.UI
 
         private void OpenConfirmLeavePanel()
         {
+            // Are you sure paneli açılmadan önce, atanmışsa altındaki paneli (örn. Settings) kapat.
+            // Hangi panelin kapanacağı Inspector'dan (panelToHideOnConfirmLeave) atanır;
+            // confirmLeavePanel'in kendisi ve açılış mantığı değişmeden aynı kalır.
+            if (panelToHideOnConfirmLeave != null)
+            {
+                HidePanel(panelToHideOnConfirmLeave, panelToHideOnConfirmLeaveBaseScale);
+            }
+
             ShowPanel(confirmLeavePanel, confirmLeavePanelBaseScale);
         }
 
         private void CloseConfirmLeavePanel()
         {
-            HidePanel(confirmLeavePanel, confirmLeavePanelBaseScale);
+            // Are you sure paneli kapanınca, açılırken gizlediğimiz paneli (varsa) geri aç.
+            HidePanel(confirmLeavePanel, confirmLeavePanelBaseScale, () =>
+            {
+                if (panelToHideOnConfirmLeave != null)
+                {
+                    ShowPanel(panelToHideOnConfirmLeave, panelToHideOnConfirmLeaveBaseScale);
+                }
+            });
         }
 
         private void QuitGame()
