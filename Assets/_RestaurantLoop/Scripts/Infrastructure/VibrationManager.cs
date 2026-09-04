@@ -21,6 +21,7 @@ namespace RestaurantLoop.Infrastructure
     public sealed class VibrationManager : MonoBehaviour
     {
         private const string VibrationEnabledPreferenceKey = "VibrationEnabled";
+        private const string LegacyVibrationPreferenceKey = "Vibration";
 
         [Header("Event Presets")]
         [SerializeField] private VibrationPreset winVibration = VibrationPreset.Heavy;
@@ -70,8 +71,7 @@ namespace RestaurantLoop.Infrastructure
 
             Instance = this;
             DontDestroyOnLoad(gameObject);
-            IsVibrationEnabled =
-                PlayerPrefs.GetInt(VibrationEnabledPreferenceKey, vibrationEnabledByDefault ? 1 : 0) != 0;
+            IsVibrationEnabled = LoadVibrationPreference();
 
 #if UNITY_ANDROID
             if (Application.platform == RuntimePlatform.Android) InitializeAndroidVibrator();
@@ -83,6 +83,21 @@ namespace RestaurantLoop.Infrastructure
             IsVibrationEnabled = enabled;
             PlayerPrefs.SetInt(VibrationEnabledPreferenceKey, enabled ? 1 : 0);
             PlayerPrefs.Save();
+        }
+
+        private bool LoadVibrationPreference()
+        {
+            if (PlayerPrefs.HasKey(VibrationEnabledPreferenceKey))
+            {
+                return PlayerPrefs.GetInt(VibrationEnabledPreferenceKey) != 0;
+            }
+
+            bool enabled = PlayerPrefs.HasKey(LegacyVibrationPreferenceKey)
+                ? PlayerPrefs.GetFloat(LegacyVibrationPreferenceKey) > 0.5f
+                : vibrationEnabledByDefault;
+            PlayerPrefs.SetInt(VibrationEnabledPreferenceKey, enabled ? 1 : 0);
+            PlayerPrefs.Save();
+            return enabled;
         }
 
         public void PlayWinVibration() => PlayPreset(winVibration);

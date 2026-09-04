@@ -60,6 +60,10 @@ namespace RestaurantLoop.UI
                 conveyor.CapacityRejected -= PlayCapacityRejectedFeedback;
             }
 
+            rejectionFeedbackTween?.Kill(false);
+            capacityIncreaseFeedbackTween?.Kill(false);
+            rejectionFeedbackTween = null;
+            capacityIncreaseFeedbackTween = null;
             ResetFeedbackVisuals();
             ResetCapacityIncreaseVisuals();
         }
@@ -76,7 +80,8 @@ namespace RestaurantLoop.UI
         {
             if (countText == null) return;
 
-            rejectionFeedbackTween?.Kill();
+            rejectionFeedbackTween?.Kill(false);
+            rejectionFeedbackTween = null;
             ResetFeedbackVisuals();
 
             Color rejectedColor = capacityRejectedColor;
@@ -91,14 +96,20 @@ namespace RestaurantLoop.UI
                     90f,
                     false))
                 .Append(countText.DOColor(defaultTextColor, rejectionFeedbackDuration))
-                .OnComplete(ResetFeedbackVisuals);
+                .SetUpdate(true)
+                .OnComplete(() =>
+                {
+                    rejectionFeedbackTween = null;
+                    ResetFeedbackVisuals();
+                });
         }
 
         private void PlayCapacityIncreasedFeedback()
         {
             if (countText == null) return;
 
-            capacityIncreaseFeedbackTween?.Kill();
+            capacityIncreaseFeedbackTween?.Kill(false);
+            capacityIncreaseFeedbackTween = null;
             ResetCapacityIncreaseVisuals();
 
             capacityIncreaseFeedbackTween = DOTween.Sequence()
@@ -106,7 +117,12 @@ namespace RestaurantLoop.UI
                     .SetEase(Ease.OutBack))
                 .Append(countText.rectTransform.DOScale(defaultTextScale, capacityIncreaseDuration)
                     .SetEase(Ease.InOutQuad))
-                .OnComplete(ResetCapacityIncreaseVisuals);
+                .SetUpdate(true)
+                .OnComplete(() =>
+                {
+                    capacityIncreaseFeedbackTween = null;
+                    ResetCapacityIncreaseVisuals();
+                });
         }
 
         private void ResetFeedbackVisuals()
@@ -123,6 +139,12 @@ namespace RestaurantLoop.UI
             {
                 countText.rectTransform.localScale = defaultTextScale;
             }
+        }
+
+        private void OnDestroy()
+        {
+            rejectionFeedbackTween?.Kill(false);
+            capacityIncreaseFeedbackTween?.Kill(false);
         }
     }
 }

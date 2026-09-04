@@ -3422,6 +3422,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1402638609326164230}
   - component: {fileID: 7544874670577953370}
+  - component: {fileID: 7993493189779648419}
   m_Layer: 5
   m_Name: Slider
   m_TagString: Untagged
@@ -3501,6 +3502,26 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &7993493189779648419
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8535700518698092059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f72bc7973f70a540a3d66cd4b5ade88, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.UI.VibrationSwitchView
+  slider: {fileID: 7544874670577953370}
+  background: {fileID: 4340206423601036796}
+  handle: {fileID: 7261792324773366202}
+  enabledColor: {r: 0.18, g: 0.78, b: 0.34, a: 1}
+  disabledColor: {r: 0.86, g: 0.22, b: 0.25, a: 1}
+  colorDuration: 0.16
+  handlePunchScale: 1.12
+  handlePunchDuration: 0.14
 --- !u!1 &8942487293195387948
 GameObject:
   m_ObjectHideFlags: 0

@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 using DG.Tweening;
 using RestaurantLoop.Audio;
 using RestaurantLoop.Core;
+using RestaurantLoop.Infrastructure;
 
 namespace RestaurantLoop.UI
 {
@@ -20,7 +21,7 @@ namespace RestaurantLoop.UI
 
         [Header("Confirmation Panel")]
         [SerializeField] private GameObject confirmLeavePanel;
-        [Tooltip("Are you sure paneli açılmadan önce kapatılacak panel (örn. Settings). Boş bırakılırsa hiçbir şey kapatılmaz.")]
+        [Tooltip("Panel hidden before the confirmation dialog opens, such as Settings. Leave empty to hide nothing.")]
         [SerializeField] private GameObject panelToHideOnConfirmLeave;
         [SerializeField] private Button leaveButton;
         [SerializeField] private Button confirmLeaveYesButton;
@@ -45,6 +46,7 @@ namespace RestaurantLoop.UI
         [SerializeField] private Slider vibrationSlider;
         [Tooltip("Invisible button placed over the vibration slider to detect taps")]
         [SerializeField] private Button vibrationSliderButton;
+        [SerializeField] private VibrationSwitchView vibrationSwitchView;
 
         [Header("Audio Toggle Buttons")]
         [SerializeField] private Button musicToggleButton;
@@ -113,14 +115,16 @@ namespace RestaurantLoop.UI
 
             float savedMusicVol = PlayerPrefs.GetFloat("MusicVolume", 1f);
             float savedSfxVol = PlayerPrefs.GetFloat("SfxVolume", 1f);
-            float savedVibration = PlayerPrefs.GetFloat("Vibration", 1f);
 
             isMusicOn = savedMusicVol > 0f;
             isSfxOn = savedSfxVol > 0f;
 
             if (musicSlider != null) musicSlider.value = savedMusicVol;
             if (sfxSlider != null) sfxSlider.value = savedSfxVol;
-            if (vibrationSlider != null) vibrationSlider.value = savedVibration;
+            ResolveVibrationControls();
+            bool vibrationEnabled = VibrationManager.Instance == null ||
+                                    VibrationManager.Instance.IsVibrationEnabled;
+            vibrationSwitchView?.SetState(vibrationEnabled, false);
 
             UpdateMusicButtonVisual();
             UpdateSfxButtonVisual();
@@ -143,7 +147,7 @@ namespace RestaurantLoop.UI
                 vibrationSliderButton.onClick.AddListener(PlayTapSound);
             }
 
-            // Çıkış (Leave) Butonları
+            // Leave confirmation buttons
             if (leaveButton != null)
             {
                 leaveButton.onClick.AddListener(OpenConfirmLeavePanel);
@@ -210,7 +214,6 @@ namespace RestaurantLoop.UI
             seq.OnComplete(() =>
             {
                 Destroy(flying3DPlate);
-                conveyorCounterPanel.DOPunchScale(Vector3.one * 0.2f, 0.3f, 5, 1f);
             });
         }
 
@@ -317,10 +320,10 @@ namespace RestaurantLoop.UI
 
         private void ToggleVibrationSliderState()
         {
-            if (vibrationSlider != null)
-            {
-                vibrationSlider.value = vibrationSlider.value == 0 ? 1 : 0;
-            }
+            bool currentState = VibrationManager.Instance != null
+                ? VibrationManager.Instance.IsVibrationEnabled
+                : vibrationSlider == null || vibrationSlider.value > 0.5f;
+            UpdateVibration(currentState ? 0f : 1f);
         }
 
         private void ToggleMusic()
@@ -382,7 +385,46 @@ namespace RestaurantLoop.UI
 
         private void UpdateVibration(float value)
         {
-            PlayerPrefs.SetFloat("Vibration", value);
+            bool enabled = value > 0.5f;
+            VibrationManager.Instance?.SetVibrationEnabled(enabled);
+            vibrationSwitchView?.SetState(enabled, true);
+        }
+
+        private void ResolveVibrationControls()
+        {
+            if (vibrationSlider == null && settingsPanel != null)
+            {
+                Slider[] sliders = settingsPanel.GetComponentsInChildren<Slider>(true);
+                for (int i = 0; i < sliders.Length; i++)
+                {
+                    if (sliders[i].transform.parent != null &&
+                        sliders[i].transform.parent.name == "Vibration_Symbol")
+                    {
+                        vibrationSlider = sliders[i];
+                        break;
+                    }
+                }
+            }
+
+            if (vibrationSliderButton == null && vibrationSlider != null)
+            {
+                Transform buttonTransform = vibrationSlider.transform.parent.Find("Button");
+                if (buttonTransform != null)
+                {
+                    vibrationSliderButton = buttonTransform.GetComponent<Button>();
+                }
+            }
+
+            if (vibrationSwitchView == null && vibrationSlider != null)
+            {
+                vibrationSwitchView = vibrationSlider.GetComponent<VibrationSwitchView>();
+                if (vibrationSwitchView == null)
+                {
+                    vibrationSwitchView = vibrationSlider.gameObject.AddComponent<VibrationSwitchView>();
+                }
+            }
+
+            vibrationSwitchView?.Initialize(vibrationSlider);
         }
 
         private void ShowWinPanel()

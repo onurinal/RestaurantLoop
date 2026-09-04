@@ -1871,6 +1871,7 @@ MonoBehaviour:
   sfxSlider: {fileID: 1933397153}
   vibrationSlider: {fileID: 1006983237}
   vibrationSliderButton: {fileID: 2038736678}
+  vibrationSwitchView: {fileID: 0}
   musicToggleButton: {fileID: 1743536173}
   sfxToggleButton: {fileID: 1743536172}
   musicToggleImage: {fileID: 1743536171}
@@ -2669,6 +2670,10 @@ PrefabInstance:
     - target: {fileID: 1776543136606078438, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1826370119111404819, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4119095150824905647, guid: 60b573f5e7e263644be50aa059019a1b, type: 3}
       propertyPath: m_SizeDelta.x
