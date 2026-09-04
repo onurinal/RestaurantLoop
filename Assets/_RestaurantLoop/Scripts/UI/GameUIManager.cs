@@ -75,7 +75,7 @@ namespace RestaurantLoop.UI
         [SerializeField] private Transform conveyorCounterPanel;
         [SerializeField] private float flyDuration = 0.5f;
         [SerializeField] private float spawnDepthFromCamera = 5f;
-        [SerializeField] private float arcHeight = 2f; // Height of the arc during flight
+        [SerializeField] private float arcHeight = 2f;
 
         private bool isMusicOn = true;
         private bool isSfxOn = true;
@@ -137,7 +137,6 @@ namespace RestaurantLoop.UI
             if (sfxSlider != null) sfxSlider.onValueChanged.AddListener(UpdateSfxVolume);
             if (vibrationSlider != null) vibrationSlider.onValueChanged.AddListener(UpdateVibration);
 
-            // Titreşim sliderı üzerine tıklanınca çalışacak kod
             if (vibrationSliderButton != null)
             {
                 vibrationSliderButton.onClick.AddListener(ToggleVibrationSliderState);
@@ -150,11 +149,13 @@ namespace RestaurantLoop.UI
                 leaveButton.onClick.AddListener(OpenConfirmLeavePanel);
                 leaveButton.onClick.AddListener(PlayTapSound);
             }
+
             if (confirmLeaveYesButton != null)
             {
-                confirmLeaveYesButton.onClick.AddListener(QuitGame);
+                confirmLeaveYesButton.onClick.AddListener(OnConfirmLeaveYesClicked);
                 confirmLeaveYesButton.onClick.AddListener(PlayTapSound);
             }
+
             if (confirmLeaveNoButton != null)
             {
                 confirmLeaveNoButton.onClick.AddListener(CloseConfirmLeavePanel);
@@ -190,10 +191,8 @@ namespace RestaurantLoop.UI
 
             if (flyingPlatePrefab == null || conveyorCounterPanel == null || powerUp1Button == null) return;
 
-            // Instantiate the 3D plate prefab in world space (not in the UI Canvas)
             GameObject flying3DPlate = Instantiate(flyingPlatePrefab);
 
-            // Convert the UI button's 2D screen coordinate to a 3D world coordinate
             Vector3 buttonScreenPos = powerUp1Button.GetComponent<RectTransform>().position;
             buttonScreenPos.z = spawnDepthFromCamera;
 
@@ -202,31 +201,16 @@ namespace RestaurantLoop.UI
             flying3DPlate.transform.position = startWorldPos;
             flying3DPlate.transform.localScale = Vector3.zero;
 
-            // Initialize DOTween Sequence for World Space to World Space flight
             Sequence seq = DOTween.Sequence();
-
-            // Spawn pop-up effect
             seq.Append(flying3DPlate.transform.DOScale(Vector3.one, 0.2f).SetEase(Ease.OutBack));
-
-            // Move towards the 3D counter in an arc (jump trajectory)
             seq.Append(flying3DPlate.transform.DOJump(conveyorCounterPanel.position, arcHeight, 1, flyDuration).SetEase(Ease.InOutQuad));
-
-            // Scale down slightly while flying
             seq.Join(flying3DPlate.transform.DOScale(Vector3.one * 0.7f, flyDuration));
-
-            // Apply rotation juice during the flight
             seq.Join(flying3DPlate.transform.DORotate(new Vector3(0, 360, 0), flyDuration, RotateMode.FastBeyond360).SetRelative());
 
-            // Target reached callback
             seq.OnComplete(() =>
             {
                 Destroy(flying3DPlate);
-
-                // Punch scale the 3D counter text for impact juice
                 conveyorCounterPanel.DOPunchScale(Vector3.one * 0.2f, 0.3f, 5, 1f);
-
-                // TODO: Add logic to increase plates in the main game system
-                // Example: ConveyorManager.Instance.AddExtraPlates(5);
             });
         }
 
@@ -267,14 +251,12 @@ namespace RestaurantLoop.UI
             stateTransitionController?.ResetImmediate();
             if (topLevelText != null)
             {
-                // Format text to display "TUTORIAL" for level 0.
                 topLevelText.text = levelNumber == 0 ? "TUTORIAL" : $"LEVEL {levelNumber}";
             }
         }
 
         private void OpenSettings()
         {
-            // Pause the game and looping audio sources.
             Time.timeScale = 0f;
 
             if (AudioManager.Instance != null)
@@ -283,7 +265,6 @@ namespace RestaurantLoop.UI
             if (CrowdAudioGenerator.Instance != null)
                 CrowdAudioGenerator.Instance.PauseCrowdAudio();
 
-            // Enable dark overlay instantly without animation
             if (darkOverlayPanel != null)
                 darkOverlayPanel.SetActive(true);
 
@@ -292,7 +273,6 @@ namespace RestaurantLoop.UI
 
         private void CloseSettings()
         {
-            // Resume the game and audio sources.
             Time.timeScale = 1f;
 
             if (AudioManager.Instance != null)
@@ -301,7 +281,6 @@ namespace RestaurantLoop.UI
             if (CrowdAudioGenerator.Instance != null)
                 CrowdAudioGenerator.Instance.ResumeCrowdAudio();
 
-            // Hide the settings panel with animation, then instantly disable the overlay on complete
             HidePanel(settingsPanel, settingsPanelBaseScale, () =>
             {
                 if (darkOverlayPanel != null)
@@ -311,9 +290,6 @@ namespace RestaurantLoop.UI
 
         private void OpenConfirmLeavePanel()
         {
-            // Are you sure paneli açılmadan önce, atanmışsa altındaki paneli (örn. Settings) kapat.
-            // Hangi panelin kapanacağı Inspector'dan (panelToHideOnConfirmLeave) atanır;
-            // confirmLeavePanel'in kendisi ve açılış mantığı değişmeden aynı kalır.
             if (panelToHideOnConfirmLeave != null)
             {
                 HidePanel(panelToHideOnConfirmLeave, panelToHideOnConfirmLeaveBaseScale);
@@ -324,7 +300,6 @@ namespace RestaurantLoop.UI
 
         private void CloseConfirmLeavePanel()
         {
-            // Are you sure paneli kapanınca, açılırken gizlediğimiz paneli (varsa) geri aç.
             HidePanel(confirmLeavePanel, confirmLeavePanelBaseScale, () =>
             {
                 if (panelToHideOnConfirmLeave != null)
@@ -334,33 +309,26 @@ namespace RestaurantLoop.UI
             });
         }
 
-        private void QuitGame()
+        private void OnConfirmLeaveYesClicked()
         {
-            Debug.Log("Exiting Game from GameUIManager...");
-            // LoadMainMenu() ile ana menüye dönebilir veya tamamen çıkış yapabilirsin:
-            Application.Quit();
+            if (isPanelTransitioning) return;
+            HidePanel(confirmLeavePanel, confirmLeavePanelBaseScale, LoadMainMenu);
         }
 
-        // --- Titreşim Slider'ını Şalter Gibi Tersine Çeviren Fonksiyon ---
         private void ToggleVibrationSliderState()
         {
             if (vibrationSlider != null)
             {
-                // Değer 0 ise 1 yap, 1 ise 0 yap. Slider'ın kendi "OnValueChanged" eventi otomatik tetiklenecektir.
                 vibrationSlider.value = vibrationSlider.value == 0 ? 1 : 0;
             }
         }
 
-        // --- Toggle Logic ---
-        // Butonlar sadece slider'ın değerini değiştirir; asıl senkronizasyon (bool + ikon)
-        // her zaman UpdateMusicVolume/UpdateSfxVolume içinde yapılır. Böylece slider'ı
-        // elle sürüklemek de, butona tıklamak da AYNI yoldan geçip ikonu günceller.
         private void ToggleMusic()
         {
             float targetVolume = isMusicOn ? 0f : 1f;
 
             if (musicSlider != null)
-                musicSlider.value = targetVolume; // -> onValueChanged -> UpdateMusicVolume
+                musicSlider.value = targetVolume;
             else
                 UpdateMusicVolume(targetVolume);
 
@@ -372,7 +340,7 @@ namespace RestaurantLoop.UI
             float targetVolume = isSfxOn ? 0f : 1f;
 
             if (sfxSlider != null)
-                sfxSlider.value = targetVolume; // -> onValueChanged -> UpdateSfxVolume
+                sfxSlider.value = targetVolume;
             else
                 UpdateSfxVolume(targetVolume);
 
@@ -391,13 +359,11 @@ namespace RestaurantLoop.UI
                 sfxToggleImage.sprite = isSfxOn ? sfxOnSprite : sfxOffSprite;
         }
 
-        // --- Value Update Logic (Tek Kaynak: Buton veya Slider fark etmez, buraya düşer) ---
         private void UpdateMusicVolume(float value)
         {
             PlayerPrefs.SetFloat("MusicVolume", value);
             if (AudioManager.Instance != null) AudioManager.Instance.SetMusicVolume(value);
 
-            // Slider kaydırıldığında veya buton tıklanınca bool'u ve resmi senkronize et
             isMusicOn = value > 0f;
             UpdateMusicButtonVisual();
         }
@@ -410,7 +376,6 @@ namespace RestaurantLoop.UI
                 AudioManager.Instance.SetSfxVolume(value);
             }
 
-            // Slider kaydırıldığında veya buton tıklanınca bool'u ve resmi senkronize et
             isSfxOn = value > 0f;
             UpdateSfxButtonVisual();
         }
@@ -422,11 +387,11 @@ namespace RestaurantLoop.UI
 
         private void ShowWinPanel()
         {
-            // Hide Next Level button if the last level is completed.
             if (LevelManager.Instance != null && nextLevelButton != null)
             {
                 nextLevelButton.gameObject.SetActive(!LevelManager.Instance.IsLastLevel);
             }
+
             if (stateTransitionController != null)
             {
                 stateTransitionController.PlayWinSequence(() => ShowPanel(winPanel, winPanelBaseScale));
@@ -492,7 +457,6 @@ namespace RestaurantLoop.UI
             panel.SetActive(true);
             panelTransform.localScale = Vector3.Scale(baseScale, Vector3.one * panelPopInStartScale);
 
-            // DOTween's SetUpdate(true) allows the animation to play independently of Time.timeScale.
             panelTransform.DOScale(baseScale, panelPopInDuration).SetEase(panelPopInEase).SetUpdate(true);
         }
 
@@ -527,10 +491,10 @@ namespace RestaurantLoop.UI
 
         private void LoadMainMenu()
         {
-            // Reset time scale to normal before scene transition.
+            DOTween.KillAll();
+
             Time.timeScale = 1f;
 
-            // Resume audio sources to ensure correct state initialization in the main menu.
             if (AudioManager.Instance != null) AudioManager.Instance.ResumeGameSounds();
             if (CrowdAudioGenerator.Instance != null) CrowdAudioGenerator.Instance.ResumeCrowdAudio();
 
