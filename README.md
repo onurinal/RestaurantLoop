@@ -13,8 +13,8 @@ This is a prototype, and there is a lot of room to improve it.
 | **Onur İnal** | Developer |
 | **Hazar Kılıç** | Developer |
 | **Enes Bozdemir** | Game Designer & Developer |
-| **Bengisu** | Artist |
-| **Merve** | Artist |
+| **Bengisu Güneş** | Artist |
+| **Merve Aydın** | Artist |
 
 ---
 
@@ -86,7 +86,7 @@ Power-ups help when you are stuck. In this prototype, each power-up has 99 uses 
 
 ## 🔧 Built With
 
-- **Unity 6.3 LTS** (URP)
+- **Unity 6.3 LTS (6000.3.22f1)** (URP)
 - **C#**
 - **DOTween** for animation
 - **Dreamteck Splines** for the conveyor path
