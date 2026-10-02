@@ -1,0 +1,464 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using DG.Tweening;
+using RestaurantLoop.UI; 
+
+namespace RestaurantLoop.Core
+{
+    public class RackManager : MonoBehaviour
+    {
+        public static RackManager Instance { get; private set; }
+
+        [Header("Prefabs & Anchors")]
+        [SerializeField] private RackSlot slotPrefab;
+        [SerializeField] private Transform beltAnchor;
+        [SerializeField] private Vector3 offsetFromBelt = new Vector3(0f, 0f, -8f);
+        [SerializeField] private bool lockToWorldCenterX = true;
+
+        [Header("Layout Settings")]
+        [SerializeField] private int initialSlotCount = 5;
+        [SerializeField] private float slotSpacing = 1.1f;
+        [SerializeField] private float shiftAnimationDuration = 0.25f;
+
+        [Header("Full Rack Warning")]
+        [SerializeField] private Color fullRackWarningColor = new Color(1f, 0.05f, 0.05f, 1f);
+        [SerializeField, Range(0f, 1f)] private float fullRackWarningMinimumAlpha = 0.22f;
+        [SerializeField, Min(0.01f)] private float fullRackWarningHalfCycleDuration = 0.32f;
+
+        private readonly List<RackSlot> rackSlots = new List<RackSlot>();
+        private bool fullRackWarningActive;
+
+        private Color InteractionOutlineColor => PowerUpManager.Instance != null
+            ? PowerUpManager.Instance.InteractionOutlineColor
+            : Color.white;
+        private SlotOutlineAnimationSettings InteractionOutlineAnimationSettings => PowerUpManager.Instance != null
+            ? PowerUpManager.Instance.InteractionOutlineAnimationSettings
+            : SlotOutlineAnimationSettings.Default;
+
+        public Vector3 CenterPosition => GetCalculatedCenterPosition();
+        public bool HasAvailableSlot => GetFirstEmptySlot() != null;
+        public bool IsCompletelyFull => rackSlots.Count > 0 && OccupiedSlotCount == rackSlots.Count;
+
+        public int OccupiedSlotCount
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < rackSlots.Count; i++)
+                {
+                    if (rackSlots[i] != null && rackSlots[i].IsOccupied) count++;
+                }
+                return count;
+            }
+        }
+
+        public bool HasClearColorSelectableStack
+        {
+            get
+            {
+                if (CrowdManager.Instance == null) return false;
+
+                for (int i = 0; i < rackSlots.Count; i++)
+                {
+                    if (IsClearColorSelectableStack(rackSlots[i]?.CurrentStack)) return true;
+                }
+
+                return false;
+            }
+        }
+
+        public event Action<StackItem, RackSlot> StackAssignedToRack;
+        public event Action<StackItem, RackSlot> RackStackRedeploymentStarted;
+
+        private void Awake()
+        {
+            if (Instance == null) Instance = this;
+            else Destroy(gameObject);
+        }
+
+        private void Start()
+        {
+            BuildRackLayout(initialSlotCount);
+            SubscribeToStateEvents();
+        }
+
+        private void OnDestroy()
+        {
+            UnsubscribeFromStateEvents();
+            StopFullRackWarning(clearVisuals: true);
+            if (Instance == this) Instance = null;
+        }
+
+        public Vector3 GetCalculatedCenterPosition()
+        {
+            if (beltAnchor == null && ConveyorManager.Instance != null)
+            {
+                beltAnchor = ConveyorManager.Instance.transform;
+            }
+
+            Vector3 origin = beltAnchor != null ? beltAnchor.position + offsetFromBelt : transform.position;
+
+            if (lockToWorldCenterX) origin.x = 0f;
+
+            return origin;
+        }
+
+        public void BuildRackLayout(int slotCount)
+        {
+            ClearExistingSlots();
+
+            if (slotPrefab == null) return;
+
+            Vector3 originPosition = GetCalculatedCenterPosition();
+            transform.position = originPosition;
+
+            float startX = originPosition.x - (((slotCount - 1) * slotSpacing) / 2f);
+
+            for (int i = 0; i < slotCount; i++)
+            {
+                Vector3 slotPosition = new Vector3(startX + (i * slotSpacing), originPosition.y, originPosition.z);
+
+                GameObject slotObj = Instantiate(slotPrefab.gameObject, slotPosition, Quaternion.identity, transform);
+                RackSlot newSlot = slotObj.GetComponent<RackSlot>();
+                newSlot.gameObject.name = $"RackSlot_{i + 1}";
+                newSlot.ClearSlot();
+                newSlot.OccupancyChanged += HandleSlotOccupancyChanged;
+
+                rackSlots.Add(newSlot);
+            }
+
+            RefreshFullRackWarning();
+        }
+
+        public bool TryAddStackToRack(StackItem stack)
+        {
+            RackSlot emptySlot = GetFirstEmptySlot();
+
+            if (emptySlot == null)
+            {
+                Debug.LogWarning("[RackManager] Rack is completely full!");
+                return false;
+            }
+
+            ConveyorManager.Instance.RemoveStackFromBelt(stack);
+            ConveyorManager.Instance.ReleaseCapacity();
+
+            emptySlot.PlaceStack(stack);
+            stack.JumpToSlot(emptySlot.transform);
+
+            StackAssignedToRack?.Invoke(stack, emptySlot);
+            RefreshFullRackWarning();
+
+            // --- TUTORIAL STEP 3 TRIGGER: ITEM ARRIVED IN RACK ---
+            if (LevelManager.Instance != null && LevelManager.Instance.IsTutorialLevel
+                && TutorialManager.Instance != null
+                && TutorialManager.Instance.CurrentStep == TutorialManager.TutorialStep.WaitUntilInRack)
+            {
+                TutorialManager.Instance.StartStepTapRack(emptySlot.transform);
+            }
+            // -----------------------------------------------------------------
+
+            return true;
+        }
+
+        public bool TrySendRackStackToBelt(StackItem stack)
+        {
+            if (stack == null || stack.IsJumping) return false;
+
+            RackSlot targetSlot = GetSlotContainingStack(stack);
+            if (targetSlot == null) return false;
+
+            if (!ConveyorManager.Instance.CanAcceptStack)
+            {
+                stack.Shake();
+                ConveyorManager.Instance.NotifyCapacityRejected();
+                return false;
+            }
+
+            bool accepted = ConveyorManager.Instance.TrySendStackToBelt(stack);
+            if (accepted)
+            {
+                targetSlot.ClearSlot();
+                RackStackRedeploymentStarted?.Invoke(stack, targetSlot);
+                ShiftItemsLeft();
+                RefreshFullRackWarning();
+
+                // --- TUTORIAL STEP 3 COMPLETE: PLAYER TAPPED RACK ITEM BACK TO BELT ---
+                if (TutorialManager.Instance != null
+                    && TutorialManager.Instance.CurrentStep == TutorialManager.TutorialStep.TapRackToConveyor)
+                {
+                    TutorialManager.Instance.HideTutorial();
+                }
+                // ------------------------------------------------------------------------
+
+                return true;
+            }
+
+            stack.Shake();
+            return false;
+        }
+
+        private void ShiftItemsLeft(bool ignoreTimeScale = false)
+        {
+            for (int i = 0; i < rackSlots.Count; i++)
+            {
+                if (!rackSlots[i].IsOccupied)
+                {
+                    for (int j = i + 1; j < rackSlots.Count; j++)
+                    {
+                        if (rackSlots[j].IsOccupied)
+                        {
+                            StackItem stackToMove = rackSlots[j].CurrentStack;
+
+                            rackSlots[j].ClearSlot();
+                            rackSlots[i].PlaceStack(stackToMove);
+
+                            if (stackToMove.IsJumping)
+                            {
+                                stackToMove.JumpToSlot(rackSlots[i].transform);
+                            }
+                            else
+                            {
+                                StackItem.KillTweensInHierarchy(stackToMove.gameObject);
+                                stackToMove.transform.SetParent(rackSlots[i].transform);
+                                Tween shiftTween = stackToMove.transform.DOMove(rackSlots[i].transform.position, shiftAnimationDuration)
+                                    .SetEase(Ease.OutQuad);
+                                if (ignoreTimeScale) shiftTween.SetUpdate(true);
+                            }
+
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        public void ClearAllItems()
+        {
+            for (int i = 0; i < rackSlots.Count; i++)
+            {
+                if (rackSlots[i] != null)
+                {
+                    if (rackSlots[i].CurrentStack != null)
+                    {
+                        StackItem.ReleaseToPool(rackSlots[i].CurrentStack);
+                    }
+
+                    rackSlots[i].ClearSlot();
+                }
+            }
+
+            RefreshFullRackWarning();
+        }
+
+        public bool IsClearColorSelectableStack(StackItem stack)
+        {
+            if (stack == null || stack.IsJumping || CrowdManager.Instance == null ||
+                !CrowdManager.Instance.HasRemainingDemand(stack.Data)) return false;
+
+            return GetSlotContainingStack(stack) != null;
+        }
+
+        public void SetClearColorSelectionVisuals(bool active)
+        {
+            if (active) StopFullRackWarning(clearVisuals: false);
+
+            for (int i = 0; i < rackSlots.Count; i++)
+            {
+                RackSlot slot = rackSlots[i];
+                StackItem stack = slot != null ? slot.CurrentStack : null;
+                bool selectable = active && IsClearColorSelectableStack(stack);
+                if (stack != null) stack.SetHandSelectionHighlight(selectable);
+                slot?.SetInteractionOutlineGuidance(selectable,
+                    InteractionOutlineColor, InteractionOutlineAnimationSettings);
+            }
+
+            if (!active) RefreshFullRackWarning();
+        }
+
+        public void PulseOccupiedSlots(Color outlineColor, SlotOutlineAnimationSettings animationSettings)
+        {
+            for (int i = 0; i < rackSlots.Count; i++)
+            {
+                RackSlot slot = rackSlots[i];
+                StackItem stack = slot != null ? slot.CurrentStack : null;
+                if (stack != null && !stack.IsJumping)
+                {
+                    slot.PulseInteractionOutline(outlineColor, animationSettings);
+                    stack.PlaySelectionRejectionFeedback();
+                }
+            }
+        }
+
+        public int RemoveStacksByData(ItemDataSO data)
+        {
+            if (data == null) return 0;
+
+            int removedCount = 0;
+            for (int i = 0; i < rackSlots.Count; i++)
+            {
+                RackSlot slot = rackSlots[i];
+                StackItem stack = slot != null ? slot.CurrentStack : null;
+                if (stack == null || stack.Data != data) continue;
+
+                slot.ClearSlot();
+                StackItem.ReleaseToPool(stack);
+                removedCount++;
+            }
+
+            if (removedCount > 0) ShiftItemsLeft(ignoreTimeScale: true);
+            RefreshFullRackWarning();
+            return removedCount;
+        }
+
+        private RackSlot GetSlotContainingStack(StackItem stack)
+        {
+            for (int i = 0; i < rackSlots.Count; i++)
+            {
+                if (rackSlots[i] != null && rackSlots[i].CurrentStack == stack) return rackSlots[i];
+            }
+            return null;
+        }
+
+        private RackSlot GetFirstEmptySlot()
+        {
+            for (int i = 0; i < rackSlots.Count; i++)
+            {
+                if (rackSlots[i] != null && !rackSlots[i].IsOccupied) return rackSlots[i];
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Returns the first occupied rack slot's RectTransform or Transform for tutorial pointing.
+        /// </summary>
+        public Transform GetFirstOccupiedRackSlotTransform()
+        {
+            for (int i = 0; i < rackSlots.Count; i++)
+            {
+                if (rackSlots[i] != null && rackSlots[i].IsOccupied)
+                {
+                    return rackSlots[i].transform;
+                }
+            }
+            return null;
+        }
+
+        private void ClearExistingSlots()
+        {
+            StopFullRackWarning(clearVisuals: true);
+            for (int i = transform.childCount - 1; i >= 0; i--)
+            {
+                Transform child = transform.GetChild(i);
+                RackSlot slot = child.GetComponent<RackSlot>();
+                if (slot != null) slot.OccupancyChanged -= HandleSlotOccupancyChanged;
+                StackItem[] childStacks = child.GetComponentsInChildren<StackItem>(true);
+                for (int stackIndex = 0; stackIndex < childStacks.Length; stackIndex++)
+                {
+                    StackItem.ReleaseToPool(childStacks[stackIndex]);
+                }
+                StackItem.KillTweensInHierarchy(child.gameObject);
+                Destroy(child.gameObject);
+            }
+
+            rackSlots.Clear();
+        }
+
+        public void RefreshFullRackWarning()
+        {
+            bool gameActive = LevelManager.Instance == null || LevelManager.Instance.IsGameActive;
+            bool powerUpHasPriority = PowerUpManager.Instance != null &&
+                                      PowerUpManager.Instance.HasRackOutlinePriority;
+            bool shouldWarn = gameActive && IsCompletelyFull && !powerUpHasPriority;
+
+            if (shouldWarn)
+            {
+                if (fullRackWarningActive) return;
+
+                fullRackWarningActive = true;
+                SlotOutlineAnimationSettings settings = new SlotOutlineAnimationSettings(
+                    fullRackWarningMinimumAlpha,
+                    fullRackWarningHalfCycleDuration,
+                    fullRackWarningHalfCycleDuration,
+                    fullRackWarningHalfCycleDuration,
+                    0f,
+                    1);
+
+                for (int i = 0; i < rackSlots.Count; i++)
+                {
+                    RackSlot slot = rackSlots[i];
+                    if (slot != null && slot.IsOccupied)
+                    {
+                        slot.SetFullRackWarning(true, fullRackWarningColor, settings);
+                    }
+                }
+                return;
+            }
+
+            StopFullRackWarning(clearVisuals: !powerUpHasPriority);
+        }
+
+        private void StopFullRackWarning(bool clearVisuals)
+        {
+            if (!fullRackWarningActive && !clearVisuals) return;
+
+            fullRackWarningActive = false;
+            if (!clearVisuals) return;
+
+            SlotOutlineAnimationSettings settings = SlotOutlineAnimationSettings.Default;
+            for (int i = 0; i < rackSlots.Count; i++)
+            {
+                rackSlots[i]?.SetFullRackWarning(false, fullRackWarningColor, settings);
+            }
+        }
+
+        private void HandleSlotOccupancyChanged(RackSlot _, bool __) => RefreshFullRackWarning();
+
+        private void HandlePowerUpStateChanged() => RefreshFullRackWarning();
+
+        private void HandleLevelEnded() => RefreshFullRackWarning();
+
+        private void SubscribeToStateEvents()
+        {
+            if (PowerUpManager.Instance != null)
+            {
+                PowerUpManager.Instance.StateChanged += HandlePowerUpStateChanged;
+            }
+
+            if (LevelManager.Instance != null)
+            {
+                LevelManager.Instance.OnLevelWon += HandleLevelEnded;
+                LevelManager.Instance.OnLevelLost += HandleLevelEnded;
+            }
+        }
+
+        private void UnsubscribeFromStateEvents()
+        {
+            if (PowerUpManager.Instance != null)
+            {
+                PowerUpManager.Instance.StateChanged -= HandlePowerUpStateChanged;
+            }
+
+            if (LevelManager.Instance != null)
+            {
+                LevelManager.Instance.OnLevelWon -= HandleLevelEnded;
+                LevelManager.Instance.OnLevelLost -= HandleLevelEnded;
+            }
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            Vector3 center = GetCalculatedCenterPosition();
+            Gizmos.color = Color.yellow;
+
+            float startX = center.x - (((initialSlotCount - 1) * slotSpacing) / 2f);
+
+            for (int i = 0; i < initialSlotCount; i++)
+            {
+                Vector3 slotPos = new Vector3(startX + (i * slotSpacing), center.y, center.z);
+                Gizmos.DrawWireCube(slotPos, Vector3.one * 0.8f);
+            }
+        }
+    }
+}

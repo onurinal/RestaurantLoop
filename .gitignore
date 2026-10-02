@@ -22,6 +22,10 @@ Thumbs.db
 .utmp/
 utmp/
 
+# IDE / Editor specific
+.vscode/
+.vsconfig
+
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data
 /[Mm]emoryCaptures/
@@ -44,6 +48,7 @@ ExportedObj/
 *.csproj
 *.unityproj
 *.sln
+*.slnx
 *.suo
 *.tmp
 *.user
@@ -79,3 +84,5 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+restaurant-loop-one-pager.pdf
+restaurantloop_BackUpThisFolder_ButDontShipItWithYourGame/

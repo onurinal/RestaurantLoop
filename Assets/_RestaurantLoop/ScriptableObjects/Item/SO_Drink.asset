@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6188d261b4bb40bba52a9ed5fdd04069, type: 3}
+  m_Name: SO_Drink
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.ItemDataSO
+  itemName: Drink
+  uiColor: {r: 0, g: 0.2901961, b: 1, a: 1}
+  balloonIcon: {fileID: 21300000, guid: 869219d76ba1dc34691d6dc7b12e5320, type: 3}
+  stackPrefab: {fileID: 3873658242560358701, guid: 656a6f7ff357a70498085d64b109c774, type: 3}
+  cellMaterial: {fileID: 2100000, guid: e1e6bf116ebcc5b45809d02342895567, type: 2}
+  customerPrefab: {fileID: 746159430835400799, guid: 2cae29f062d832f41868b9c9927ed2e0, type: 3}
+  uiTextOffsetDistance: 1.2

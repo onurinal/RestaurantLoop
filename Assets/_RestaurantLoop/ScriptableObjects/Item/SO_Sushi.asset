@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6188d261b4bb40bba52a9ed5fdd04069, type: 3}
+  m_Name: SO_Sushi
+  m_EditorClassIdentifier: Assembly-CSharp::RestaurantLoop.Core.ItemDataSO
+  itemName: White Item
+  uiColor: {r: 0.05882353, g: 1, b: 0, a: 1}
+  balloonIcon: {fileID: 15104906, guid: 7d9bc5c86c09f5d428e0ca4bcb723a46, type: 3}
+  stackPrefab: {fileID: 3873658242560358701, guid: 989f682506c549147a022fea42783e1b, type: 3}
+  cellMaterial: {fileID: 2100000, guid: b2adaf4821b956049a8827b3d8c0ca78, type: 2}
+  customerPrefab: {fileID: 6890054401377583542, guid: 848140d34d6091b47881c58657729262, type: 3}
+  uiTextOffsetDistance: 1.55
