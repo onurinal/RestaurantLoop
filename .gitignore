@@ -22,6 +22,10 @@ Thumbs.db
 .utmp/
 utmp/
 
+# IDE / Editor specific
+.vscode/
+.vsconfig
+
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data
 /[Mm]emoryCaptures/
